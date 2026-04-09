@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({Key? key}) : super(key: key);
+  final String? redirectRouteName;
+
+  const RegisterPage({Key? key, this.redirectRouteName}) : super(key: key);
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -41,7 +44,7 @@ class _RegisterPageState extends State<RegisterPage> {
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            completeAuthRedirect(context, widget.redirectRouteName);
           }
 
           if (state is AuthError) {

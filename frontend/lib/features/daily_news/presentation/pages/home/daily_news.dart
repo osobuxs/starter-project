@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_bloc.dart';
@@ -54,12 +55,11 @@ class DailyNews extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.person),
-            title: Text(isAuthenticated ? 'Mi perfil' : 'Iniciar sesión'),
+            title: const Text('Mi perfil'),
             onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(
+              _navigateFromDrawer(
                 context,
-                isAuthenticated ? '/UserProfile' : '/Login',
+                routeName: AppRouteNames.userProfile,
               );
             },
           ),
@@ -67,24 +67,27 @@ class DailyNews extends StatelessWidget {
             leading: const Icon(Icons.add_circle_outline),
             title: const Text('Crear noticia'),
             onTap: () {
-              Navigator.pop(context);
-              // TODO: Navigator.pushNamed(context, '/CreateArticle');
+              _navigateFromDrawer(
+                context,
+                routeName: AppRouteNames.createArticle,
+              );
             },
           ),
           ListTile(
             leading: const Icon(Icons.article_outlined),
             title: const Text('Mis notas'),
             onTap: () {
-              Navigator.pop(context);
-              // TODO: Navigator.pushNamed(context, '/MyNotes');
+              _navigateFromDrawer(context, routeName: AppRouteNames.myNotes);
             },
           ),
           ListTile(
             leading: const Icon(Icons.favorite_outline),
             title: const Text('Mis favoritos'),
             onTap: () {
-              Navigator.pop(context);
-              // TODO: Navigator.pushNamed(context, '/MyFavorites');
+              _navigateFromDrawer(
+                context,
+                routeName: AppRouteNames.myFavorites,
+              );
             },
           ),
           const Divider(),
@@ -93,12 +96,15 @@ class DailyNews extends StatelessWidget {
               isAuthenticated ? Icons.logout : Icons.person_add_alt,
             ),
             title: Text(isAuthenticated ? 'Cerrar sesión' : 'Crear cuenta'),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
               if (isAuthenticated) {
-                context.read<AuthCubit>().logout();
+                final shouldLogout = await _showLogoutConfirmation(context);
+                if (shouldLogout == true && context.mounted) {
+                  context.read<AuthCubit>().logout();
+                }
               } else {
-                Navigator.pushNamed(context, '/Register');
+                Navigator.pushNamed(context, AppRouteNames.register);
               }
             },
           ),
@@ -156,10 +162,48 @@ class DailyNews extends StatelessWidget {
   }
 
   void _onArticlePressed(BuildContext context, ArticleEntity article) {
-    Navigator.pushNamed(context, '/ArticleDetails', arguments: article);
+    Navigator.pushNamed(
+      context,
+      AppRouteNames.articleDetails,
+      arguments: article,
+    );
   }
 
   void _onShowSavedArticlesViewTapped(BuildContext context) {
-    Navigator.pushNamed(context, '/SavedArticles');
+    Navigator.pushNamed(context, AppRouteNames.savedArticles);
+  }
+
+  void _navigateFromDrawer(BuildContext context, {required String routeName}) {
+    final authState = context.read<AuthCubit>().state;
+    final isAuthenticated = authState is AuthAuthenticated;
+
+    Navigator.pop(context);
+    Navigator.pushNamed(
+      context,
+      isAuthenticated ? routeName : AppRouteNames.login,
+      arguments: isAuthenticated ? null : routeName,
+    );
+  }
+
+  Future<bool?> _showLogoutConfirmation(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Cerrar sesión'),
+          content: const Text('¿Querés cerrar tu sesión actual?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Cerrar sesión'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

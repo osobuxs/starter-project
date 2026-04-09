@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
+import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  final String? redirectRouteName;
+
+  const LoginPage({Key? key, this.redirectRouteName}) : super(key: key);
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -42,7 +46,7 @@ class _LoginPageState extends State<LoginPage> {
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            completeAuthRedirect(context, widget.redirectRouteName);
           }
 
           if (state is AuthError) {
@@ -178,7 +182,10 @@ class _LoginPageState extends State<LoginPage> {
                         const Text('¿No tenés cuenta?'),
                         TextButton(
                           onPressed: () {
-                            Navigator.of(context).pushNamed('/Register');
+                            Navigator.of(context).pushNamed(
+                              AppRouteNames.register,
+                              arguments: widget.redirectRouteName,
+                            );
                           },
                           child: const Text('Registrate'),
                         ),
