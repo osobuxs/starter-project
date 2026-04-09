@@ -8,6 +8,8 @@ import 'package:news_app_clean_architecture/features/articles/domain/entities/ar
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_state.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/pages/create_edit_article_page.dart';
+import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_bloc.dart';
+import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_event.dart';
 
 class MyNotesPage extends StatefulWidget {
   const MyNotesPage({super.key});
@@ -46,6 +48,7 @@ class _MyNotesPageState extends State<MyNotesPage> {
             ..showSnackBar(SnackBar(content: Text(state.errorMessage!)));
         } else if (state.successMessage != null &&
             state.successMessage!.isNotEmpty) {
+          _refreshDashboard(context);
           messenger
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(content: Text(state.successMessage!)));
@@ -146,6 +149,13 @@ class _MyNotesPageState extends State<MyNotesPage> {
     }
 
     await context.read<MyNotesCubit>().refresh();
+  }
+
+  void _refreshDashboard(BuildContext context) {
+    final remoteState = context.read<RemoteArticlesBloc>().state;
+    context.read<RemoteArticlesBloc>().add(
+      GetArticles(selectedDate: remoteState.selectedDate),
+    );
   }
 }
 
@@ -257,7 +267,7 @@ class _MyNoteCard extends StatelessWidget {
                           if (onDisable != null)
                             const PopupMenuItem(
                               value: _MyNoteAction.disable,
-                              child: Text('Deshabilitar'),
+                              child: Text('Archivar'),
                             ),
                           if (onEnable != null)
                             const PopupMenuItem(
@@ -340,7 +350,7 @@ class _ArticleStateBadge extends StatelessWidget {
   _BadgePresentation _resolveBadgePresentation() {
     if (!article.isActive) {
       return const _BadgePresentation(
-        label: 'Inactiva',
+        label: 'Archivada',
         backgroundColor: Color(0xFFE0E0E0),
         foregroundColor: Color(0xFF424242),
       );

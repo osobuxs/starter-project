@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_state.dart';
+import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_bloc.dart';
+import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_event.dart';
 
 class CreateEditArticlePageArgs {
   final String? articleId;
@@ -70,6 +72,8 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
         }
 
         if (state.successMessage != null && state.successMessage!.isNotEmpty) {
+          _refreshDashboard(context);
+
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(content: Text(state.successMessage!)));
@@ -88,9 +92,7 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
           onWillPop: () => _confirmDiscardIfNeeded(context, state),
           child: Scaffold(
             appBar: AppBar(
-              title: Text(
-                state.isEditMode ? 'Editar noticia' : 'Crear noticia',
-              ),
+              title: Text(state.isEditMode ? 'Editar nota' : 'Crear nota'),
             ),
             body: isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -163,21 +165,25 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
           const SizedBox(height: 24),
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: state.canSaveDraft
-                      ? context.read<CreateEditArticleCubit>().saveDraft
-                      : null,
-                  child: const Text('Guardar borrador'),
+              if (!state.isPublished) ...[
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: state.canSaveDraft
+                        ? context.read<CreateEditArticleCubit>().saveDraft
+                        : null,
+                    child: const Text('Guardar borrador'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: ElevatedButton(
                   onPressed: state.canPublish
                       ? context.read<CreateEditArticleCubit>().publish
                       : null,
-                  child: const Text('Publicar'),
+                  child: Text(
+                    state.isPublished ? 'Guardar cambios' : 'Publicar',
+                  ),
                 ),
               ),
             ],
@@ -253,6 +259,13 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
     if (_contentController.text != state.content) {
       _contentController.text = state.content;
     }
+  }
+
+  void _refreshDashboard(BuildContext context) {
+    final remoteState = context.read<RemoteArticlesBloc>().state;
+    context.read<RemoteArticlesBloc>().add(
+      GetArticles(selectedDate: remoteState.selectedDate),
+    );
   }
 }
 
