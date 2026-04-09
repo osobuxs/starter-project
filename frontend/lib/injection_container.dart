@@ -13,6 +13,7 @@ import 'package:news_app_clean_architecture/features/auth/domain/usecases/logout
 import 'package:news_app_clean_architecture/features/auth/domain/usecases/register_usecase.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/usecases/sign_in_with_google_usecase.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
+import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/article_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/news_api_service.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/repository/article_repository_impl.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/repository/article_repository.dart';
@@ -53,6 +54,9 @@ Future<void> initializeDependencies() async {
 
   // Dependencies
   sl.registerSingleton<NewsApiService>(NewsApiService(sl()));
+  sl.registerLazySingleton<ArticleFirestoreDataSource>(
+    () => ArticleFirestoreDataSourceImpl(sl()),
+  );
   sl.registerLazySingleton<AuthFirebaseDataSource>(
     () => AuthFirebaseDataSourceImpl(sl(), sl(), sl()),
   );

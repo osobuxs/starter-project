@@ -1,10 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
-import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
-import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_bloc.dart';
+import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_event.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_state.dart';
 
 import '../../../domain/entities/article.dart';
@@ -18,145 +19,137 @@ class DailyNews extends StatelessWidget {
     return _buildPage(context);
   }
 
-  PreferredSizeWidget _buildAppbar(BuildContext context) {
-    return AppBar(
-      title: const Text('Daily News', style: TextStyle(color: Colors.black)),
-      actions: [
-        GestureDetector(
-          onTap: () => _onShowSavedArticlesViewTapped(context),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14),
-            child: Icon(Icons.bookmark, color: Colors.black),
-          ),
-        ),
-      ],
+  Widget _buildPage(BuildContext context) {
+    return BlocBuilder<RemoteArticlesBloc, RemoteArticlesState>(
+      builder: (context, state) {
+        if (state.isLoading) {
+          return AppSectionScaffold(
+            title: 'Daily News',
+            currentRouteName: AppRouteNames.dashboard,
+            body: const Center(child: CupertinoActivityIndicator()),
+          );
+        }
+
+        if (state.error != null && state.articles.isEmpty) {
+          return AppSectionScaffold(
+            title: 'Daily News',
+            currentRouteName: AppRouteNames.dashboard,
+            body: Center(
+              child: IconButton(
+                onPressed: () {
+                  context.read<RemoteArticlesBloc>().add(
+                    GetArticles(selectedDate: state.selectedDate),
+                  );
+                },
+                icon: const Icon(Icons.refresh),
+              ),
+            ),
+          );
+        }
+
+        return _buildArticlesPage(context, state);
+      },
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
-    final authState = context.watch<AuthCubit>().state;
-    final isAuthenticated = authState is AuthAuthenticated;
+  Widget _buildArticlesPage(BuildContext context, RemoteArticlesState state) {
+    final articles = state.articles;
 
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
+    return AppSectionScaffold(
+      title: 'Daily News',
+      currentRouteName: AppRouteNames.dashboard,
+      actions: [
+        IconButton(
+          onPressed: () => _onShowSavedArticlesViewTapped(context),
+          icon: const Icon(Icons.bookmark, color: Colors.black),
+        ),
+      ],
+      body: Column(
         children: [
-          DrawerHeader(
-            decoration: BoxDecoration(color: Theme.of(context).primaryColor),
-            child: const Text(
-              'Menu',
-              style: TextStyle(color: Colors.white, fontSize: 24),
+          _buildDateFilter(context, state),
+          Expanded(
+            child: articles.isEmpty
+                ? _buildEmptyState()
+                : NotificationListener<ScrollNotification>(
+                    onNotification: (notification) {
+                      if (notification.metrics.pixels >=
+                              notification.metrics.maxScrollExtent - 200 &&
+                          !state.isLoadingMore &&
+                          !state.hasReachedMax) {
+                        context.read<RemoteArticlesBloc>().add(
+                          const GetArticles(loadMore: true),
+                        );
+                      }
+
+                      return false;
+                    },
+                    child: ListView.builder(
+                      itemCount:
+                          articles.length + (state.isLoadingMore ? 1 : 0),
+                      itemBuilder: (_, index) {
+                        if (index >= articles.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(child: CupertinoActivityIndicator()),
+                          );
+                        }
+
+                        return ArticleWidget(
+                          article: articles[index],
+                          onArticlePressed: (article) =>
+                              _onArticlePressed(context, article),
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildDateFilter(BuildContext context, RemoteArticlesState state) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Row(
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => _onPickDate(context, state.selectedDate),
+            icon: const Icon(Icons.calendar_today_outlined),
+            label: Text(
+              state.selectedDate == null
+                  ? 'Filtrar por fecha'
+                  : DateFormat('dd/MM/yyyy').format(state.selectedDate!),
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text('Dashboard'),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: const Text('Mi perfil'),
-            onTap: () {
-              _navigateFromDrawer(
-                context,
-                routeName: AppRouteNames.userProfile,
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.add_circle_outline),
-            title: const Text('Crear noticia'),
-            onTap: () {
-              _navigateFromDrawer(
-                context,
-                routeName: AppRouteNames.createArticle,
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.article_outlined),
-            title: const Text('Mis notas'),
-            onTap: () {
-              _navigateFromDrawer(context, routeName: AppRouteNames.myNotes);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.favorite_outline),
-            title: const Text('Mis favoritos'),
-            onTap: () {
-              _navigateFromDrawer(
-                context,
-                routeName: AppRouteNames.myFavorites,
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: Icon(
-              isAuthenticated ? Icons.logout : Icons.person_add_alt,
+          if (state.selectedDate != null) ...[
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () {
+                context.read<RemoteArticlesBloc>().add(
+                  const GetArticles(clearDateFilter: true),
+                );
+              },
+              child: const Text('Limpiar'),
             ),
-            title: Text(isAuthenticated ? 'Cerrar sesión' : 'Crear cuenta'),
-            onTap: () async {
-              Navigator.pop(context);
-              if (isAuthenticated) {
-                final shouldLogout = await _showLogoutConfirmation(context);
-                if (shouldLogout == true && context.mounted) {
-                  context.read<AuthCubit>().logout();
-                }
-              } else {
-                Navigator.pushNamed(context, AppRouteNames.register);
-              }
-            },
-          ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildPage(BuildContext context) {
-    return BlocBuilder<RemoteArticlesBloc, RemoteArticlesState>(
-      builder: (context, state) {
-        if (state is RemoteArticlesLoading) {
-          return Scaffold(
-            appBar: _buildAppbar(context),
-            drawer: _buildDrawer(context),
-            body: const Center(child: CupertinoActivityIndicator()),
-          );
-        }
-        if (state is RemoteArticlesError) {
-          return Scaffold(
-            appBar: _buildAppbar(context),
-            drawer: _buildDrawer(context),
-            body: const Center(child: Icon(Icons.refresh)),
-          );
-        }
-        if (state is RemoteArticlesDone) {
-          return _buildArticlesPage(context, state.articles!);
-        }
-        return const SizedBox();
-      },
-    );
-  }
-
-  Widget _buildArticlesPage(
-    BuildContext context,
-    List<ArticleEntity> articles,
-  ) {
-    return Scaffold(
-      appBar: _buildAppbar(context),
-      drawer: _buildDrawer(context),
-      body: ListView.builder(
-        itemCount: articles.length,
-        itemBuilder: (_, index) => ArticleWidget(
-          article: articles[index],
-          onArticlePressed: (article) => _onArticlePressed(context, article),
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24),
+        child: Text(
+          'Todavía no hay notas cargadas.',
+          textAlign: TextAlign.center,
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: check auth, then Navigator.pushNamed(context, '/CreateArticle');
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -173,37 +166,21 @@ class DailyNews extends StatelessWidget {
     Navigator.pushNamed(context, AppRouteNames.savedArticles);
   }
 
-  void _navigateFromDrawer(BuildContext context, {required String routeName}) {
-    final authState = context.read<AuthCubit>().state;
-    final isAuthenticated = authState is AuthAuthenticated;
-
-    Navigator.pop(context);
-    Navigator.pushNamed(
-      context,
-      isAuthenticated ? routeName : AppRouteNames.login,
-      arguments: isAuthenticated ? null : routeName,
-    );
-  }
-
-  Future<bool?> _showLogoutConfirmation(BuildContext context) {
-    return showDialog<bool>(
+  Future<void> _onPickDate(BuildContext context, DateTime? selectedDate) async {
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Cerrar sesión'),
-          content: const Text('¿Querés cerrar tu sesión actual?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Cerrar sesión'),
-            ),
-          ],
-        );
-      },
+      initialDate: selectedDate ?? now,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(now.year + 1),
+    );
+
+    if (pickedDate == null || !context.mounted) {
+      return;
+    }
+
+    context.read<RemoteArticlesBloc>().add(
+      GetArticles(selectedDate: pickedDate),
     );
   }
 }
