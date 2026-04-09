@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "770136573743",
+    "project_id": "symmetry-daily-news-challenge",
+    "storage_bucket": "symmetry-daily-news-challenge.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:770136573743:android:82127e5dc772521e9243da",
+        "android_client_info": {
+          "package_name": "com.osobuxs.newsapp.symmetry"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "770136573743-52ansdvkija7r6pnkq2k1fb13uv15sa4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.osobuxs.newsapp.symmetry",
+            "certificate_hash": "41a9f71c4799565cf80696712643c6258bfa40c8"
+          }
+        },
+        {
+          "client_id": "770136573743-sosedq4d07ic0ger8u1re7kvu0gokloc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDG48mwP_bzgTQ5KE5EhQUCRk9evg72HzA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "770136573743-sosedq4d07ic0ger8u1re7kvu0gokloc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -5,11 +5,11 @@ It has a dependency to the backend which ensures that there is data consistency.
 You will be doing most of your work in this folder.
 
 ## Getting Started
-Before you can run the app, you will need to add the Firebase options file to this project.
-To do this, follow these steps:
-1. Complete the [backend tutorial](../backend/README.md) to create a Firebase project which satisfies the requirements
-2. Watch this [tutorial to setup Firebase for Flutter](https://youtu.be/Wa0rdbb53I8?list=PL4cUxeGkcC9j--TKIdkb3ISfRbJeJYQwC)
-Once you have completed this appropriately, you can start to work with the project.
+Android evaluators can use the committed Firebase config and shared demo keystore without adding their own SHA fingerprints once the maintainer has registered the shared keystore fingerprints in Firebase and committed the refreshed `google-services.json`.
+
+See [Android evaluation](./docs/ANDROID_EVALUATION.md) for the zero-setup Android flow.
+
+If you are wiring the project to a different Firebase backend, follow the [backend tutorial](../backend/README.md) and your normal Firebase setup flow for that separate project.
 
 ### Generate files for routing, di etc.:
 `flutter pub run build_runner build --delete-conflicting-outputs`

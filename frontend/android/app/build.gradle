@@ -1,5 +1,6 @@
 plugins {
     id "com.android.application"
+    id "com.google.gms.google-services"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
@@ -10,6 +11,16 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.withReader('UTF-8') { reader ->
         localProperties.load(reader)
     }
+}
+
+def demoKeystoreProperties = new Properties()
+def demoKeystorePropertiesFile = rootProject.file('demo-keystore.properties')
+if (!demoKeystorePropertiesFile.exists()) {
+    throw new GradleException('Missing demo-keystore.properties required for shared Android evaluation signing.')
+}
+
+demoKeystorePropertiesFile.withReader('UTF-8') { reader ->
+    demoKeystoreProperties.load(reader)
 }
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
@@ -24,7 +35,7 @@ if (flutterVersionName == null) {
 
 
 android {
-    namespace "com.example.news_app_clean_architecture" // Add your namespace here
+    namespace "com.osobuxs.newsapp.symmetry"
 
     compileSdkVersion flutter.compileSdkVersion
 
@@ -42,8 +53,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId "com.example.news_app_clean_architecture"
+        applicationId "com.osobuxs.newsapp.symmetry"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
@@ -52,11 +62,22 @@ android {
 
     }
 
+    signingConfigs {
+        demo {
+            keyAlias demoKeystoreProperties['keyAlias']
+            keyPassword demoKeystoreProperties['keyPassword']
+            storeFile rootProject.file(demoKeystoreProperties['storeFile'])
+            storePassword demoKeystoreProperties['storePassword']
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.demo
+        }
+
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.demo
         }
     }
 }
