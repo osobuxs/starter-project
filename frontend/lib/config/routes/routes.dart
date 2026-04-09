@@ -42,6 +42,7 @@ class AppRoutes {
           const RoutePlaceholderPage(
             title: 'Crear noticia',
             message: 'Esta sección todavía no está implementada.',
+            routeName: AppRouteNames.createArticle,
           ),
         );
 
@@ -50,6 +51,7 @@ class AppRoutes {
           const RoutePlaceholderPage(
             title: 'Mis notas',
             message: 'Esta sección todavía no está implementada.',
+            routeName: AppRouteNames.myNotes,
           ),
         );
 
@@ -58,6 +60,7 @@ class AppRoutes {
           const RoutePlaceholderPage(
             title: 'Mis favoritos',
             message: 'Esta sección todavía no está implementada.',
+            routeName: AppRouteNames.myFavorites,
           ),
         );
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 import 'package:news_app_clean_architecture/features/user_profile/presentation/cubit/user_profile_cubit.dart';
@@ -114,8 +116,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mi perfil')),
+    return AppSectionScaffold(
+      title: 'Mi perfil',
+      currentRouteName: AppRouteNames.userProfile,
       body: BlocConsumer<UserProfileCubit, UserProfileState>(
         listener: (context, state) {
           if (state is UserProfileLoaded) {

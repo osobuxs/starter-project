@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
+import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 
@@ -58,7 +60,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppSectionScaffold(
+      title: 'Crear cuenta',
+      currentRouteName: AppRouteNames.register,
+      drawerVariant: AppSectionDrawerVariant.auth,
+      redirectRouteName: widget.redirectRouteName,
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
@@ -77,122 +83,133 @@ class _RegisterPageState extends State<RegisterPage> {
         },
         child: SafeArea(
           child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 32),
-                    Text(
-                      'Crear cuenta',
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 32),
-                    TextFormField(
-                      controller: _displayNameController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre completo',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person_outlined),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Sumate a la app',
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Ingresá tu nombre';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.email_outlined),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Creá tu cuenta para guardar contexto y destrabar las secciones privadas.',
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Ingresá tu email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Email inválido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        labelText: 'Contraseña',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.lock_outlined),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () {
-                            setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            );
-                          },
+                      const SizedBox(height: 32),
+                      TextFormField(
+                        controller: _displayNameController,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          labelText: 'Nombre completo',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.person_outlined),
                         ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Ingresá tu nombre';
+                          }
+                          return null;
+                        },
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Ingresá tu contraseña';
-                        }
-                        if (value.length < 6) {
-                          return 'Mínimo 6 caracteres';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    BlocBuilder<AuthCubit, AuthState>(
-                      builder: (context, state) {
-                        final isLoading = state is AuthLoading;
-                        return ElevatedButton(
-                          onPressed: isLoading ? null : _onRegister,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Ingresá tu email';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Email inválido';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: 'Contraseña',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.lock_outlined),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
                             ),
+                            onPressed: () {
+                              setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              );
+                            },
                           ),
-                          child: isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text('Crear cuenta'),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('¿Ya tenés cuenta?'),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Iniciá sesión'),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Ingresá tu contraseña';
+                          }
+                          if (value.length < 6) {
+                            return 'Mínimo 6 caracteres';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      BlocBuilder<AuthCubit, AuthState>(
+                        builder: (context, state) {
+                          final isLoading = state is AuthLoading;
+                          return ElevatedButton(
+                            onPressed: isLoading ? null : _onRegister,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Crear cuenta'),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('¿Ya tenés cuenta?'),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pushReplacementNamed(
+                                AppRouteNames.login,
+                                arguments: widget.redirectRouteName,
+                              );
+                            },
+                            child: const Text('Iniciá sesión'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
