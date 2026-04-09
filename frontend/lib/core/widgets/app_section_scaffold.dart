@@ -45,6 +45,68 @@ class AppSectionScaffold extends StatelessWidget {
   }
 }
 
+Future<void> navigateToProtectedRoute(
+  BuildContext context, {
+  required BuildContext navigationContext,
+  required String currentRouteName,
+  required String routeName,
+  required String label,
+  bool closeCurrentDrawer = false,
+}) async {
+  final authState = context.read<AuthCubit>().state;
+  final isAuthenticated = authState is AuthAuthenticated;
+
+  if (isAuthenticated) {
+    Navigator.of(navigationContext).pushNamed(routeName);
+    return;
+  }
+
+  if (closeCurrentDrawer) {
+    Navigator.of(context).pop();
+  }
+
+  final shouldContinue = await showDialog<bool>(
+    context: navigationContext,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Necesitás iniciar sesión'),
+        content: Text(
+          'Para abrir "$label" primero necesitás iniciar sesión. Después te llevamos automáticamente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Ir al login'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (shouldContinue != true || !navigationContext.mounted) {
+    return;
+  }
+
+  final shouldReplaceCurrent =
+      currentRouteName == AppRouteNames.login ||
+      currentRouteName == AppRouteNames.register;
+
+  if (shouldReplaceCurrent) {
+    Navigator.of(
+      navigationContext,
+    ).pushReplacementNamed(AppRouteNames.login, arguments: routeName);
+    return;
+  }
+
+  Navigator.of(
+    navigationContext,
+  ).pushNamed(AppRouteNames.login, arguments: routeName);
+}
+
 class _AppSectionDrawer extends StatelessWidget {
   final BuildContext navigationContext;
   final String currentRouteName;
@@ -120,24 +182,32 @@ class _AppSectionDrawer extends StatelessWidget {
             ),
           ),
           const Divider(),
-          if (drawerVariant == AppSectionDrawerVariant.full)
+          if (drawerVariant == AppSectionDrawerVariant.full && isAuthenticated)
             _DrawerRouteTile(
-              icon: isAuthenticated ? Icons.logout : Icons.person_add_alt,
-              label: isAuthenticated ? 'Cerrar sesión' : 'Crear cuenta',
-              onTap: () {
-                if (isAuthenticated) {
-                  _onLogoutTapped(context);
-                  return;
-                }
-
-                _navigateToRoute(
-                  context,
-                  routeName: AppRouteNames.register,
-                  arguments: redirectRouteName,
-                );
-              },
+              icon: Icons.logout,
+              label: 'Cerrar sesión',
+              onTap: () => _onLogoutTapped(context),
             )
-          else if (currentRouteName == AppRouteNames.login)
+          else if (drawerVariant == AppSectionDrawerVariant.full) ...[
+            _DrawerRouteTile(
+              icon: Icons.person_add_alt,
+              label: 'Crear cuenta',
+              onTap: () => _navigateToRoute(
+                context,
+                routeName: AppRouteNames.register,
+                arguments: redirectRouteName,
+              ),
+            ),
+            _DrawerRouteTile(
+              icon: Icons.login,
+              label: 'Iniciar sesión',
+              onTap: () => _navigateToRoute(
+                context,
+                routeName: AppRouteNames.login,
+                arguments: redirectRouteName,
+              ),
+            ),
+          ] else if (currentRouteName == AppRouteNames.login)
             _DrawerRouteTile(
               icon: Icons.person_add_alt,
               label: 'Crear cuenta',
@@ -169,52 +239,13 @@ class _AppSectionDrawer extends StatelessWidget {
     required String routeName,
     required String label,
   }) async {
-    final authState = context.read<AuthCubit>().state;
-    final isAuthenticated = authState is AuthAuthenticated;
-
-    if (isAuthenticated) {
-      _navigateToRoute(context, routeName: routeName);
-      return;
-    }
-
-    Navigator.of(context).pop();
-
-    final shouldContinue = await showDialog<bool>(
-      context: navigationContext,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Necesitás iniciar sesión'),
-          content: Text(
-            'Para abrir "$label" primero necesitás iniciar sesión. Después te llevamos automáticamente.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Ir al login'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (shouldContinue != true || !navigationContext.mounted) {
-      return;
-    }
-
-    final shouldReplaceCurrent =
-        currentRouteName == AppRouteNames.login ||
-        currentRouteName == AppRouteNames.register;
-
-    _navigateToRoute(
+    await navigateToProtectedRoute(
       context,
-      routeName: AppRouteNames.login,
-      arguments: routeName,
-      replaceCurrent: shouldReplaceCurrent,
-      closeDrawer: false,
+      navigationContext: navigationContext,
+      currentRouteName: currentRouteName,
+      routeName: routeName,
+      label: label,
+      closeCurrentDrawer: true,
     );
   }
 

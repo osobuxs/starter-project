@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
@@ -36,16 +37,7 @@ class DailyNews extends StatelessWidget {
           return AppSectionScaffold(
             title: 'Daily News',
             currentRouteName: AppRouteNames.dashboard,
-            body: Center(
-              child: IconButton(
-                onPressed: () {
-                  context.read<RemoteArticlesBloc>().add(
-                    GetArticles(selectedDate: state.selectedDate),
-                  );
-                },
-                icon: const Icon(Icons.refresh),
-              ),
-            ),
+            body: _buildErrorState(context, state),
           );
         }
 
@@ -108,7 +100,7 @@ class DailyNews extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () => _onCreateArticleTapped(context),
         child: const Icon(Icons.add),
       ),
     );
@@ -151,6 +143,40 @@ class DailyNews extends StatelessWidget {
         child: Text(
           'Todavía no hay notas cargadas.',
           textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, RemoteArticlesState state) {
+    final presentation = _mapDashboardError(state.error);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_outlined, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              presentation.title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(presentation.message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                context.read<RemoteArticlesBloc>().add(
+                  GetArticles(selectedDate: state.selectedDate),
+                );
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+            ),
+          ],
         ),
       ),
     );
@@ -204,6 +230,51 @@ class DailyNews extends StatelessWidget {
     });
   }
 
+  Future<void> _onCreateArticleTapped(BuildContext context) {
+    return navigateToProtectedRoute(
+      context,
+      navigationContext: context,
+      currentRouteName: AppRouteNames.dashboard,
+      routeName: AppRouteNames.createArticle,
+      label: 'Crear noticia',
+    );
+  }
+
+  _DashboardErrorPresentation _mapDashboardError(Exception? error) {
+    if (error is FirebaseException) {
+      if (error.code == 'permission-denied') {
+        return const _DashboardErrorPresentation(
+          title: 'No se pudieron cargar las noticias públicas',
+          message:
+              'Firestore rechazó la consulta. Revisá las reglas publicadas para permitir leer artículos activos y publicados.',
+        );
+      }
+
+      if (error.code == 'unavailable') {
+        return const _DashboardErrorPresentation(
+          title: 'No hay conexión con el servicio',
+          message:
+              'No pudimos contactar a Firestore en este momento. Revisá tu conexión e intentá nuevamente.',
+        );
+      }
+    }
+
+    final message = error?.toString() ?? '';
+    if (message.contains('SocketException') || message.contains('network')) {
+      return const _DashboardErrorPresentation(
+        title: 'Parece un problema de red',
+        message:
+            'No se pudieron descargar las noticias. Revisá tu conexión e intentá nuevamente.',
+      );
+    }
+
+    return const _DashboardErrorPresentation(
+      title: 'No se pudieron cargar las noticias',
+      message:
+          'Ocurrió un problema al cargar el dashboard. Tocá "Reintentar" para volver a intentar.',
+    );
+  }
+
   Future<void> _onPickDate(BuildContext context, DateTime? selectedDate) async {
     final now = DateTime.now();
     final pickedDate = await showDatePicker(
@@ -221,4 +292,14 @@ class DailyNews extends StatelessWidget {
       GetArticles(selectedDate: pickedDate),
     );
   }
+}
+
+class _DashboardErrorPresentation {
+  final String title;
+  final String message;
+
+  const _DashboardErrorPresentation({
+    required this.title,
+    required this.message,
+  });
 }
