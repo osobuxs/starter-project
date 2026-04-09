@@ -79,6 +79,20 @@ class MyNotesCubit extends Cubit<MyNotesState> {
   }
 
   Future<void> publish(ArticleAuthoringEntity article) async {
+    final publishValidationMessage = _validatePublishableArticle(article);
+    if (publishValidationMessage != null) {
+      emit(
+        state.copyWith(
+          status: MyNotesStatus.ready,
+          errorMessage: publishValidationMessage,
+          feedbackId: state.feedbackId + 1,
+          clearActionArticleId: true,
+          clearSuccessMessage: true,
+        ),
+      );
+      return;
+    }
+
     final now = DateTime.now();
     final articleToPublish = article.copyWith(
       isPublished: true,
@@ -110,10 +124,19 @@ class MyNotesCubit extends Cubit<MyNotesState> {
       operation: () => _updateArticleActiveState(
         params: UpdateArticleActiveStateParams(article: updatedArticle),
       ).timeout(_timeout),
-      successMessage: isActive
-          ? 'La nota volvió a estar activa.'
-          : 'La nota quedó deshabilitada.',
+      successMessage: isActive ? 'La nota se reactivó.' : 'La nota se archivó.',
     );
+  }
+
+  String? _validatePublishableArticle(ArticleAuthoringEntity article) {
+    if (article.title.trim().isEmpty ||
+        article.content.trim().isEmpty ||
+        article.imageUrl == null ||
+        article.imageUrl!.trim().isEmpty) {
+      return 'No pudimos publicar la nota. Completá título, contenido e imagen desde el editor y volvé a intentarlo.';
+    }
+
+    return null;
   }
 
   Future<void> _loadArticles(String authorId) async {

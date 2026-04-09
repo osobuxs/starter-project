@@ -5,6 +5,7 @@ enum CreateEditArticleStatus { initial, loading, ready, submitting, failure }
 class CreateEditArticleState extends Equatable {
   final CreateEditArticleStatus status;
   final bool isEditMode;
+  final bool isPublished;
   final String? articleId;
   final String title;
   final String subtitle;
@@ -24,6 +25,7 @@ class CreateEditArticleState extends Equatable {
   const CreateEditArticleState({
     this.status = CreateEditArticleStatus.initial,
     this.isEditMode = false,
+    this.isPublished = false,
     this.articleId,
     this.title = '',
     this.subtitle = '',
@@ -44,6 +46,7 @@ class CreateEditArticleState extends Equatable {
   bool get canSaveDraft =>
       status != CreateEditArticleStatus.loading &&
       status != CreateEditArticleStatus.submitting &&
+      !isPublished &&
       title.trim().isNotEmpty &&
       !isUploadingImage;
 
@@ -59,6 +62,7 @@ class CreateEditArticleState extends Equatable {
   CreateEditArticleState copyWith({
     CreateEditArticleStatus? status,
     bool? isEditMode,
+    bool? isPublished,
     String? articleId,
     String? title,
     String? subtitle,
@@ -85,6 +89,7 @@ class CreateEditArticleState extends Equatable {
     return CreateEditArticleState(
       status: status ?? this.status,
       isEditMode: isEditMode ?? this.isEditMode,
+      isPublished: isPublished ?? this.isPublished,
       articleId: articleId ?? this.articleId,
       title: title ?? this.title,
       subtitle: subtitle ?? this.subtitle,
@@ -115,6 +120,7 @@ class CreateEditArticleState extends Equatable {
   List<Object?> get props => [
     status,
     isEditMode,
+    isPublished,
     articleId,
     title,
     subtitle,

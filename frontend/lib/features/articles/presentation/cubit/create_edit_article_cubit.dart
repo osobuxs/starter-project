@@ -78,6 +78,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
         state.copyWith(
           status: CreateEditArticleStatus.ready,
           isEditMode: false,
+          isPublished: false,
           articleId: null,
           title: '',
           subtitle: '',
@@ -293,6 +294,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
       state.copyWith(
         status: CreateEditArticleStatus.ready,
         isEditMode: true,
+        isPublished: article.isPublished,
         articleId: article.firestoreId,
         title: article.title,
         subtitle: article.subtitle ?? '',
@@ -365,6 +367,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
         state.copyWith(
           status: CreateEditArticleStatus.ready,
           isEditMode: true,
+          isPublished: persistedArticle.isPublished,
           articleId: persistedArticle.firestoreId,
           title: persistedArticle.title,
           subtitle: persistedArticle.subtitle ?? '',
