@@ -18,7 +18,7 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
       if (profile == null) {
         return DataFailed(Exception('Profile not found'));
       }
-      return DataSuccess(profile);
+      return DataSuccess(profile.toEntity());
     } on Exception catch (e) {
       return DataFailed(e);
     }
@@ -31,7 +31,7 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
     try {
       final model = UserProfileModel.fromEntity(profile);
       final updated = await _firestoreDataSource.updateUserProfile(model);
-      return DataSuccess(updated);
+      return DataSuccess(updated.toEntity());
     } on Exception catch (e) {
       return DataFailed(e);
     }

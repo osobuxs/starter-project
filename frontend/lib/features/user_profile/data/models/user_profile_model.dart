@@ -54,6 +54,18 @@ class UserProfileModel extends UserProfileEntity {
     );
   }
 
+  UserProfileEntity toEntity() {
+    return UserProfileEntity(
+      uid: uid,
+      name: name,
+      email: email,
+      age: age,
+      photoUrl: photoUrl,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
   UserProfileModel copyWith({
     String? uid,
     String? name,
