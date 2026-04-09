@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:news_app_clean_architecture/features/auth/data/models/user_model.dart';
 
@@ -17,8 +18,13 @@ abstract class AuthFirebaseDataSource {
 class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
   final FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;
+  final FirebaseFirestore _firestore;
 
-  AuthFirebaseDataSourceImpl(this._firebaseAuth, this._googleSignIn);
+  AuthFirebaseDataSourceImpl(
+    this._firebaseAuth,
+    this._googleSignIn,
+    this._firestore,
+  );
 
   @override
   Future<UserModel> login({
@@ -45,6 +51,11 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
     await credential.user!.updateDisplayName(displayName);
     await credential.user!.reload();
     final updatedUser = _firebaseAuth.currentUser!;
+    await _ensureUserProfile(
+      uid: updatedUser.uid,
+      email: updatedUser.email ?? email,
+      displayName: updatedUser.displayName ?? displayName,
+    );
     return UserModel.fromFirebaseUser(updatedUser);
   }
 
@@ -58,15 +69,18 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
       idToken: googleAuth.idToken,
     );
     final userCredential = await _firebaseAuth.signInWithCredential(credential);
+    final user = userCredential.user!;
+    await _ensureUserProfile(
+      uid: user.uid,
+      email: user.email ?? '',
+      displayName: user.displayName ?? 'Usuario',
+    );
     return UserModel.fromFirebaseUser(userCredential.user!);
   }
 
   @override
   Future<void> logout() async {
-    await Future.wait([
-      _firebaseAuth.signOut(),
-      _googleSignIn.signOut(),
-    ]);
+    await Future.wait([_firebaseAuth.signOut(), _googleSignIn.signOut()]);
   }
 
   @override
@@ -74,5 +88,28 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
     final user = _firebaseAuth.currentUser;
     if (user == null) return null;
     return UserModel.fromFirebaseUser(user);
+  }
+
+  Future<void> _ensureUserProfile({
+    required String uid,
+    required String email,
+    required String displayName,
+  }) async {
+    final userRef = _firestore.collection('users').doc(uid);
+    final snapshot = await userRef.get();
+
+    if (snapshot.exists) {
+      return;
+    }
+
+    final now = DateTime.now();
+    await userRef.set({
+      'name': displayName,
+      'email': email,
+      'age': null,
+      'photoUrl': null,
+      'createdAt': now,
+      'updatedAt': now,
+    });
   }
 }

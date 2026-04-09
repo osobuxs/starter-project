@@ -28,10 +28,10 @@ class _RegisterPageState extends State<RegisterPage> {
   void _onRegister() {
     if (_formKey.currentState!.validate()) {
       context.read<AuthCubit>().register(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-            displayName: _displayNameController.text.trim(),
-          );
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        displayName: _displayNameController.text.trim(),
+      );
     }
   }
 
@@ -40,10 +40,14 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
+          if (state is AuthAuthenticated) {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+
           if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         child: SafeArea(
@@ -58,9 +62,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     const SizedBox(height: 32),
                     Text(
                       'Crear cuenta',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 32),
                     TextFormField(
@@ -112,7 +115,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                 : Icons.visibility_off_outlined,
                           ),
                           onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
                           },
                         ),
                       ),
@@ -142,7 +147,9 @@ class _RegisterPageState extends State<RegisterPage> {
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Text('Crear cuenta'),
                         );

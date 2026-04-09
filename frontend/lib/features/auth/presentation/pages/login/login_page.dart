@@ -26,9 +26,9 @@ class _LoginPageState extends State<LoginPage> {
   void _onLogin() {
     if (_formKey.currentState!.validate()) {
       context.read<AuthCubit>().login(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
     }
   }
 
@@ -41,10 +41,14 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
+          if (state is AuthAuthenticated) {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+
           if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         child: SafeArea(
@@ -59,9 +63,8 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 32),
                     Text(
                       'Iniciar sesión',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 32),
                     TextFormField(
@@ -97,7 +100,9 @@ class _LoginPageState extends State<LoginPage> {
                                 : Icons.visibility_off_outlined,
                           ),
                           onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
                           },
                         ),
                       ),
@@ -127,7 +132,9 @@ class _LoginPageState extends State<LoginPage> {
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Text('Ingresar'),
                         );

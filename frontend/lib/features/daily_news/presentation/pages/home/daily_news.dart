@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
+import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_bloc.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_state.dart';
 
@@ -17,10 +19,7 @@ class DailyNews extends StatelessWidget {
 
   Widget _buildAppbar(BuildContext context) {
     return AppBar(
-      title: const Text(
-        'Daily News',
-        style: TextStyle(color: Colors.black),
-      ),
+      title: const Text('Daily News', style: TextStyle(color: Colors.black)),
       actions: [
         GestureDetector(
           onTap: () => _onShowSavedArticlesViewTapped(context),
@@ -34,6 +33,9 @@ class DailyNews extends StatelessWidget {
   }
 
   Widget _buildDrawer(BuildContext context) {
+    final authState = context.watch<AuthCubit>().state;
+    final isAuthenticated = authState is AuthAuthenticated;
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -52,10 +54,13 @@ class DailyNews extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.person),
-            title: const Text('Mi perfil'),
+            title: Text(isAuthenticated ? 'Mi perfil' : 'Iniciar sesión'),
             onTap: () {
               Navigator.pop(context);
-              // TODO: Navigator.pushNamed(context, '/UserProfile');
+              Navigator.pushNamed(
+                context,
+                isAuthenticated ? '/UserProfile' : '/Login',
+              );
             },
           ),
           ListTile(
@@ -84,11 +89,17 @@ class DailyNews extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Cerrar sesión'),
+            leading: Icon(
+              isAuthenticated ? Icons.logout : Icons.person_add_alt,
+            ),
+            title: Text(isAuthenticated ? 'Cerrar sesión' : 'Crear cuenta'),
             onTap: () {
               Navigator.pop(context);
-              // TODO: context.read<AuthCubit>().logout();
+              if (isAuthenticated) {
+                context.read<AuthCubit>().logout();
+              } else {
+                Navigator.pushNamed(context, '/Register');
+              }
             },
           ),
         ],
@@ -121,7 +132,10 @@ class DailyNews extends StatelessWidget {
     );
   }
 
-  Widget _buildArticlesPage(BuildContext context, List<ArticleEntity> articles) {
+  Widget _buildArticlesPage(
+    BuildContext context,
+    List<ArticleEntity> articles,
+  ) {
     return Scaffold(
       appBar: _buildAppbar(context),
       drawer: _buildDrawer(context),
