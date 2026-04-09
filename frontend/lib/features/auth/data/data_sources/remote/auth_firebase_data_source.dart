@@ -63,10 +63,12 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
   Future<UserModel> signInWithGoogle() async {
     final googleUser = await _googleSignIn.authenticate();
     final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
+    final idToken = googleAuth.idToken;
+    if (idToken == null) {
+      throw Exception('Google sign-in did not return an ID token');
+    }
+
+    final credential = GoogleAuthProvider.credential(idToken: idToken);
     final userCredential = await _firebaseAuth.signInWithCredential(credential);
     final user = userCredential.user!;
     await _ensureUserProfile(
