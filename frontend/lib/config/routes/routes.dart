@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
-import 'package:news_app_clean_architecture/core/widgets/route_placeholder_page.dart';
+import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_cubit.dart';
+import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_cubit.dart';
+import 'package:news_app_clean_architecture/features/articles/presentation/pages/create_edit_article_page.dart';
+import 'package:news_app_clean_architecture/features/articles/presentation/pages/my_notes_page.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/pages/login/login_page.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/pages/register/register_page.dart';
 import 'package:news_app_clean_architecture/features/user_profile/presentation/pages/user_profile_page.dart';
+import 'package:news_app_clean_architecture/injection_container.dart';
 
 import '../../features/daily_news/domain/entities/article.dart';
 import '../../features/daily_news/presentation/pages/article_detail/article_detail.dart';
@@ -38,20 +43,19 @@ class AppRoutes {
         return _materialRoute(const UserProfilePage());
 
       case AppRouteNames.createArticle:
+        final args = settings.arguments as CreateEditArticlePageArgs?;
         return _materialRoute(
-          const RoutePlaceholderPage(
-            title: 'Crear noticia',
-            message: 'Esta sección todavía no está implementada.',
-            routeName: AppRouteNames.createArticle,
+          BlocProvider<CreateEditArticleCubit>(
+            create: (_) => sl<CreateEditArticleCubit>(),
+            child: CreateEditArticlePage(args: args),
           ),
         );
 
       case AppRouteNames.myNotes:
         return _materialRoute(
-          const RoutePlaceholderPage(
-            title: 'Mis notas',
-            message: 'Esta sección todavía no está implementada.',
-            routeName: AppRouteNames.myNotes,
+          BlocProvider<MyNotesCubit>(
+            create: (_) => sl<MyNotesCubit>(),
+            child: const MyNotesPage(),
           ),
         );
 

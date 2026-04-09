@@ -9,9 +9,5 @@ class AppRouteNames {
   static const myNotes = '/MyNotes';
   static const myFavorites = '/MyFavorites';
 
-  static const placeholderProtectedRoutes = {
-    createArticle,
-    myNotes,
-    myFavorites,
-  };
+  static const placeholderProtectedRoutes = {myNotes, myFavorites};
 }

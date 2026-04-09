@@ -13,6 +13,18 @@ import 'package:news_app_clean_architecture/features/auth/domain/usecases/logout
 import 'package:news_app_clean_architecture/features/auth/domain/usecases/register_usecase.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/usecases/sign_in_with_google_usecase.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
+import 'package:news_app_clean_architecture/features/articles/data/data_sources/article_authoring_firestore_data_source.dart';
+import 'package:news_app_clean_architecture/features/articles/data/data_sources/article_authoring_storage_data_source.dart';
+import 'package:news_app_clean_architecture/features/articles/data/repository/article_authoring_repository_impl.dart';
+import 'package:news_app_clean_architecture/features/articles/domain/repository/article_authoring_repository.dart';
+import 'package:news_app_clean_architecture/features/articles/domain/usecases/get_article_by_id_usecase.dart';
+import 'package:news_app_clean_architecture/features/articles/domain/usecases/get_my_articles_usecase.dart';
+import 'package:news_app_clean_architecture/features/articles/domain/usecases/publish_article_usecase.dart';
+import 'package:news_app_clean_architecture/features/articles/domain/usecases/save_article_draft_usecase.dart';
+import 'package:news_app_clean_architecture/features/articles/domain/usecases/update_article_active_state_usecase.dart';
+import 'package:news_app_clean_architecture/features/articles/domain/usecases/upload_article_image_usecase.dart';
+import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_cubit.dart';
+import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_cubit.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/article_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/news_api_service.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/repository/article_repository_impl.dart';
@@ -57,6 +69,12 @@ Future<void> initializeDependencies() async {
   sl.registerLazySingleton<ArticleFirestoreDataSource>(
     () => ArticleFirestoreDataSourceImpl(sl()),
   );
+  sl.registerLazySingleton<ArticleAuthoringFirestoreDataSource>(
+    () => ArticleAuthoringFirestoreDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<ArticleAuthoringStorageDataSource>(
+    () => ArticleAuthoringStorageDataSourceImpl(sl()),
+  );
   sl.registerLazySingleton<AuthFirebaseDataSource>(
     () => AuthFirebaseDataSourceImpl(sl(), sl(), sl()),
   );
@@ -68,6 +86,9 @@ Future<void> initializeDependencies() async {
   );
 
   sl.registerSingleton<ArticleRepository>(ArticleRepositoryImpl(sl(), sl()));
+  sl.registerLazySingleton<ArticleAuthoringRepository>(
+    () => ArticleAuthoringRepositoryImpl(sl(), sl()),
+  );
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(sl()));
   sl.registerLazySingleton<UserProfileRepository>(
     () => UserProfileRepositoryImpl(sl(), sl()),
@@ -81,6 +102,24 @@ Future<void> initializeDependencies() async {
   sl.registerSingleton<SaveArticleUseCase>(SaveArticleUseCase(sl()));
 
   sl.registerSingleton<RemoveArticleUseCase>(RemoveArticleUseCase(sl()));
+  sl.registerLazySingleton<SaveArticleDraftUseCase>(
+    () => SaveArticleDraftUseCase(sl()),
+  );
+  sl.registerLazySingleton<PublishArticleUseCase>(
+    () => PublishArticleUseCase(sl()),
+  );
+  sl.registerLazySingleton<UploadArticleImageUseCase>(
+    () => UploadArticleImageUseCase(sl()),
+  );
+  sl.registerLazySingleton<GetArticleByIdUseCase>(
+    () => GetArticleByIdUseCase(sl()),
+  );
+  sl.registerLazySingleton<GetMyArticlesUseCase>(
+    () => GetMyArticlesUseCase(sl()),
+  );
+  sl.registerLazySingleton<UpdateArticleActiveStateUseCase>(
+    () => UpdateArticleActiveStateUseCase(sl()),
+  );
   sl.registerLazySingleton<LoginUseCase>(() => LoginUseCase(sl()));
   sl.registerLazySingleton<RegisterUseCase>(() => RegisterUseCase(sl()));
   sl.registerLazySingleton<SignInWithGoogleUseCase>(
@@ -112,6 +151,24 @@ Future<void> initializeDependencies() async {
       getUserProfile: sl(),
       updateUserProfile: sl(),
       uploadPhoto: sl(),
+    ),
+  );
+  sl.registerFactory<CreateEditArticleCubit>(
+    () => CreateEditArticleCubit(
+      saveArticleDraft: sl(),
+      publishArticle: sl(),
+      uploadArticleImage: sl(),
+      getArticleById: sl(),
+      getCurrentUser: sl(),
+      getUserProfile: sl(),
+    ),
+  );
+  sl.registerFactory<MyNotesCubit>(
+    () => MyNotesCubit(
+      getCurrentUser: sl(),
+      getMyArticles: sl(),
+      publishArticle: sl(),
+      updateArticleActiveState: sl(),
     ),
   );
 }
