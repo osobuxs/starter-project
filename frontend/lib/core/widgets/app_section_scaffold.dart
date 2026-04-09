@@ -34,6 +34,7 @@ class AppSectionScaffold extends StatelessWidget {
         actions: actions,
       ),
       drawer: _AppSectionDrawer(
+        navigationContext: context,
         currentRouteName: currentRouteName,
         drawerVariant: drawerVariant,
         redirectRouteName: redirectRouteName,
@@ -45,11 +46,13 @@ class AppSectionScaffold extends StatelessWidget {
 }
 
 class _AppSectionDrawer extends StatelessWidget {
+  final BuildContext navigationContext;
   final String currentRouteName;
   final AppSectionDrawerVariant drawerVariant;
   final String? redirectRouteName;
 
   const _AppSectionDrawer({
+    required this.navigationContext,
     required this.currentRouteName,
     required this.drawerVariant,
     required this.redirectRouteName,
@@ -177,7 +180,7 @@ class _AppSectionDrawer extends StatelessWidget {
     Navigator.of(context).pop();
 
     final shouldContinue = await showDialog<bool>(
-      context: context,
+      context: navigationContext,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Necesitás iniciar sesión'),
@@ -198,7 +201,7 @@ class _AppSectionDrawer extends StatelessWidget {
       },
     );
 
-    if (shouldContinue != true || !context.mounted) {
+    if (shouldContinue != true || !navigationContext.mounted) {
       return;
     }
 
@@ -219,7 +222,7 @@ class _AppSectionDrawer extends StatelessWidget {
     Navigator.of(context).pop();
 
     final shouldLogout = await showDialog<bool>(
-      context: context,
+      context: navigationContext,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Cerrar sesión'),
@@ -238,12 +241,12 @@ class _AppSectionDrawer extends StatelessWidget {
       },
     );
 
-    if (shouldLogout != true || !context.mounted) {
+    if (shouldLogout != true || !navigationContext.mounted) {
       return;
     }
 
-    Navigator.of(context).popUntil((route) => route.isFirst);
-    context.read<AuthCubit>().logout();
+    Navigator.of(navigationContext).popUntil((route) => route.isFirst);
+    navigationContext.read<AuthCubit>().logout();
   }
 
   void _navigateToRoute(
@@ -263,12 +266,12 @@ class _AppSectionDrawer extends StatelessWidget {
 
     if (replaceCurrent) {
       Navigator.of(
-        context,
+        navigationContext,
       ).pushReplacementNamed(routeName, arguments: arguments);
       return;
     }
 
-    Navigator.of(context).pushNamed(routeName, arguments: arguments);
+    Navigator.of(navigationContext).pushNamed(routeName, arguments: arguments);
   }
 }
 
