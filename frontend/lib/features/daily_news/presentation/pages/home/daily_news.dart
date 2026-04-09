@@ -12,10 +12,10 @@ class DailyNews extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _buildPage();
+    return _buildPage(context);
   }
 
-  _buildAppbar(BuildContext context) {
+  Widget _buildAppbar(BuildContext context) {
     return AppBar(
       title: const Text(
         'Daily News',
@@ -33,18 +33,85 @@ class DailyNews extends StatelessWidget {
     );
   }
 
-  _buildPage() {
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(color: Theme.of(context).primaryColor),
+            child: const Text(
+              'Menu',
+              style: TextStyle(color: Colors.white, fontSize: 24),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home),
+            title: const Text('Dashboard'),
+            onTap: () => Navigator.pop(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text('Mi perfil'),
+            onTap: () {
+              Navigator.pop(context);
+              // TODO: Navigator.pushNamed(context, '/UserProfile');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.add_circle_outline),
+            title: const Text('Crear noticia'),
+            onTap: () {
+              Navigator.pop(context);
+              // TODO: Navigator.pushNamed(context, '/CreateArticle');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.article_outlined),
+            title: const Text('Mis notas'),
+            onTap: () {
+              Navigator.pop(context);
+              // TODO: Navigator.pushNamed(context, '/MyNotes');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.favorite_outline),
+            title: const Text('Mis favoritos'),
+            onTap: () {
+              Navigator.pop(context);
+              // TODO: Navigator.pushNamed(context, '/MyFavorites');
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Cerrar sesión'),
+            onTap: () {
+              Navigator.pop(context);
+              // TODO: context.read<AuthCubit>().logout();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPage(BuildContext context) {
     return BlocBuilder<RemoteArticlesBloc, RemoteArticlesState>(
       builder: (context, state) {
         if (state is RemoteArticlesLoading) {
           return Scaffold(
-              appBar: _buildAppbar(context),
-              body: const Center(child: CupertinoActivityIndicator()));
+            appBar: _buildAppbar(context),
+            drawer: _buildDrawer(context),
+            body: const Center(child: CupertinoActivityIndicator()),
+          );
         }
         if (state is RemoteArticlesError) {
           return Scaffold(
-              appBar: _buildAppbar(context),
-              body: const Center(child: Icon(Icons.refresh)));
+            appBar: _buildAppbar(context),
+            drawer: _buildDrawer(context),
+            body: const Center(child: Icon(Icons.refresh)),
+          );
         }
         if (state is RemoteArticlesDone) {
           return _buildArticlesPage(context, state.articles!);
@@ -54,24 +121,20 @@ class DailyNews extends StatelessWidget {
     );
   }
 
-  Widget _buildArticlesPage(
-      BuildContext context, List<ArticleEntity> articles) {
-    List<Widget> articleWidgets = [];
-    for (var article in articles) {
-      articleWidgets.add(ArticleWidget(
-        article: article,
-        onArticlePressed: (article) => _onArticlePressed(context, article),
-      ));
-    }
-
+  Widget _buildArticlesPage(BuildContext context, List<ArticleEntity> articles) {
     return Scaffold(
       appBar: _buildAppbar(context),
-      body: ListView(
-        children: articleWidgets,
+      drawer: _buildDrawer(context),
+      body: ListView.builder(
+        itemCount: articles.length,
+        itemBuilder: (_, index) => ArticleWidget(
+          article: articles[index],
+          onArticlePressed: (article) => _onArticlePressed(context, article),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: REPLACE ROUTE WITH YOUR "ADD ARTICLE" PAGE
+          // TODO: check auth, then Navigator.pushNamed(context, '/CreateArticle');
         },
         child: const Icon(Icons.add),
       ),
