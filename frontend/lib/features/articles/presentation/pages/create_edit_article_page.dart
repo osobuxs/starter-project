@@ -153,7 +153,13 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
             ),
           ),
           const SizedBox(height: 20),
-          _ArticleImagePicker(state: state, onPickImage: _onPickImage),
+          _ArticleImagePicker(
+            state: state,
+            onPickImage: _onPickImage,
+            onRemoveImage: context
+                .read<CreateEditArticleCubit>()
+                .removeSelectedImage,
+          ),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -253,8 +259,17 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
 class _ArticleImagePicker extends StatelessWidget {
   final CreateEditArticleState state;
   final Future<void> Function() onPickImage;
+  final VoidCallback onRemoveImage;
 
-  const _ArticleImagePicker({required this.state, required this.onPickImage});
+  const _ArticleImagePicker({
+    required this.state,
+    required this.onPickImage,
+    required this.onRemoveImage,
+  });
+
+  bool get _hasImagePreview =>
+      (state.localImagePath?.isNotEmpty ?? false) ||
+      (state.imageUrl?.isNotEmpty ?? false);
 
   @override
   Widget build(BuildContext context) {
@@ -270,6 +285,17 @@ class _ArticleImagePicker extends StatelessWidget {
                 : 'Seleccionar imagen',
           ),
         ),
+        if (_hasImagePreview) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: state.isUploadingImage ? null : onRemoveImage,
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Quitar imagen'),
+            ),
+          ),
+        ],
         if (state.imageError != null) ...[
           const SizedBox(height: 8),
           Text(

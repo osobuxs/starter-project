@@ -222,6 +222,23 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
     }
   }
 
+  void removeSelectedImage() {
+    emit(
+      state.copyWith(
+        clearImageUrl: true,
+        clearLocalImagePath: true,
+        clearImageError: true,
+        clearErrorMessage: true,
+        clearSuccessMessage: true,
+        status: CreateEditArticleStatus.ready,
+        hasUnsavedChanges: _resolveUnsavedChanges(
+          imageUrl: '',
+          localImagePath: '',
+        ),
+      ),
+    );
+  }
+
   Future<void> saveDraft() async {
     final validation = _validateDraft();
     if (!validation.isValid) {
