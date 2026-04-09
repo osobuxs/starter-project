@@ -44,6 +44,9 @@ dependencies:
   # Media
   image_picker: ^1.0.7
 
+  # Auth
+  google_sign_in: ^6.2.1
+
 
   #Hooks
   flutter_hooks: ^0.18.3
