@@ -59,6 +59,40 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+  void _retryLoadProfile() {
+    final authState = context.read<AuthCubit>().state;
+    if (authState is! AuthAuthenticated) {
+      return;
+    }
+
+    context.read<UserProfileCubit>().loadProfile(authState.user.id);
+  }
+
+  Future<void> _showProfileErrorDialog(String message) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('No pudimos cargar tu perfil'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cerrar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _retryLoadProfile();
+              },
+              child: const Text('Reintentar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _onSave() {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -90,9 +124,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           }
 
           if (state is UserProfileError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            _showProfileErrorDialog(state.message);
           }
         },
         builder: (context, state) {
@@ -110,10 +142,32 @@ class _UserProfilePageState extends State<UserProfilePage> {
               ? state.profile
               : state is UserProfilePhotoUploading
               ? state.profile
+              : state is UserProfileError
+              ? state.profile
               : null;
 
           if (currentProfile == null) {
-            return const Center(child: Text('No se pudo cargar el perfil.'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No se pudo cargar el perfil.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _retryLoadProfile,
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           final isBusy =

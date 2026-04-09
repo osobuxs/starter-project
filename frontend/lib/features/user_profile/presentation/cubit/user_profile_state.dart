@@ -25,11 +25,12 @@ class UserProfileNotFound extends UserProfileState {}
 
 class UserProfileError extends UserProfileState {
   final String message;
+  final UserProfileEntity? profile;
 
-  const UserProfileError(this.message);
+  const UserProfileError(this.message, {this.profile});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, profile];
 }
 
 class UserProfileUpdating extends UserProfileState {

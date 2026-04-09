@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
@@ -9,6 +11,8 @@ import 'package:news_app_clean_architecture/features/auth/domain/usecases/sign_i
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
+  static const Duration _authTimeout = Duration(seconds: 15);
+
   final LoginUseCase _loginUseCase;
   final RegisterUseCase _registerUseCase;
   final SignInWithGoogleUseCase _signInWithGoogleUseCase;
@@ -25,13 +29,21 @@ class AuthCubit extends Cubit<AuthState> {
 
   Future<void> login({required String email, required String password}) async {
     emit(const AuthLoading());
-    final result = await _loginUseCase(
-      params: LoginParams(email: email, password: password),
-    );
-    if (result is DataSuccess) {
-      emit(AuthAuthenticated(result.data!));
-    } else {
-      emit(AuthError(_mapFirebaseError(result.error)));
+    try {
+      final result = await _loginUseCase(
+        params: LoginParams(email: email, password: password),
+      ).timeout(_authTimeout);
+      if (result is DataSuccess) {
+        emit(AuthAuthenticated(result.data!));
+      } else {
+        emit(AuthError(_mapFirebaseError(result.error)));
+      }
+    } on TimeoutException {
+      emit(
+        const AuthError(
+          'El inicio de sesión tardó demasiado. Verificá tu conexión e intentá de nuevo.',
+        ),
+      );
     }
   }
 
@@ -41,37 +53,61 @@ class AuthCubit extends Cubit<AuthState> {
     required String displayName,
   }) async {
     emit(const AuthLoading());
-    final result = await _registerUseCase(
-      params: RegisterParams(
-        email: email,
-        password: password,
-        displayName: displayName,
-      ),
-    );
-    if (result is DataSuccess) {
-      emit(AuthAuthenticated(result.data!));
-    } else {
-      emit(AuthError(_mapFirebaseError(result.error)));
+    try {
+      final result = await _registerUseCase(
+        params: RegisterParams(
+          email: email,
+          password: password,
+          displayName: displayName,
+        ),
+      ).timeout(_authTimeout);
+      if (result is DataSuccess) {
+        emit(AuthAuthenticated(result.data!));
+      } else {
+        emit(AuthError(_mapFirebaseError(result.error)));
+      }
+    } on TimeoutException {
+      emit(
+        const AuthError(
+          'La creación de la cuenta tardó demasiado. Intentá nuevamente en unos segundos.',
+        ),
+      );
     }
   }
 
   Future<void> signInWithGoogle() async {
     emit(const AuthLoading());
-    final result = await _signInWithGoogleUseCase();
-    if (result is DataSuccess) {
-      emit(AuthAuthenticated(result.data!));
-    } else {
-      emit(AuthError(_mapFirebaseError(result.error)));
+    try {
+      final result = await _signInWithGoogleUseCase().timeout(_authTimeout);
+      if (result is DataSuccess) {
+        emit(AuthAuthenticated(result.data!));
+      } else {
+        emit(AuthError(_mapFirebaseError(result.error)));
+      }
+    } on TimeoutException {
+      emit(
+        const AuthError(
+          'Google tardó demasiado en responder. Intentá nuevamente.',
+        ),
+      );
     }
   }
 
   Future<void> logout() async {
     emit(const AuthLoading());
-    final result = await _logoutUseCase();
-    if (result is DataSuccess) {
-      emit(const AuthUnauthenticated());
-    } else {
-      emit(AuthError(_mapFirebaseError(result.error)));
+    try {
+      final result = await _logoutUseCase().timeout(_authTimeout);
+      if (result is DataSuccess) {
+        emit(const AuthUnauthenticated());
+      } else {
+        emit(AuthError(_mapFirebaseError(result.error)));
+      }
+    } on TimeoutException {
+      emit(
+        const AuthError(
+          'No se pudo cerrar la sesión a tiempo. Intentá nuevamente.',
+        ),
+      );
     }
   }
 

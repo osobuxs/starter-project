@@ -38,19 +38,41 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  Future<void> _showAuthErrorDialog(String message) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('No pudimos continuar'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Entendido'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            completeAuthRedirect(context, widget.redirectRouteName);
+            try {
+              completeAuthRedirect(context, widget.redirectRouteName);
+            } catch (_) {
+              _showAuthErrorDialog(
+                'La cuenta se creó, pero no pudimos abrir la pantalla solicitada. Intentá nuevamente.',
+              );
+            }
           }
 
           if (state is AuthError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            _showAuthErrorDialog(state.message);
           }
         },
         child: SafeArea(
