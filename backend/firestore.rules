@@ -2,9 +2,38 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isPublishedAndActive(data) {
+      return data.isActive == true && data.isPublished == true;
+    }
+
+    function isArticleOwner(data) {
+      return isSignedIn() && data.authorId == request.auth.uid;
+    }
+
+    function isValidArticleWrite() {
+      return request.resource.data.authorId == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.content is string
+        && request.resource.data.category is string
+        && request.resource.data.isPublished is bool
+        && request.resource.data.isActive is bool
+        && request.resource.data.createdAt != null
+        && request.resource.data.updatedAt != null;
+    }
+
     match /articles/{articleId} {
-      allow get, list: if resource.data.isActive == true && resource.data.isPublished == true;
-      allow create, update, delete: if false;
+      allow get: if isPublishedAndActive(resource.data) || isArticleOwner(resource.data);
+      allow list: if isPublishedAndActive(resource.data) || isArticleOwner(resource.data);
+      allow create: if isSignedIn() && isValidArticleWrite();
+      allow update: if isArticleOwner(resource.data)
+        && isValidArticleWrite()
+        && request.resource.data.authorId == resource.data.authorId
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
     }
 
     match /users/{userId} {

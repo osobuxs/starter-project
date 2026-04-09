@@ -2,6 +2,16 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    //TODO: WRITE ANY NECESSARY STORAGE RULES HERE
+    function isSignedIn() {
+      return request.auth != null;
     }
+
+    match /media/users/{uid}/{allPaths=**} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /articles/{authorId}/{allPaths=**} {
+      allow read, write: if isSignedIn() && request.auth.uid == authorId;
+    }
+  }
 }
