@@ -140,10 +140,7 @@ class DailyNews extends StatelessWidget {
     return const Center(
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 24),
-        child: Text(
-          'Todavía no hay notas cargadas.',
-          textAlign: TextAlign.center,
-        ),
+        child: Text('No existen notas.', textAlign: TextAlign.center),
       ),
     );
   }
