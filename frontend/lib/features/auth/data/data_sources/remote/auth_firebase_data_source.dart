@@ -61,8 +61,7 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
 
   @override
   Future<UserModel> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) throw Exception('Google sign-in aborted');
+    final googleUser = await _googleSignIn.authenticate();
     final googleAuth = await googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
@@ -80,7 +79,7 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
 
   @override
   Future<void> logout() async {
-    await Future.wait([_firebaseAuth.signOut(), _googleSignIn.signOut()]);
+    await Future.wait([_firebaseAuth.signOut(), _googleSignIn.disconnect()]);
   }
 
   @override

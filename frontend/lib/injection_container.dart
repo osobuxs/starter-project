@@ -40,10 +40,13 @@ Future<void> initializeDependencies() async {
       .build();
   sl.registerSingleton<AppDatabase>(database);
 
+  final googleSignIn = GoogleSignIn.instance;
+  await googleSignIn.initialize();
+
   sl.registerLazySingleton<FirebaseAuth>(() => FirebaseAuth.instance);
   sl.registerLazySingleton<FirebaseFirestore>(() => FirebaseFirestore.instance);
   sl.registerLazySingleton<FirebaseStorage>(() => FirebaseStorage.instance);
-  sl.registerLazySingleton<GoogleSignIn>(() => GoogleSignIn());
+  sl.registerLazySingleton<GoogleSignIn>(() => googleSignIn);
 
   // Dio
   sl.registerSingleton<Dio>(Dio());

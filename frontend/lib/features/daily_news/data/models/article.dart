@@ -14,15 +14,15 @@ class ArticleModel extends ArticleEntity {
     String? publishedAt,
     String? content,
   }) : super(
-          id: id,
-          author: author,
-          title: title,
-          description: description,
-          url: url,
-          urlToImage: urlToImage,
-          publishedAt: publishedAt,
-          content: content,
-        );
+         id: id,
+         author: author,
+         title: title,
+         description: description,
+         url: url,
+         urlToImage: urlToImage,
+         publishedAt: publishedAt,
+         content: content,
+       );
 
   factory ArticleModel.fromRawData(Map<String, dynamic> map) {
     return ArticleModel(
@@ -36,6 +36,10 @@ class ArticleModel extends ArticleEntity {
       publishedAt: map['publishedAt'] ?? "",
       content: map['content'] ?? "",
     );
+  }
+
+  factory ArticleModel.fromJson(Map<String, dynamic> map) {
+    return ArticleModel.fromRawData(map);
   }
 
   factory ArticleModel.fromEntity(ArticleEntity entity) {

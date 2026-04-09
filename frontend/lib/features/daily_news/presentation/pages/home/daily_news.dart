@@ -17,7 +17,7 @@ class DailyNews extends StatelessWidget {
     return _buildPage(context);
   }
 
-  Widget _buildAppbar(BuildContext context) {
+  PreferredSizeWidget _buildAppbar(BuildContext context) {
     return AppBar(
       title: const Text('Daily News', style: TextStyle(color: Colors.black)),
       actions: [
