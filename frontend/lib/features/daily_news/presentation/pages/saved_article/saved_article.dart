@@ -12,15 +12,22 @@ import '../../bloc/article/local/local_article_state.dart';
 import '../../widgets/article_tile.dart';
 
 class SavedArticles extends HookWidget {
-  const SavedArticles({Key? key}) : super(key: key);
+  final String title;
+  final String currentRouteName;
+
+  const SavedArticles({
+    Key? key,
+    this.title = 'Mis favoritos',
+    this.currentRouteName = AppRouteNames.myFavorites,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => sl<LocalArticleBloc>()..add(const GetSavedArticles()),
       child: AppSectionScaffold(
-        title: 'Saved Articles',
-        currentRouteName: AppRouteNames.savedArticles,
+        title: title,
+        currentRouteName: currentRouteName,
         body: _buildBody(),
       ),
     );
@@ -42,7 +49,10 @@ class SavedArticles extends HookWidget {
   Widget _buildArticlesList(List<ArticleEntity> articles) {
     if (articles.isEmpty) {
       return const Center(
-        child: Text('NO SAVED ARTICLES', style: TextStyle(color: Colors.black)),
+        child: Text(
+          'Todavía no guardaste artículos.',
+          style: TextStyle(color: Colors.black),
+        ),
       );
     }
 

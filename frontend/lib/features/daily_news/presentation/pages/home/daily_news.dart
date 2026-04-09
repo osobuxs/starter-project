@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
+import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
+import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_bloc.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_event.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_state.dart';
@@ -163,7 +165,43 @@ class DailyNews extends StatelessWidget {
   }
 
   void _onShowSavedArticlesViewTapped(BuildContext context) {
-    Navigator.pushNamed(context, AppRouteNames.savedArticles);
+    final authState = context.read<AuthCubit>().state;
+    final isAuthenticated = authState is AuthAuthenticated;
+
+    if (isAuthenticated) {
+      Navigator.pushNamed(context, AppRouteNames.myFavorites);
+      return;
+    }
+
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Necesitás iniciar sesión'),
+          content: const Text(
+            'Para abrir "Mis favoritos" primero necesitás iniciar sesión. Después te llevamos automáticamente.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Ir al login'),
+            ),
+          ],
+        );
+      },
+    ).then((shouldContinue) {
+      if (shouldContinue != true || !context.mounted) {
+        return;
+      }
+
+      Navigator.of(
+        context,
+      ).pushNamed(AppRouteNames.login, arguments: AppRouteNames.myFavorites);
+    });
   }
 
   Future<void> _onPickDate(BuildContext context, DateTime? selectedDate) async {

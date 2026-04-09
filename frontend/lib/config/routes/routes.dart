@@ -56,13 +56,7 @@ class AppRoutes {
         );
 
       case AppRouteNames.myFavorites:
-        return _materialRoute(
-          const RoutePlaceholderPage(
-            title: 'Mis favoritos',
-            message: 'Esta sección todavía no está implementada.',
-            routeName: AppRouteNames.myFavorites,
-          ),
-        );
+        return _materialRoute(const SavedArticles());
 
       default:
         return _materialRoute(const DailyNews());
