@@ -112,11 +112,7 @@ service cloud.firestore {
         ])
         && request.resource.data.articleId == articleId
         && request.resource.data.favoritedAt != null
-        && request.resource.data.favoritesVersion is int
-        && request.resource.data.favoritesVersion
-          == (targetArticle(articleId).favoritesVersion is int
-            ? targetArticle(articleId).favoritesVersion
-            : 0);
+        && request.resource.data.favoritesVersion is int;
     }
 
     match /articles/{articleId} {
