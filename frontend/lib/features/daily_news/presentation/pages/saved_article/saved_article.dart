@@ -85,7 +85,36 @@ class SavedArticles extends StatelessWidget {
     );
   }
 
-  void _onRemoveArticle(BuildContext context, ArticleEntity article) {
+  Future<void> _onRemoveArticle(
+    BuildContext context,
+    ArticleEntity article,
+  ) async {
+    final shouldRemove = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Quitar de favoritos'),
+          content: Text(
+            '¿Querés quitar "${article.title?.trim().isNotEmpty == true ? article.title!.trim() : 'esta nota'}" de tus favoritos?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Quitar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldRemove != true || !context.mounted) {
+      return;
+    }
+
     BlocProvider.of<LocalArticleBloc>(context).add(RemoveArticle(article));
   }
 

@@ -77,9 +77,17 @@ class DailyNews extends StatelessWidget {
 
                       return false;
                     },
-                    child: ListView.builder(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                       itemCount:
                           articles.length + (state.isLoadingMore ? 1 : 0),
+                      separatorBuilder: (_, index) {
+                        if (index >= articles.length - 1) {
+                          return const SizedBox(height: 0);
+                        }
+
+                        return const SizedBox(height: 12);
+                      },
                       itemBuilder: (_, index) {
                         if (index >= articles.length) {
                           return const Padding(
@@ -90,6 +98,7 @@ class DailyNews extends StatelessWidget {
 
                         return ArticleWidget(
                           article: articles[index],
+                          showCardContainer: true,
                           onArticlePressed: (article) =>
                               _onArticlePressed(context, article),
                         );

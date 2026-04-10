@@ -22,23 +22,24 @@ class ArticleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    final content = InkWell(
       onTap: _onTap,
-      child: Container(
-        padding: const EdgeInsetsDirectional.only(
-          start: 14,
-          end: 14,
-          bottom: 7,
-          top: 7,
-        ),
-        height: MediaQuery.of(context).size.width / 2.2,
-        child: Row(
-          children: [
-            _buildImage(context),
-            _buildTitleAndDescription(),
-            _buildRemovableArea(),
-          ],
+      child: SizedBox(
+        height: 164,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildImage(context),
+              const SizedBox(width: 12),
+              _buildTitleAndDescription(context),
+              if (isRemovable == true) ...[
+                const SizedBox(width: 8),
+                _buildRemovableArea(),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -51,106 +52,113 @@ class ArticleWidget extends StatelessWidget {
   }
 
   Widget _buildImage(BuildContext context) {
+    final imageUrl = article?.urlToImage?.trim();
+
+    Widget fallback(IconData icon) => ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 116,
+        height: double.infinity,
+        color: Colors.black.withOpacity(0.06),
+        child: Icon(icon, color: Colors.black45),
+      ),
+    );
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return fallback(Icons.image_outlined);
+    }
+
     return CachedNetworkImage(
-      imageUrl: article!.urlToImage!,
-      imageBuilder: (context, imageProvider) => Padding(
-        padding: const EdgeInsetsDirectional.only(end: 14),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20.0),
-          child: Container(
-            width: MediaQuery.of(context).size.width / 3,
-            height: double.maxFinite,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.08),
-              image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
-            ),
+      imageUrl: imageUrl,
+      imageBuilder: (context, imageProvider) => ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 116,
+          height: double.maxFinite,
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.08),
+            image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
           ),
         ),
       ),
-      progressIndicatorBuilder: (context, url, downloadProgress) => Padding(
-        padding: const EdgeInsetsDirectional.only(end: 14),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20.0),
-          child: Container(
-            width: MediaQuery.of(context).size.width / 3,
-            height: double.maxFinite,
-            child: CupertinoActivityIndicator(),
-            decoration: BoxDecoration(color: Colors.black.withOpacity(0.08)),
-          ),
-        ),
-      ),
-      errorWidget: (context, url, error) => Padding(
-        padding: const EdgeInsetsDirectional.only(end: 14),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20.0),
-          child: Container(
-            width: MediaQuery.of(context).size.width / 3,
-            height: double.maxFinite,
-            child: Icon(Icons.error),
-            decoration: BoxDecoration(color: Colors.black.withOpacity(0.08)),
-          ),
-        ),
-      ),
+      progressIndicatorBuilder: (context, url, downloadProgress) =>
+          fallback(CupertinoIcons.photo),
+      errorWidget: (context, url, error) =>
+          fallback(Icons.broken_image_outlined),
     );
   }
 
-  Widget _buildTitleAndDescription() {
+  Widget _buildTitleAndDescription(BuildContext context) {
+    final preview = _resolvePreview();
+
     return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title
-            Text(
-              article!.title ?? '',
-              maxLines: 3,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            (article?.title?.trim().isNotEmpty == true)
+                ? article!.title!
+                : 'Sin título',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: 'Butler',
+              fontWeight: FontWeight.w900,
+              fontSize: 20,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Text(
+              preview,
+              maxLines: 4,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: 'Butler',
-                fontWeight: FontWeight.w900,
-                fontSize: 18,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                height: 1.45,
                 color: Colors.black87,
               ),
             ),
-
-            // Description
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(article!.description ?? '', maxLines: 2),
-              ),
-            ),
-
-            // Datetime
-            Row(
-              children: [
-                const Icon(Icons.timeline_outlined, size: 16),
-                const SizedBox(width: 4),
-                Text(
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.timeline_outlined, size: 16),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
                   _formatPublishedAt(article!),
                   style: const TextStyle(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildRemovableArea() {
-    if (isRemovable!) {
-      return GestureDetector(
-        onTap: _onRemove,
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8),
-          child: Icon(Icons.remove_circle_outline, color: Colors.red),
-        ),
-      );
+    return IconButton(
+      onPressed: _onRemove,
+      icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+      tooltip: 'Quitar de favoritos',
+    );
+  }
+
+  String _resolvePreview() {
+    final rawContent = article?.content?.trim();
+    if (rawContent != null && rawContent.isNotEmpty) {
+      return rawContent;
     }
-    return Container();
+
+    final rawDescription = article?.description?.trim();
+    if (rawDescription != null && rawDescription.isNotEmpty) {
+      return rawDescription;
+    }
+
+    return 'Sin contenido disponible.';
   }
 
   void _onTap() {
