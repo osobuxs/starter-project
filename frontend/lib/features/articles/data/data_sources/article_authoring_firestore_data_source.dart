@@ -72,16 +72,54 @@ class ArticleAuthoringFirestoreDataSourceImpl
   @override
   Future<ArticleAuthoringModel> updateArticleActiveState(
     ArticleAuthoringModel article,
-  ) {
-    return _persistArticle(article);
+  ) async {
+    final documentRef = _resolveArticleDocumentRef(article.firestoreId);
+    late final ArticleAuthoringModel persistedModel;
+
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(documentRef);
+      final currentData = snapshot.data();
+      if (!snapshot.exists || currentData == null) {
+        throw Exception('Article not found');
+      }
+
+      final currentFavoritesVersion = _resolveFavoritesVersion(
+        currentData['favoritesVersion'],
+      );
+      final currentIsActive = currentData['isActive'] as bool? ?? true;
+      final nextFavoritesVersion = !article.isActive && currentIsActive
+          ? currentFavoritesVersion + 1
+          : currentFavoritesVersion;
+
+      persistedModel = ArticleAuthoringModel(
+        firestoreId: documentRef.id,
+        author: article.author,
+        title: article.title,
+        subtitle: article.subtitle,
+        category: article.category,
+        content: article.content,
+        imageUrl: article.imageUrl,
+        isPublished: article.isPublished,
+        isActive: article.isActive,
+        createdAt: article.createdAt,
+        updatedAt: article.updatedAt,
+        publishedAt: article.publishedAt,
+      );
+
+      transaction.set(documentRef, {
+        ...persistedModel.toMap(),
+        'favoritesVersion': nextFavoritesVersion,
+      }, SetOptions(merge: true));
+    });
+
+    return persistedModel;
   }
 
   Future<ArticleAuthoringModel> _persistArticle(
     ArticleAuthoringModel article,
   ) async {
-    final documentRef = article.firestoreId == null
-        ? _firestore.collection(kArticlesCollection).doc()
-        : _firestore.collection(kArticlesCollection).doc(article.firestoreId);
+    final documentRef = _resolveArticleDocumentRef(article.firestoreId);
+    final favoritesVersion = await _readPersistedFavoritesVersion(documentRef);
 
     final persistedModel = ArticleAuthoringModel(
       firestoreId: documentRef.id,
@@ -98,8 +136,40 @@ class ArticleAuthoringFirestoreDataSourceImpl
       publishedAt: article.publishedAt,
     );
 
-    await documentRef.set(persistedModel.toMap(), SetOptions(merge: true));
+    await documentRef.set({
+      ...persistedModel.toMap(),
+      'favoritesVersion': favoritesVersion,
+    }, SetOptions(merge: true));
 
     return persistedModel;
+  }
+
+  DocumentReference<Map<String, dynamic>> _resolveArticleDocumentRef(
+    String? firestoreId,
+  ) {
+    if (firestoreId == null) {
+      return _firestore.collection(kArticlesCollection).doc();
+    }
+
+    return _firestore.collection(kArticlesCollection).doc(firestoreId);
+  }
+
+  Future<int> _readPersistedFavoritesVersion(
+    DocumentReference<Map<String, dynamic>> documentRef,
+  ) async {
+    final snapshot = await documentRef.get();
+    return _resolveFavoritesVersion(snapshot.data()?['favoritesVersion']);
+  }
+
+  int _resolveFavoritesVersion(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return 0;
   }
 }

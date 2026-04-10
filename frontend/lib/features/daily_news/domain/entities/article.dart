@@ -17,6 +17,7 @@ class ArticleEntity extends Equatable {
   final DateTime? updatedAt;
   final bool? isPublished;
   final bool? isActive;
+  final int? favoritesVersion;
 
   const ArticleEntity({
     this.id,
@@ -35,6 +36,7 @@ class ArticleEntity extends Equatable {
     this.updatedAt,
     this.isPublished,
     this.isActive,
+    this.favoritesVersion,
   });
 
   @override
@@ -56,6 +58,7 @@ class ArticleEntity extends Equatable {
       updatedAt,
       isPublished,
       isActive,
+      favoritesVersion,
     ];
   }
 }

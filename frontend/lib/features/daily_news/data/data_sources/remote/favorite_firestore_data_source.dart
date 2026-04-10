@@ -28,13 +28,22 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
         .orderBy('favoritedAt', descending: true)
         .get();
 
-    return snapshot.docs
-        .map(
-          (document) => ArticleModel.fromRawData(
-            _normalizeDocumentData(document.data()),
-            documentId: document.id,
-          ),
-        )
+    final lookupResults = await Future.wait(
+      snapshot.docs.map(_resolveFavoriteArticle),
+    );
+
+    final staleFavoriteIds = lookupResults
+        .where((result) => result.shouldDelete)
+        .map((result) => result.favoriteId)
+        .toList();
+
+    if (staleFavoriteIds.isNotEmpty) {
+      await _deleteFavoritesById(favoritesCollection, staleFavoriteIds);
+    }
+
+    return lookupResults
+        .map((result) => result.article)
+        .whereType<ArticleModel>()
         .toList();
   }
 
@@ -45,11 +54,15 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
     )!;
     final articleId = _resolveArticleId(article);
 
+    if (article.isActive != true || article.isPublished != true) {
+      throw Exception('Only active published articles can be favorited');
+    }
+
     await favoritesCollection.doc(articleId).set({
-      ...article.toRawData(),
       'articleId': articleId,
       'favoritedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+      'favoritesVersion': article.favoritesVersion ?? 0,
+    });
   }
 
   @override
@@ -107,5 +120,121 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
     }
 
     return normalized;
+  }
+
+  Future<_FavoriteArticleLookupResult> _resolveFavoriteArticle(
+    QueryDocumentSnapshot<Map<String, dynamic>> favoriteDocument,
+  ) async {
+    final favoriteData = favoriteDocument.data();
+    final articleId = _resolveFavoriteDocumentArticleId(
+      favoriteDocument.id,
+      favoriteData,
+    );
+
+    try {
+      final articleSnapshot = await _firestore
+          .collection(kArticlesCollection)
+          .doc(articleId)
+          .get();
+
+      final articleData = articleSnapshot.data();
+      if (!articleSnapshot.exists || articleData == null) {
+        return _FavoriteArticleLookupResult.delete(favoriteDocument.id);
+      }
+
+      final normalizedArticleData = _normalizeDocumentData(articleData);
+      final article = ArticleModel.fromRawData(
+        normalizedArticleData,
+        documentId: articleSnapshot.id,
+      );
+
+      final storedVersion = _toInt(favoriteData['favoritesVersion']) ?? 0;
+      final currentVersion = article.favoritesVersion ?? 0;
+
+      if (article.isActive != true ||
+          article.isPublished != true ||
+          storedVersion != currentVersion) {
+        return _FavoriteArticleLookupResult.delete(favoriteDocument.id);
+      }
+
+      return _FavoriteArticleLookupResult.keep(
+        favoriteId: favoriteDocument.id,
+        article: article,
+      );
+    } on FirebaseException catch (error) {
+      if (error.code == 'permission-denied') {
+        return _FavoriteArticleLookupResult.delete(favoriteDocument.id);
+      }
+
+      rethrow;
+    }
+  }
+
+  Future<void> _deleteFavoritesById(
+    CollectionReference<Map<String, dynamic>> favoritesCollection,
+    List<String> favoriteIds,
+  ) async {
+    final batch = _firestore.batch();
+
+    for (final favoriteId in favoriteIds) {
+      batch.delete(favoritesCollection.doc(favoriteId));
+    }
+
+    await batch.commit();
+  }
+
+  String _resolveFavoriteDocumentArticleId(
+    String fallbackId,
+    Map<String, dynamic> data,
+  ) {
+    final articleId = (data['articleId'] as String?)?.trim();
+    if (articleId != null && articleId.isNotEmpty) {
+      return articleId;
+    }
+
+    return fallbackId;
+  }
+
+  int? _toInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return null;
+  }
+}
+
+class _FavoriteArticleLookupResult {
+  final String favoriteId;
+  final ArticleModel? article;
+  final bool shouldDelete;
+
+  const _FavoriteArticleLookupResult._({
+    required this.favoriteId,
+    required this.article,
+    required this.shouldDelete,
+  });
+
+  factory _FavoriteArticleLookupResult.keep({
+    required String favoriteId,
+    required ArticleModel article,
+  }) {
+    return _FavoriteArticleLookupResult._(
+      favoriteId: favoriteId,
+      article: article,
+      shouldDelete: false,
+    );
+  }
+
+  factory _FavoriteArticleLookupResult.delete(String favoriteId) {
+    return _FavoriteArticleLookupResult._(
+      favoriteId: favoriteId,
+      article: null,
+      shouldDelete: true,
+    );
   }
 }

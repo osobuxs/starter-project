@@ -21,6 +21,7 @@ class ArticleModel extends ArticleEntity {
     DateTime? updatedAt,
     bool? isPublished,
     bool? isActive,
+    int? favoritesVersion,
   }) : super(
          id: id,
          firestoreId: firestoreId,
@@ -38,6 +39,7 @@ class ArticleModel extends ArticleEntity {
          updatedAt: updatedAt,
          isPublished: isPublished,
          isActive: isActive,
+         favoritesVersion: favoritesVersion,
        );
 
   factory ArticleModel.fromRawData(
@@ -69,6 +71,7 @@ class ArticleModel extends ArticleEntity {
       updatedAt: updatedAt,
       isPublished: map['isPublished'] as bool? ?? true,
       isActive: map['isActive'] as bool? ?? true,
+      favoritesVersion: _toInt(map['favoritesVersion']) ?? 0,
     );
   }
 
@@ -94,6 +97,7 @@ class ArticleModel extends ArticleEntity {
       updatedAt: entity.updatedAt,
       isPublished: entity.isPublished,
       isActive: entity.isActive,
+      favoritesVersion: entity.favoritesVersion,
     );
   }
 
@@ -115,6 +119,7 @@ class ArticleModel extends ArticleEntity {
       updatedAt: updatedAt,
       isPublished: isPublished,
       isActive: isActive,
+      favoritesVersion: favoritesVersion,
     );
   }
 
@@ -137,7 +142,20 @@ class ArticleModel extends ArticleEntity {
       'updatedAt': updatedAt,
       'isPublished': isPublished,
       'isActive': isActive,
+      'favoritesVersion': favoritesVersion,
     };
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return null;
   }
 
   static DateTime? _toDateTime(dynamic value) {
