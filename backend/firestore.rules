@@ -6,23 +6,117 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
     function isPublishedAndActive(data) {
-      return data.isActive == true && data.isPublished == true;
+      return data != null && data.isActive == true && data.isPublished == true;
     }
 
     function isArticleOwner(data) {
-      return isSignedIn() && data.authorId == request.auth.uid;
+      return data != null && isOwner(data.authorId);
     }
 
     function isValidArticleWrite() {
-      return request.resource.data.authorId == request.auth.uid
+      return request.resource.data.keys().hasOnly([
+          'authorId',
+          'authorName',
+          'authorEmail',
+          'authorPhotoUrl',
+          'title',
+          'subtitle',
+          'description',
+          'category',
+          'content',
+          'urlToImage',
+          'thumbnailUrl',
+          'isPublished',
+          'isActive',
+          'createdAt',
+          'updatedAt',
+          'publishedAt',
+          'favoritesVersion',
+        ])
+        && request.resource.data.authorId is string
+        && request.resource.data.authorName is string
+        && request.resource.data.authorEmail is string
+        && request.resource.data.authorId == request.auth.uid
         && request.resource.data.title is string
         && request.resource.data.content is string
         && request.resource.data.category is string
         && request.resource.data.isPublished is bool
         && request.resource.data.isActive is bool
+        && request.resource.data.favoritesVersion is int
         && request.resource.data.createdAt != null
-        && request.resource.data.updatedAt != null;
+        && request.resource.data.updatedAt != null
+        && (!('authorPhotoUrl' in request.resource.data)
+          || request.resource.data.authorPhotoUrl == null
+          || request.resource.data.authorPhotoUrl is string)
+        && (!('subtitle' in request.resource.data)
+          || request.resource.data.subtitle == null
+          || request.resource.data.subtitle is string)
+        && (!('description' in request.resource.data)
+          || request.resource.data.description == null
+          || request.resource.data.description is string)
+        && (!('urlToImage' in request.resource.data)
+          || request.resource.data.urlToImage == null
+          || request.resource.data.urlToImage is string)
+        && (!('thumbnailUrl' in request.resource.data)
+          || request.resource.data.thumbnailUrl == null
+          || request.resource.data.thumbnailUrl is string)
+        && (!('publishedAt' in request.resource.data)
+          || request.resource.data.publishedAt == null
+          || request.resource.data.publishedAt is timestamp);
+    }
+
+    function isValidUserProfileWrite(userId) {
+      return isOwner(userId)
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'email',
+          'age',
+          'photoUrl',
+          'createdAt',
+          'updatedAt',
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.email is string
+        && request.resource.data.createdAt != null
+        && request.resource.data.updatedAt != null
+        && (!('age' in request.resource.data)
+          || request.resource.data.age == null
+          || request.resource.data.age is int)
+        && (!('photoUrl' in request.resource.data)
+          || request.resource.data.photoUrl == null
+          || request.resource.data.photoUrl is string);
+    }
+
+    function articlePath(articleId) {
+      return /databases/$(database)/documents/articles/$(articleId);
+    }
+
+    function targetArticle(articleId) {
+      return get(articlePath(articleId)).data;
+    }
+
+    function favoriteTargetsActivePublishedArticle(articleId) {
+      return isPublishedAndActive(targetArticle(articleId));
+    }
+
+    function isValidFavoriteWrite(articleId) {
+      return request.resource.data.keys().hasOnly([
+          'articleId',
+          'favoritedAt',
+          'favoritesVersion',
+        ])
+        && request.resource.data.articleId == articleId
+        && request.resource.data.favoritedAt != null
+        && request.resource.data.favoritesVersion is int
+        && request.resource.data.favoritesVersion
+          == (targetArticle(articleId).favoritesVersion is int
+            ? targetArticle(articleId).favoritesVersion
+            : 0);
     }
 
     match /articles/{articleId} {
@@ -37,11 +131,15 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, create, update: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      allow create, update: if isValidUserProfileWrite(userId);
       allow delete: if false;
 
       match /favorites/{articleId} {
-        allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && favoriteTargetsActivePublishedArticle(articleId)
+          && isValidFavoriteWrite(articleId);
       }
     }
   }

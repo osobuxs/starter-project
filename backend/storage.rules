@@ -6,12 +6,25 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isImageUpload() {
+      return request.resource != null
+        && request.resource.contentType.matches('image/.*');
+    }
+
     match /media/users/{uid}/{allPaths=**} {
-      allow read, write: if isSignedIn() && request.auth.uid == uid;
+      allow read: if true;
+      allow create, update: if isOwner(uid) && isImageUpload();
+      allow delete: if isOwner(uid);
     }
 
     match /articles/{authorId}/{allPaths=**} {
-      allow read, write: if isSignedIn() && request.auth.uid == authorId;
+      allow read: if true;
+      allow create, update: if isOwner(authorId) && isImageUpload();
+      allow delete: if isOwner(authorId);
     }
   }
 }
