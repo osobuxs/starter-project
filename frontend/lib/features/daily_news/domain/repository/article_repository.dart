@@ -8,10 +8,10 @@ abstract class ArticleRepository {
     DateTime? dateFilter,
   });
 
-  // Database methods
-  Future<List<ArticleEntity>> getSavedArticles();
+  // Favorites methods
+  Future<DataState<List<ArticleEntity>>> getSavedArticles();
 
-  Future<void> saveArticle(ArticleEntity article);
+  Future<DataState<void>> saveArticle(ArticleEntity article);
 
-  Future<void> removeArticle(ArticleEntity article);
+  Future<DataState<void>> removeArticle(ArticleEntity article);
 }

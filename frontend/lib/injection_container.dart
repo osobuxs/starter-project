@@ -26,6 +26,7 @@ import 'package:news_app_clean_architecture/features/articles/domain/usecases/up
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_cubit.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/article_firestore_data_source.dart';
+import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/favorite_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/news_api_service.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/repository/article_repository_impl.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/repository/article_repository.dart';
@@ -68,6 +69,9 @@ Future<void> initializeDependencies() async {
   sl.registerSingleton<NewsApiService>(NewsApiService(sl()));
   sl.registerLazySingleton<ArticleFirestoreDataSource>(
     () => ArticleFirestoreDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<FavoriteFirestoreDataSource>(
+    () => FavoriteFirestoreDataSourceImpl(sl(), sl()),
   );
   sl.registerLazySingleton<ArticleAuthoringFirestoreDataSource>(
     () => ArticleAuthoringFirestoreDataSourceImpl(sl()),

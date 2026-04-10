@@ -118,6 +118,28 @@ class ArticleModel extends ArticleEntity {
     );
   }
 
+  Map<String, dynamic> toRawData() {
+    return {
+      'id': id,
+      'firestoreId': firestoreId,
+      'authorId': authorId,
+      'author': author,
+      'authorName': author,
+      'authorPhotoUrl': authorPhotoUrl,
+      'title': title,
+      'description': description,
+      'category': category,
+      'url': url,
+      'urlToImage': urlToImage,
+      'publishedAt': publishedAt,
+      'content': content,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'isPublished': isPublished,
+      'isActive': isActive,
+    };
+  }
+
   static DateTime? _toDateTime(dynamic value) {
     if (value is DateTime) {
       return value;
