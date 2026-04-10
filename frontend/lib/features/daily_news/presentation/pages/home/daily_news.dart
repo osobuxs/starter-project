@@ -100,6 +100,7 @@ class DailyNews extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'dashboard_create_article_fab',
         onPressed: () => _onCreateArticleTapped(context),
         child: const Icon(Icons.add),
       ),

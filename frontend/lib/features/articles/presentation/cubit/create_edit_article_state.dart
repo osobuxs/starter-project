@@ -47,12 +47,14 @@ class CreateEditArticleState extends Equatable {
       status != CreateEditArticleStatus.loading &&
       status != CreateEditArticleStatus.submitting &&
       !isPublished &&
+      hasUnsavedChanges &&
       title.trim().isNotEmpty &&
       !isUploadingImage;
 
   bool get canPublish =>
       status != CreateEditArticleStatus.loading &&
       status != CreateEditArticleStatus.submitting &&
+      hasUnsavedChanges &&
       title.trim().isNotEmpty &&
       content.trim().isNotEmpty &&
       imageUrl != null &&

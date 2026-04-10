@@ -119,7 +119,10 @@ class ArticleAuthoringFirestoreDataSourceImpl
     ArticleAuthoringModel article,
   ) async {
     final documentRef = _resolveArticleDocumentRef(article.firestoreId);
-    final favoritesVersion = await _readPersistedFavoritesVersion(documentRef);
+    final favoritesVersion = await _resolveFavoritesVersionForPersist(
+      article: article,
+      documentRef: documentRef,
+    );
 
     final persistedModel = ArticleAuthoringModel(
       firestoreId: documentRef.id,
@@ -159,6 +162,18 @@ class ArticleAuthoringFirestoreDataSourceImpl
   ) async {
     final snapshot = await documentRef.get();
     return _resolveFavoritesVersion(snapshot.data()?['favoritesVersion']);
+  }
+
+  Future<int> _resolveFavoritesVersionForPersist({
+    required ArticleAuthoringModel article,
+    required DocumentReference<Map<String, dynamic>> documentRef,
+  }) async {
+    final firestoreId = article.firestoreId?.trim();
+    if (firestoreId == null || firestoreId.isEmpty) {
+      return 0;
+    }
+
+    return _readPersistedFavoritesVersion(documentRef);
   }
 
   int _resolveFavoritesVersion(dynamic value) {
