@@ -61,10 +61,36 @@ class SavedArticles extends StatelessWidget {
 
   Widget _buildArticlesList(List<ArticleEntity> articles) {
     if (articles.isEmpty) {
-      return const Center(
-        child: Text(
-          'Todavía no tenés favoritos guardados. Cuando guardes una nota, la vas a ver acá.',
-          style: TextStyle(color: Colors.black),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.favorite_border,
+                    size: 48,
+                    color: Colors.grey.shade700,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Todavía no guardaste favoritos',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Cuando guardes una nota como favorita, la vas a ver acá.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade700, height: 1.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       );
     }
