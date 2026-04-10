@@ -1,14 +1,17 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:intl/intl.dart';
-import 'package:ionicons/ionicons.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
+
 import '../../../../../injection_container.dart';
 import '../../../domain/entities/article.dart';
 import '../../bloc/article/local/local_article_bloc.dart';
 import '../../bloc/article/local/local_article_event.dart';
+import '../../bloc/article/local/local_article_state.dart';
 
 class ArticleDetailsView extends HookWidget {
   final ArticleEntity? article;
@@ -17,98 +20,283 @@ class ArticleDetailsView extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasLoadedFavorites = useRef(false);
+
     return BlocProvider(
-      create: (_) => sl<LocalArticleBloc>(),
-      child: AppSectionScaffold(
-        title: 'Detalle de noticia',
-        currentRouteName: AppRouteNames.articleDetails,
-        body: _buildBody(),
-        floatingActionButton: _buildFloatingActionButton(),
+      create: (_) => sl<LocalArticleBloc>()..add(const GetSavedArticles()),
+      child: BlocListener<LocalArticleBloc, LocalArticlesState>(
+        listenWhen: (previous, current) => current is LocalArticlesDone,
+        listener: (context, state) {
+          if (state is! LocalArticlesDone) {
+            return;
+          }
+
+          if (!hasLoadedFavorites.value) {
+            hasLoadedFavorites.value = true;
+            return;
+          }
+
+          final isFavorite = _isFavorite(state.articles ?? const []);
+          final message = isFavorite
+              ? 'Se agregó a favoritos.'
+              : 'Se quitó de favoritos.';
+
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(backgroundColor: Colors.black, content: Text(message)),
+            );
+        },
+        child: AppSectionScaffold(
+          title: 'Detalle de noticia',
+          currentRouteName: AppRouteNames.articleDetails,
+          body: _buildBody(),
+          floatingActionButton: _buildFloatingActionButton(),
+        ),
       ),
     );
   }
 
   Widget _buildBody() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildArticleTitleAndDate(),
-          _buildArticleImage(),
-          _buildArticleDescription(),
-        ],
-      ),
-    );
-  }
+    final currentArticle = article;
+    if (currentArticle == null) {
+      return const Center(child: Text('No encontramos la noticia.'));
+    }
 
-  Widget _buildArticleTitleAndDate() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 22),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          Text(
-            article!.title!,
-            style: const TextStyle(
-              fontFamily: 'Butler',
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-
-          const SizedBox(height: 14),
-          // DateTime
-          Row(
-            children: [
-              const Icon(Ionicons.time_outline, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                _formatPublishedAt(article!),
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
+          _buildHeaderCard(currentArticle),
+          const SizedBox(height: 16),
+          _buildArticleImage(currentArticle),
+          const SizedBox(height: 16),
+          _buildContentCard(currentArticle),
+          const SizedBox(height: 16),
+          _buildFooterCard(currentArticle),
         ],
       ),
     );
   }
 
-  Widget _buildArticleImage() {
-    return Container(
-      width: double.maxFinite,
-      height: 250,
-      margin: const EdgeInsets.only(top: 14),
-      child: Image.network(article!.urlToImage!, fit: BoxFit.cover),
+  Widget _buildHeaderCard(ArticleEntity article) {
+    final subtitle = _resolveSubtitle(article);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              article.title?.trim().isNotEmpty == true
+                  ? article.title!
+                  : 'Sin título',
+              style: const TextStyle(
+                fontFamily: 'Butler',
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey.shade700,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildArticleDescription() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
-      child: Text(
-        '${article!.description ?? ''}\n\n${article!.content ?? ''}',
-        style: const TextStyle(fontSize: 16),
+  Widget _buildArticleImage(ArticleEntity article) {
+    final imageUrl = article.urlToImage?.trim();
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        width: double.infinity,
+        height: 240,
+        child: imageUrl == null || imageUrl.isEmpty
+            ? DecoratedBox(
+                decoration: BoxDecoration(color: Colors.grey.shade200),
+                child: const Icon(Icons.image_outlined, size: 48),
+              )
+            : CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                placeholder: (_, __) =>
+                    const Center(child: CupertinoActivityIndicator()),
+                errorWidget: (_, __, ___) => DecoratedBox(
+                  decoration: BoxDecoration(color: Colors.grey.shade200),
+                  child: const Icon(Icons.broken_image_outlined, size: 48),
+                ),
+              ),
       ),
+    );
+  }
+
+  Widget _buildContentCard(ArticleEntity article) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          _resolveBody(article),
+          style: const TextStyle(fontSize: 16, height: 1.6),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooterCard(ArticleEntity article) {
+    final authorName = article.author?.trim().isNotEmpty == true
+        ? article.author!.trim()
+        : 'autor desconocido';
+    final dateLabel = _formatPublishedAt(article);
+    final hasAuthorPhoto = article.authorPhotoUrl?.trim().isNotEmpty == true;
+
+    return Builder(
+      builder: (context) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                if (hasAuthorPhoto) ...[
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundImage: CachedNetworkImageProvider(
+                      article.authorPhotoUrl!.trim(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Publicado por $authorName',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      if (dateLabel.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Fecha de publicación: $dateLabel',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildFloatingActionButton() {
+    final currentArticle = article;
+    if (currentArticle == null) {
+      return const SizedBox.shrink();
+    }
+
     return Builder(
-      builder: (context) => FloatingActionButton(
-        onPressed: () => _onFloatingActionButtonPressed(context),
-        child: const Icon(Ionicons.bookmark, color: Colors.white),
-      ),
+      builder: (context) {
+        return BlocBuilder<LocalArticleBloc, LocalArticlesState>(
+          builder: (context, state) {
+            final savedArticles = state.articles ?? const <ArticleEntity>[];
+            final isFavorite = _isFavorite(savedArticles);
+
+            return FloatingActionButton.extended(
+              onPressed: () => _onFloatingActionButtonPressed(
+                context,
+                isFavorite: isFavorite,
+              ),
+              icon: Icon(
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: Colors.white,
+              ),
+              label: Text(
+                isFavorite ? 'En favoritos' : 'Guardar',
+                style: const TextStyle(color: Colors.white),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
-  void _onFloatingActionButtonPressed(BuildContext context) {
+  void _onFloatingActionButtonPressed(
+    BuildContext context, {
+    required bool isFavorite,
+  }) {
+    if (isFavorite) {
+      BlocProvider.of<LocalArticleBloc>(context).add(RemoveArticle(article!));
+      return;
+    }
+
     BlocProvider.of<LocalArticleBloc>(context).add(SaveArticle(article!));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Colors.black,
-        content: Text('Article saved successfully.'),
-      ),
-    );
+  }
+
+  bool _isFavorite(List<ArticleEntity> savedArticles) {
+    final currentArticle = article;
+    if (currentArticle == null) {
+      return false;
+    }
+
+    return savedArticles.any((savedArticle) {
+      final firestoreId = currentArticle.firestoreId;
+      if (firestoreId != null && firestoreId.isNotEmpty) {
+        return savedArticle.firestoreId == firestoreId;
+      }
+
+      final currentId = currentArticle.id;
+      if (currentId != null) {
+        return savedArticle.id == currentId;
+      }
+
+      return savedArticle.title == currentArticle.title &&
+          savedArticle.publishedAt == currentArticle.publishedAt;
+    });
+  }
+
+  String? _resolveSubtitle(ArticleEntity article) {
+    final subtitle = article.description?.trim();
+    if (subtitle == null || subtitle.isEmpty) {
+      return null;
+    }
+
+    final normalizedTitle = article.title?.trim() ?? '';
+    if (subtitle == normalizedTitle) {
+      return null;
+    }
+
+    return subtitle;
+  }
+
+  String _resolveBody(ArticleEntity article) {
+    final body = article.content?.trim();
+    if (body != null && body.isNotEmpty) {
+      return body;
+    }
+
+    final subtitle = _resolveSubtitle(article);
+    if (subtitle != null) {
+      return subtitle;
+    }
+
+    return 'No hay contenido disponible para esta noticia.';
   }
 
   String _formatPublishedAt(ArticleEntity article) {
