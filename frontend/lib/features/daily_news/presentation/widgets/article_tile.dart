@@ -7,6 +7,7 @@ import '../../domain/entities/article.dart';
 class ArticleWidget extends StatelessWidget {
   final ArticleEntity? article;
   final bool? isRemovable;
+  final bool showCardContainer;
   final void Function(ArticleEntity article)? onRemove;
   final void Function(ArticleEntity article)? onArticlePressed;
 
@@ -15,12 +16,13 @@ class ArticleWidget extends StatelessWidget {
     this.article,
     this.onArticlePressed,
     this.isRemovable = false,
+    this.showCardContainer = false,
     this.onRemove,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final content = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _onTap,
       child: Container(
@@ -40,6 +42,12 @@ class ArticleWidget extends StatelessWidget {
         ),
       ),
     );
+
+    if (!showCardContainer) {
+      return content;
+    }
+
+    return Card(clipBehavior: Clip.antiAlias, child: content);
   }
 
   Widget _buildImage(BuildContext context) {

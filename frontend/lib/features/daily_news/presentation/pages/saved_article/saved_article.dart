@@ -56,12 +56,15 @@ class SavedArticles extends HookWidget {
       );
     }
 
-    return ListView.builder(
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
       itemCount: articles.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         return ArticleWidget(
           article: articles[index],
           isRemovable: true,
+          showCardContainer: true,
           onRemove: (article) => _onRemoveArticle(context, article),
           onArticlePressed: (article) => _onArticlePressed(context, article),
         );
