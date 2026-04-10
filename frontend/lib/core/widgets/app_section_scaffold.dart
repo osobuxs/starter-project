@@ -101,14 +101,14 @@ class _AppSectionDrawer extends StatelessWidget {
             child: const Align(
               alignment: Alignment.bottomLeft,
               child: Text(
-                'Daily News',
+                'Noticias',
                 style: TextStyle(color: Colors.white, fontSize: 24),
               ),
             ),
           ),
           _DrawerRouteTile(
             icon: Icons.home,
-            label: 'Dashboard',
+            label: 'Inicio',
             onTap: () =>
                 _navigateToRoute(context, routeName: AppRouteNames.dashboard),
           ),

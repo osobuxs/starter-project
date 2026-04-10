@@ -79,7 +79,7 @@ class ArticleDetailsView extends HookWidget {
       return const AppCenteredMessageState(
         icon: Icons.article_outlined,
         title: 'No encontramos la noticia',
-        message: 'Volvé al dashboard y elegí otra nota para ver el detalle.',
+        message: 'Volvé a inicio y elegí otra noticia para ver el detalle.',
         emphasized: true,
       );
     }
@@ -333,8 +333,8 @@ class ArticleDetailsView extends HookWidget {
           routeName: AppRouteNames.articleDetails,
           arguments: article,
         ),
-        actionLabel: 'guardar esta nota en favoritos',
-        successMessage: 'Después te llevamos de vuelta a esta nota.',
+        actionLabel: 'guardar esta noticia en favoritos',
+        successMessage: 'Después te llevamos de vuelta a esta noticia.',
       );
       return;
     }

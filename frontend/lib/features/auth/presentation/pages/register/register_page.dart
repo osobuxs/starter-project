@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_state_views.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 
@@ -38,6 +39,10 @@ class _RegisterPageState extends State<RegisterPage> {
         displayName: _displayNameController.text.trim(),
       );
     }
+  }
+
+  void _onGoogleSignIn() {
+    context.read<AuthCubit>().signInWithGoogle();
   }
 
   Future<void> _showAuthErrorDialog(String message) {
@@ -181,14 +186,39 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                             ),
                             child: isLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
+                                ? const AppInlineLoadingIndicator()
                                 : const Text('Crear cuenta'),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'o',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      BlocBuilder<AuthCubit, AuthState>(
+                        builder: (context, state) {
+                          final isLoading = state is AuthLoading;
+                          return OutlinedButton.icon(
+                            onPressed: isLoading ? null : _onGoogleSignIn,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            icon: const Icon(Icons.g_mobiledata, size: 24),
+                            label: const Text('Continuar con Google'),
                           );
                         },
                       ),

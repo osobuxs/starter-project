@@ -1,5 +1,59 @@
 import 'package:flutter/material.dart';
 
+class AppLoadingState extends StatelessWidget {
+  final String? label;
+  final EdgeInsetsGeometry padding;
+
+  const AppLoadingState({
+    super.key,
+    this.label,
+    this.padding = const EdgeInsets.all(24),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: padding,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            if (label != null && label!.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                label!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AppInlineLoadingIndicator extends StatelessWidget {
+  final double size;
+  final double strokeWidth;
+
+  const AppInlineLoadingIndicator({
+    super.key,
+    this.size = 20,
+    this.strokeWidth = 2,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: size,
+      width: size,
+      child: CircularProgressIndicator(strokeWidth: strokeWidth),
+    );
+  }
+}
+
 class AppCenteredMessageState extends StatelessWidget {
   final IconData icon;
   final String title;

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_access_policy.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_state_views.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/pages/create_edit_article_page.dart';
@@ -33,12 +34,13 @@ class AppRoutes {
         );
 
       case AppRouteNames.articleDetails:
+        final article = settings.arguments is ArticleEntity
+            ? settings.arguments as ArticleEntity
+            : null;
         return _materialRoute(
           settings,
           policy: policy,
-          child: ArticleDetailsView(
-            article: settings.arguments as ArticleEntity,
-          ),
+          child: ArticleDetailsView(article: article),
         );
 
       case AppRouteNames.login:
@@ -225,6 +227,6 @@ class _RouteRedirectPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return const Scaffold(body: AppLoadingState(label: 'Cargando...'));
   }
 }

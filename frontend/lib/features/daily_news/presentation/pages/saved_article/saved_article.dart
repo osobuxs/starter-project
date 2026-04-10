@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
@@ -38,13 +37,13 @@ class SavedArticles extends StatelessWidget {
     return BlocBuilder<LocalArticleBloc, LocalArticlesState>(
       builder: (context, state) {
         if (state is LocalArticlesLoading) {
-          return const Center(child: CupertinoActivityIndicator());
+          return const AppLoadingState(label: 'Cargando tus favoritos...');
         } else if (state is LocalArticlesDone) {
           return _buildArticlesList(state.articles!);
         } else if (state is LocalArticlesError) {
           return _buildErrorState(state.message);
         }
-        return Container();
+        return const AppLoadingState(label: 'Preparando tus favoritos...');
       },
     );
   }
@@ -64,7 +63,7 @@ class SavedArticles extends StatelessWidget {
         icon: Icons.favorite_border,
         title: 'Todavía no guardaste favoritos',
         message:
-            'Cuando guardes una nota como favorita, la vas a ver en esta sección.',
+            'Cuando guardes una noticia como favorita, la vas a ver en esta sección.',
         emphasized: true,
       );
     }
@@ -93,7 +92,7 @@ class SavedArticles extends StatelessWidget {
       context,
       title: 'Quitar de favoritos',
       message:
-          '¿Querés quitar "${article.title?.trim().isNotEmpty == true ? article.title!.trim() : 'esta nota'}" de tus favoritos?',
+          '¿Querés quitar "${article.title?.trim().isNotEmpty == true ? article.title!.trim() : 'esta noticia'}" de tus favoritos?',
       confirmLabel: 'Quitar',
       isDestructive: true,
     );

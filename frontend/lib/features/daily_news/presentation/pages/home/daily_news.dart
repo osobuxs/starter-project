@@ -27,15 +27,15 @@ class DailyNews extends StatelessWidget {
       builder: (context, state) {
         if (state.isLoading) {
           return AppSectionScaffold(
-            title: 'Daily News',
+            title: 'Inicio',
             currentRouteName: AppRouteNames.dashboard,
-            body: const Center(child: CupertinoActivityIndicator()),
+            body: const AppLoadingState(label: 'Cargando noticias...'),
           );
         }
 
         if (state.error != null && state.articles.isEmpty) {
           return AppSectionScaffold(
-            title: 'Daily News',
+            title: 'Inicio',
             currentRouteName: AppRouteNames.dashboard,
             body: _buildErrorState(context, state),
           );
@@ -50,7 +50,7 @@ class DailyNews extends StatelessWidget {
     final articles = state.articles;
 
     return AppSectionScaffold(
-      title: 'Daily News',
+      title: 'Inicio',
       currentRouteName: AppRouteNames.dashboard,
       actions: [
         IconButton(
@@ -119,7 +119,10 @@ class DailyNews extends StatelessWidget {
   Widget _buildDateFilter(BuildContext context, RemoteArticlesState state) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           OutlinedButton.icon(
             onPressed: () => _onPickDate(context, state.selectedDate),
@@ -235,7 +238,7 @@ class DailyNews extends StatelessWidget {
     return const _DashboardErrorPresentation(
       title: 'No se pudieron cargar las noticias',
       message:
-          'Ocurrió un problema al cargar el dashboard. Tocá "Reintentar" para volver a intentar.',
+          'Ocurrió un problema al cargar el inicio. Tocá "Reintentar" para volver a intentar.',
     );
   }
 

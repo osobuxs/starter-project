@@ -155,7 +155,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           return const AppSectionScaffold(
             title: 'Mi perfil',
             currentRouteName: AppRouteNames.userProfile,
-            body: Center(child: CircularProgressIndicator()),
+            body: AppLoadingState(label: 'Cargando tu perfil...'),
           );
         }
 
@@ -317,11 +317,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ElevatedButton(
                       onPressed: isBusy || !hasUnsavedChanges ? null : _onSave,
                       child: isBusy
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? const AppInlineLoadingIndicator(size: 18)
                           : const Text('Guardar cambios'),
                     ),
                   ],
