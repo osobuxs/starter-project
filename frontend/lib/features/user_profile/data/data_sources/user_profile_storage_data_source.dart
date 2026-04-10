@@ -22,6 +22,12 @@ class UserProfileStorageDataSourceImpl implements UserProfileStorageDataSource {
   @override
   Future<void> deleteProfilePhoto(String uid) async {
     final ref = _storage.ref().child('media/users/$uid/profile.jpg');
-    await ref.delete();
+    try {
+      await ref.delete();
+    } on FirebaseException catch (error) {
+      if (error.code != 'object-not-found') {
+        rethrow;
+      }
+    }
   }
 }

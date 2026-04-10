@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
+import 'package:news_app_clean_architecture/features/user_profile/domain/usecases/delete_profile_photo_usecase.dart';
 import 'package:news_app_clean_architecture/features/user_profile/domain/entities/user_profile_entity.dart';
 import 'package:news_app_clean_architecture/features/user_profile/domain/usecases/get_user_profile_usecase.dart';
 import 'package:news_app_clean_architecture/features/user_profile/domain/usecases/update_user_profile_usecase.dart';
@@ -14,14 +15,17 @@ class UserProfileCubit extends Cubit<UserProfileState> {
   final GetUserProfileUseCase _getUserProfile;
   final UpdateUserProfileUseCase _updateUserProfile;
   final UploadProfilePhotoUseCase _uploadPhoto;
+  final DeleteProfilePhotoUseCase _deletePhoto;
 
   UserProfileCubit({
     required GetUserProfileUseCase getUserProfile,
     required UpdateUserProfileUseCase updateUserProfile,
     required UploadProfilePhotoUseCase uploadPhoto,
+    required DeleteProfilePhotoUseCase deletePhoto,
   }) : _getUserProfile = getUserProfile,
        _updateUserProfile = updateUserProfile,
        _uploadPhoto = uploadPhoto,
+       _deletePhoto = deletePhoto,
        super(UserProfileInitial());
 
   Future<void> loadProfile(String uid) async {
@@ -92,6 +96,25 @@ class UserProfileCubit extends Cubit<UserProfileState> {
 
         photoUrl = uploadResult.data;
       } else if (removePhoto) {
+        final hadStoredPhoto =
+            currentState.profile.photoUrl?.trim().isNotEmpty == true;
+
+        if (hadStoredPhoto) {
+          final deleteResult = await _deletePhoto(
+            params: DeleteProfilePhotoParams(uid: uid),
+          ).timeout(_profileTimeout);
+
+          if (deleteResult is DataFailed<void>) {
+            emit(
+              UserProfileError(
+                'No se pudo quitar la foto. Intentá nuevamente.',
+                profile: currentState.profile,
+              ),
+            );
+            return;
+          }
+        }
+
         photoUrl = null;
       }
 

@@ -49,4 +49,14 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
       return DataFailed(e);
     }
   }
+
+  @override
+  Future<DataState<void>> deleteProfilePhoto(String uid) async {
+    try {
+      await _storageDataSource.deleteProfilePhoto(uid);
+      return const DataSuccess(null);
+    } on Exception catch (e) {
+      return DataFailed(e);
+    }
+  }
 }

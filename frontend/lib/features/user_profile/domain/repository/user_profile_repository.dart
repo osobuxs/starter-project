@@ -7,4 +7,5 @@ abstract class UserProfileRepository {
     UserProfileEntity profile,
   );
   Future<DataState<String>> uploadProfilePhoto(String uid, String imagePath);
+  Future<DataState<void>> deleteProfilePhoto(String uid);
 }

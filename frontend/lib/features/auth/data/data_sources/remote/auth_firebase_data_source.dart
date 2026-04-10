@@ -35,7 +35,16 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
       email: email,
       password: password,
     );
-    return UserModel.fromFirebaseUser(credential.user!);
+    final user = credential.user!;
+    await _ensureUserProfile(
+      uid: user.uid,
+      email: user.email ?? email,
+      displayName: _resolveDisplayName(
+        user.displayName,
+        fallbackEmail: user.email ?? email,
+      ),
+    );
+    return UserModel.fromFirebaseUser(user);
   }
 
   @override
@@ -81,7 +90,18 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
 
   @override
   Future<void> logout() async {
-    await Future.wait([_firebaseAuth.signOut(), _googleSignIn.disconnect()]);
+    final currentUser = _firebaseAuth.currentUser;
+    final usedGoogleProvider =
+        currentUser?.providerData.any(
+          (provider) => provider.providerId == 'google.com',
+        ) ??
+        false;
+
+    await _firebaseAuth.signOut();
+
+    if (usedGoogleProvider) {
+      await _googleSignIn.signOut();
+    }
   }
 
   @override
@@ -112,5 +132,22 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
       'createdAt': now,
       'updatedAt': now,
     });
+  }
+
+  String _resolveDisplayName(
+    String? displayName, {
+    required String fallbackEmail,
+  }) {
+    final normalizedDisplayName = displayName?.trim();
+    if (normalizedDisplayName != null && normalizedDisplayName.isNotEmpty) {
+      return normalizedDisplayName;
+    }
+
+    final emailPrefix = fallbackEmail.split('@').first.trim();
+    if (emailPrefix.isNotEmpty) {
+      return emailPrefix;
+    }
+
+    return 'Usuario';
   }
 }

@@ -34,6 +34,7 @@ import 'package:news_app_clean_architecture/features/user_profile/data/data_sour
 import 'package:news_app_clean_architecture/features/user_profile/data/data_sources/user_profile_storage_data_source.dart';
 import 'package:news_app_clean_architecture/features/user_profile/data/repository/user_profile_repository_impl.dart';
 import 'package:news_app_clean_architecture/features/user_profile/domain/repository/user_profile_repository.dart';
+import 'package:news_app_clean_architecture/features/user_profile/domain/usecases/delete_profile_photo_usecase.dart';
 import 'package:news_app_clean_architecture/features/user_profile/domain/usecases/get_user_profile_usecase.dart';
 import 'package:news_app_clean_architecture/features/user_profile/domain/usecases/update_user_profile_usecase.dart';
 import 'package:news_app_clean_architecture/features/user_profile/domain/usecases/upload_profile_photo_usecase.dart';
@@ -136,6 +137,9 @@ Future<void> initializeDependencies() async {
   sl.registerLazySingleton<UploadProfilePhotoUseCase>(
     () => UploadProfilePhotoUseCase(sl()),
   );
+  sl.registerLazySingleton<DeleteProfilePhotoUseCase>(
+    () => DeleteProfilePhotoUseCase(sl()),
+  );
 
   //Blocs
   sl.registerFactory<RemoteArticlesBloc>(() => RemoteArticlesBloc(sl()));
@@ -149,6 +153,7 @@ Future<void> initializeDependencies() async {
       getUserProfile: sl(),
       updateUserProfile: sl(),
       uploadPhoto: sl(),
+      deletePhoto: sl(),
     ),
   );
   sl.registerFactory<CreateEditArticleCubit>(
