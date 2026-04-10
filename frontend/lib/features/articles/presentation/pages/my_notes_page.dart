@@ -8,6 +8,7 @@ import 'package:news_app_clean_architecture/features/articles/domain/entities/ar
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_state.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/pages/create_edit_article_page.dart';
+import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_bloc.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_event.dart';
 
@@ -59,6 +60,7 @@ class _MyNotesPageState extends State<MyNotesPage> {
           title: 'Mis notas',
           currentRouteName: AppRouteNames.myNotes,
           floatingActionButton: FloatingActionButton(
+            heroTag: 'my_notes_create_fab',
             onPressed: () => _openCreateArticle(context),
             child: const Icon(Icons.add),
           ),
@@ -105,6 +107,9 @@ class _MyNotesPageState extends State<MyNotesPage> {
           return _MyNoteCard(
             article: article,
             isBusy: state.isBusy(article.firestoreId),
+            onOpenDetails: () {
+              _openArticleDetail(context, article);
+            },
             onEdit: () => _openEditArticle(context, article),
             onPublish: article.isPublished
                 ? null
@@ -151,6 +156,35 @@ class _MyNotesPageState extends State<MyNotesPage> {
     await context.read<MyNotesCubit>().refresh();
   }
 
+  Future<void> _openArticleDetail(
+    BuildContext context,
+    ArticleAuthoringEntity article,
+  ) {
+    return Navigator.of(context).pushNamed(
+      AppRouteNames.articleDetails,
+      arguments: _mapToArticleDetailEntity(article),
+    );
+  }
+
+  ArticleEntity _mapToArticleDetailEntity(ArticleAuthoringEntity article) {
+    return ArticleEntity(
+      firestoreId: article.firestoreId,
+      authorId: article.author.id,
+      author: article.author.name,
+      authorPhotoUrl: article.author.photoUrl,
+      title: article.title,
+      description: article.subtitle,
+      category: article.category,
+      urlToImage: article.imageUrl,
+      publishedAt: article.publishedAt?.toIso8601String(),
+      content: article.content,
+      createdAt: article.createdAt,
+      updatedAt: article.updatedAt,
+      isPublished: article.isPublished,
+      isActive: article.isActive,
+    );
+  }
+
   void _refreshDashboard(BuildContext context) {
     final remoteState = context.read<RemoteArticlesBloc>().state;
     context.read<RemoteArticlesBloc>().add(
@@ -162,6 +196,7 @@ class _MyNotesPageState extends State<MyNotesPage> {
 class _MyNoteCard extends StatelessWidget {
   final ArticleAuthoringEntity article;
   final bool isBusy;
+  final VoidCallback onOpenDetails;
   final VoidCallback onEdit;
   final VoidCallback? onPublish;
   final VoidCallback? onDisable;
@@ -170,6 +205,7 @@ class _MyNoteCard extends StatelessWidget {
   const _MyNoteCard({
     required this.article,
     required this.isBusy,
+    required this.onOpenDetails,
     required this.onEdit,
     required this.onPublish,
     required this.onDisable,
@@ -184,101 +220,104 @@ class _MyNoteCard extends StatelessWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _ArticleCardImage(imageUrl: article.imageUrl),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              article.title.trim().isEmpty
-                                  ? 'Sin título'
-                                  : article.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleMedium,
+      child: InkWell(
+        onTap: onOpenDetails,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ArticleCardImage(imageUrl: article.imageUrl),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                article.title.trim().isEmpty
+                                    ? 'Sin título'
+                                    : article.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          _ArticleStateBadge(article: article),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        preview,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Creada el ${DateFormat('dd/MM/yyyy').format(article.createdAt)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+                            const SizedBox(width: 8),
+                            _ArticleStateBadge(article: article),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          preview,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Creada el ${DateFormat('dd/MM/yyyy').format(article.createdAt)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                isBusy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : PopupMenuButton<_MyNoteAction>(
-                        onSelected: (action) {
-                          switch (action) {
-                            case _MyNoteAction.edit:
-                              onEdit();
-                              break;
-                            case _MyNoteAction.publish:
-                              onPublish?.call();
-                              break;
-                            case _MyNoteAction.disable:
-                              onDisable?.call();
-                              break;
-                            case _MyNoteAction.enable:
-                              onEnable?.call();
-                              break;
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(
-                            value: _MyNoteAction.edit,
-                            child: Text('Editar'),
-                          ),
-                          if (onPublish != null)
+                  const SizedBox(width: 4),
+                  isBusy
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : PopupMenuButton<_MyNoteAction>(
+                          onSelected: (action) {
+                            switch (action) {
+                              case _MyNoteAction.edit:
+                                onEdit();
+                                break;
+                              case _MyNoteAction.publish:
+                                onPublish?.call();
+                                break;
+                              case _MyNoteAction.disable:
+                                onDisable?.call();
+                                break;
+                              case _MyNoteAction.enable:
+                                onEnable?.call();
+                                break;
+                            }
+                          },
+                          itemBuilder: (_) => [
                             const PopupMenuItem(
-                              value: _MyNoteAction.publish,
-                              child: Text('Publicar'),
+                              value: _MyNoteAction.edit,
+                              child: Text('Editar'),
                             ),
-                          if (onDisable != null)
-                            const PopupMenuItem(
-                              value: _MyNoteAction.disable,
-                              child: Text('Archivar'),
-                            ),
-                          if (onEnable != null)
-                            const PopupMenuItem(
-                              value: _MyNoteAction.enable,
-                              child: Text('Reactivar'),
-                            ),
-                        ],
-                      ),
-              ],
-            ),
-          ],
+                            if (onPublish != null)
+                              const PopupMenuItem(
+                                value: _MyNoteAction.publish,
+                                child: Text('Publicar'),
+                              ),
+                            if (onDisable != null)
+                              const PopupMenuItem(
+                                value: _MyNoteAction.disable,
+                                child: Text('Archivar'),
+                              ),
+                            if (onEnable != null)
+                              const PopupMenuItem(
+                                value: _MyNoteAction.enable,
+                                child: Text('Reactivar'),
+                              ),
+                          ],
+                        ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

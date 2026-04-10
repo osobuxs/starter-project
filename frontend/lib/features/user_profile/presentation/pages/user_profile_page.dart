@@ -5,6 +5,7 @@ import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
+import 'package:news_app_clean_architecture/features/user_profile/domain/entities/user_profile_entity.dart';
 import 'package:news_app_clean_architecture/features/user_profile/presentation/cubit/user_profile_cubit.dart';
 import 'package:news_app_clean_architecture/features/user_profile/presentation/cubit/user_profile_state.dart';
 
@@ -22,10 +23,25 @@ class _UserProfilePageState extends State<UserProfilePage> {
   bool _didLoad = false;
 
   @override
+  void initState() {
+    super.initState();
+    _nameController.addListener(_onFormChanged);
+    _ageController.addListener(_onFormChanged);
+  }
+
+  @override
   void dispose() {
+    _nameController.removeListener(_onFormChanged);
+    _ageController.removeListener(_onFormChanged);
     _nameController.dispose();
     _ageController.dispose();
     super.dispose();
+  }
+
+  void _onFormChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -176,6 +192,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           final isBusy =
               state is UserProfileUpdating ||
               state is UserProfilePhotoUploading;
+          final hasUnsavedChanges = _hasUnsavedChanges(currentProfile);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -187,19 +204,27 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   Center(
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 42,
-                          backgroundImage: currentProfile.photoUrl != null
-                              ? NetworkImage(currentProfile.photoUrl!)
+                        GestureDetector(
+                          onTap:
+                              currentProfile.photoUrl?.trim().isNotEmpty == true
+                              ? () {
+                                  _showProfilePhotoPreview(currentProfile);
+                                }
                               : null,
-                          child: currentProfile.photoUrl == null
-                              ? Text(
-                                  currentProfile.name.isEmpty
-                                      ? '?'
-                                      : currentProfile.name[0].toUpperCase(),
-                                  style: const TextStyle(fontSize: 28),
-                                )
-                              : null,
+                          child: CircleAvatar(
+                            radius: 42,
+                            backgroundImage: currentProfile.photoUrl != null
+                                ? NetworkImage(currentProfile.photoUrl!)
+                                : null,
+                            child: currentProfile.photoUrl == null
+                                ? Text(
+                                    currentProfile.name.isEmpty
+                                        ? '?'
+                                        : currentProfile.name[0].toUpperCase(),
+                                    style: const TextStyle(fontSize: 28),
+                                  )
+                                : null,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         TextButton(
@@ -254,7 +279,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: isBusy ? null : _onSave,
+                    onPressed: isBusy || !hasUnsavedChanges ? null : _onSave,
                     child: isBusy
                         ? const SizedBox(
                             height: 18,
@@ -269,6 +294,53 @@ class _UserProfilePageState extends State<UserProfilePage> {
           );
         },
       ),
+    );
+  }
+
+  bool _hasUnsavedChanges(UserProfileEntity currentProfile) {
+    final normalizedName = _nameController.text.trim();
+    final normalizedAgeText = _ageController.text.trim();
+    final parsedAge = normalizedAgeText.isEmpty
+        ? null
+        : int.tryParse(normalizedAgeText);
+
+    return currentProfile.name.trim() != normalizedName ||
+        currentProfile.age != parsedAge;
+  }
+
+  Future<void> _showProfilePhotoPreview(UserProfileEntity currentProfile) {
+    final photoUrl = currentProfile.photoUrl?.trim();
+    if (photoUrl == null || photoUrl.isEmpty) {
+      return Future<void>.value();
+    }
+
+    return showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (dialogContext) {
+        return Dialog.fullscreen(
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4,
+                  child: Image.network(photoUrl, fit: BoxFit.contain),
+                ),
+              ),
+              Positioned(
+                top: 24,
+                right: 24,
+                child: IconButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  icon: const Icon(Icons.close, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
