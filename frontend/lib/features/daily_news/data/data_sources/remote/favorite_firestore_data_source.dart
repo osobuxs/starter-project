@@ -29,7 +29,10 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
         .get();
 
     final lookupResults = await Future.wait(
-      snapshot.docs.map(_resolveFavoriteArticle),
+      snapshot.docs.map(
+        (favoriteDocument) =>
+            _resolveFavoriteArticle(favoritesCollection, favoriteDocument),
+      ),
     );
 
     final staleFavoriteIds = lookupResults
@@ -59,9 +62,8 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
     }
 
     await favoritesCollection.doc(articleId).set({
-      'articleId': articleId,
+      ..._buildFavoriteDocument(articleId: articleId, article: article),
       'favoritedAt': FieldValue.serverTimestamp(),
-      'favoritesVersion': article.favoritesVersion ?? 0,
     });
   }
 
@@ -123,9 +125,22 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
   }
 
   Future<_FavoriteArticleLookupResult> _resolveFavoriteArticle(
+    CollectionReference<Map<String, dynamic>> favoritesCollection,
     QueryDocumentSnapshot<Map<String, dynamic>> favoriteDocument,
   ) async {
     final favoriteData = favoriteDocument.data();
+    final articleFromFavorite = _tryResolveArticleFromFavoriteData(
+      favoriteDocument.id,
+      favoriteData,
+    );
+
+    if (articleFromFavorite != null) {
+      return _FavoriteArticleLookupResult.keep(
+        favoriteId: favoriteDocument.id,
+        article: articleFromFavorite,
+      );
+    }
+
     final articleId = _resolveFavoriteDocumentArticleId(
       favoriteDocument.id,
       favoriteData,
@@ -156,6 +171,13 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
           storedVersion != currentVersion) {
         return _FavoriteArticleLookupResult.delete(favoriteDocument.id);
       }
+
+      await favoritesCollection
+          .doc(favoriteDocument.id)
+          .set(
+            _buildFavoriteDocument(articleId: articleId, article: article),
+            SetOptions(merge: true),
+          );
 
       return _FavoriteArticleLookupResult.keep(
         favoriteId: favoriteDocument.id,
@@ -205,6 +227,46 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
     }
 
     return null;
+  }
+
+  ArticleModel? _tryResolveArticleFromFavoriteData(
+    String documentId,
+    Map<String, dynamic> favoriteData,
+  ) {
+    final title = (favoriteData['title'] as String?)?.trim();
+    if (title == null || title.isEmpty) {
+      return null;
+    }
+
+    return ArticleModel.fromRawData(
+      _normalizeDocumentData(favoriteData),
+      documentId: documentId,
+    );
+  }
+
+  Map<String, dynamic> _buildFavoriteDocument({
+    required String articleId,
+    required ArticleModel article,
+  }) {
+    return {
+      'articleId': articleId,
+      'firestoreId': articleId,
+      'authorId': article.authorId,
+      'author': article.author,
+      'authorPhotoUrl': article.authorPhotoUrl,
+      'title': article.title,
+      'description': article.description,
+      'category': article.category,
+      'url': article.url,
+      'urlToImage': article.urlToImage,
+      'publishedAt': article.publishedAt,
+      'content': article.content,
+      'createdAt': article.createdAt,
+      'updatedAt': article.updatedAt,
+      'isPublished': article.isPublished ?? true,
+      'isActive': article.isActive ?? true,
+      'favoritesVersion': article.favoritesVersion ?? 0,
+    };
   }
 }
 

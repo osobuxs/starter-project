@@ -228,6 +228,10 @@ class ArticleDetailsView extends HookWidget {
       return const SizedBox.shrink();
     }
 
+    if (currentArticle.isPublished != true || currentArticle.isActive != true) {
+      return const SizedBox.shrink();
+    }
+
     return Builder(
       builder: (context) {
         return BlocBuilder<LocalArticleBloc, LocalArticlesState>(
@@ -236,6 +240,7 @@ class ArticleDetailsView extends HookWidget {
             final isFavorite = _isFavorite(savedArticles);
 
             return FloatingActionButton.extended(
+              heroTag: 'article_details_favorite_fab',
               onPressed: () => _onFloatingActionButtonPressed(
                 context,
                 isFavorite: isFavorite,

@@ -109,10 +109,58 @@ service cloud.firestore {
           'articleId',
           'favoritedAt',
           'favoritesVersion',
+          'firestoreId',
+          'authorId',
+          'author',
+          'authorPhotoUrl',
+          'title',
+          'description',
+          'category',
+          'url',
+          'urlToImage',
+          'publishedAt',
+          'content',
+          'createdAt',
+          'updatedAt',
+          'isPublished',
+          'isActive',
         ])
         && request.resource.data.articleId == articleId
         && request.resource.data.favoritedAt != null
-        && request.resource.data.favoritesVersion is int;
+        && request.resource.data.favoritesVersion is int
+        && request.resource.data.firestoreId == articleId
+        && request.resource.data.title is string
+        && request.resource.data.content is string
+        && request.resource.data.isPublished is bool
+        && request.resource.data.isActive is bool
+        && (!('authorId' in request.resource.data)
+          || request.resource.data.authorId == null
+          || request.resource.data.authorId is string)
+        && (!('author' in request.resource.data)
+          || request.resource.data.author == null
+          || request.resource.data.author is string)
+        && (!('authorPhotoUrl' in request.resource.data)
+          || request.resource.data.authorPhotoUrl == null
+          || request.resource.data.authorPhotoUrl is string)
+        && (!('description' in request.resource.data)
+          || request.resource.data.description == null
+          || request.resource.data.description is string)
+        && (!('category' in request.resource.data)
+          || request.resource.data.category == null
+          || request.resource.data.category is string)
+        && (!('url' in request.resource.data)
+          || request.resource.data.url == null
+          || request.resource.data.url is string)
+        && (!('urlToImage' in request.resource.data)
+          || request.resource.data.urlToImage == null
+          || request.resource.data.urlToImage is string)
+        && (!('publishedAt' in request.resource.data)
+          || request.resource.data.publishedAt == null
+          || request.resource.data.publishedAt is string)
+        && request.resource.data.createdAt != null
+        && (!('updatedAt' in request.resource.data)
+          || request.resource.data.updatedAt == null
+          || request.resource.data.updatedAt is timestamp);
     }
 
     match /articles/{articleId} {
