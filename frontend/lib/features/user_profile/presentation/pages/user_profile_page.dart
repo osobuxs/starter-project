@@ -5,7 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_dialogs.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_section_card.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_state_views.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 import 'package:news_app_clean_architecture/features/user_profile/domain/entities/user_profile_entity.dart';
@@ -95,28 +97,17 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Future<void> _showProfileErrorDialog(String message) {
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('No pudimos cargar tu perfil'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cerrar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _retryLoadProfile();
-              },
-              child: const Text('Reintentar'),
-            ),
-          ],
-        );
-      },
-    );
+    return showConfirmationDialog(
+      context,
+      title: 'No pudimos cargar tu perfil',
+      message: message,
+      cancelLabel: 'Cerrar',
+      confirmLabel: 'Reintentar',
+    ).then((shouldRetry) {
+      if (shouldRetry) {
+        _retryLoadProfile();
+      }
+    });
   }
 
   void _onSave() {
@@ -172,7 +163,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
           return const AppSectionScaffold(
             title: 'Mi perfil',
             currentRouteName: AppRouteNames.userProfile,
-            body: Center(child: Text('No se encontró el perfil.')),
+            body: AppCenteredMessageState(
+              icon: Icons.person_off_outlined,
+              title: 'No encontramos tu perfil',
+              message:
+                  'Volvé a intentar en unos segundos para recuperar tus datos.',
+              emphasized: true,
+            ),
           );
         }
 
@@ -188,26 +185,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
           return AppSectionScaffold(
             title: 'Mi perfil',
             currentRouteName: AppRouteNames.userProfile,
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline, size: 48),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'No se pudo cargar el perfil.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _retryLoadProfile,
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              ),
+            body: AppCenteredMessageState(
+              icon: Icons.error_outline,
+              title: 'No se pudo cargar el perfil',
+              message:
+                  'Intentá nuevamente en unos segundos para seguir editando tus datos.',
+              actionLabel: 'Reintentar',
+              actionIcon: Icons.refresh,
+              emphasized: true,
+              onPressed: _retryLoadProfile,
             ),
           );
         }
@@ -230,94 +216,102 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
-                      child: Column(
-                        children: [
-                          GestureDetector(
-                            onTap: hasDisplayedPhoto
-                                ? () {
-                                    _showProfilePhotoPreview(currentProfile);
-                                  }
-                                : null,
-                            child: CircleAvatar(
-                              radius: 42,
-                              backgroundImage: photoProvider,
-                              child: !hasDisplayedPhoto
-                                  ? Text(
-                                      currentProfile.name.isEmpty
-                                          ? '?'
-                                          : currentProfile.name[0]
-                                                .toUpperCase(),
-                                      style: const TextStyle(fontSize: 28),
-                                    )
+                    AppSectionCard(
+                      child: Center(
+                        child: Column(
+                          children: [
+                            GestureDetector(
+                              onTap: hasDisplayedPhoto
+                                  ? () {
+                                      _showProfilePhotoPreview(currentProfile);
+                                    }
                                   : null,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 8,
-                            alignment: WrapAlignment.center,
-                            children: [
-                              TextButton(
-                                onPressed: isBusy ? null : _onPickPhoto,
-                                child: const Text('Cambiar foto'),
+                              child: CircleAvatar(
+                                radius: 42,
+                                backgroundImage: photoProvider,
+                                child: !hasDisplayedPhoto
+                                    ? Text(
+                                        currentProfile.name.isEmpty
+                                            ? '?'
+                                            : currentProfile.name[0]
+                                                  .toUpperCase(),
+                                        style: const TextStyle(fontSize: 28),
+                                      )
+                                    : null,
                               ),
-                              if (hasDisplayedPhoto)
-                                OutlinedButton.icon(
-                                  onPressed: isBusy
-                                      ? null
-                                      : () => _onRemovePhoto(currentProfile),
-                                  icon: const Icon(Icons.delete_outline),
-                                  label: const Text('Quitar foto'),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                TextButton(
+                                  onPressed: isBusy ? null : _onPickPhoto,
+                                  child: const Text('Cambiar foto'),
                                 ),
-                            ],
-                          ),
-                        ],
+                                if (hasDisplayedPhoto)
+                                  OutlinedButton.icon(
+                                    onPressed: isBusy
+                                        ? null
+                                        : () => _onRemovePhoto(currentProfile),
+                                    icon: const Icon(Icons.delete_outline),
+                                    label: const Text('Quitar foto'),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Ingresá tu nombre';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      initialValue: currentProfile.email,
-                      enabled: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _ageController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Edad',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return null;
-                        }
+                    AppSectionCard(
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Nombre',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Ingresá tu nombre';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            initialValue: currentProfile.email,
+                            enabled: false,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _ageController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Edad',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return null;
+                              }
 
-                        if (int.tryParse(value.trim()) == null) {
-                          return 'Ingresá una edad válida';
-                        }
+                              if (int.tryParse(value.trim()) == null) {
+                                return 'Ingresá una edad válida';
+                              }
 
-                        return null;
-                      },
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_dialogs.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 
@@ -231,24 +232,11 @@ class _AppSectionDrawer extends StatelessWidget {
 
     Navigator.of(context).pop();
 
-    final shouldLogout = await showDialog<bool>(
-      context: navigationContext,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Cerrar sesión'),
-          content: const Text('¿Querés cerrar tu sesión actual?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Cerrar sesión'),
-            ),
-          ],
-        );
-      },
+    final shouldLogout = await showConfirmationDialog(
+      navigationContext,
+      title: 'Cerrar sesión',
+      message: '¿Querés cerrar tu sesión actual?',
+      confirmLabel: 'Cerrar sesión',
     );
 
     if (shouldLogout != true || !navigationContext.mounted) {

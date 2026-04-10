@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_state_views.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_bloc.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_event.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_state.dart';
@@ -146,45 +147,30 @@ class DailyNews extends StatelessWidget {
   }
 
   Widget _buildEmptyState() {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24),
-        child: Text('No existen notas.', textAlign: TextAlign.center),
-      ),
+    return const AppCenteredMessageState(
+      icon: Icons.newspaper_outlined,
+      title: 'No encontramos noticias',
+      message:
+          'Probá con otra fecha o volvé más tarde para ver nuevas publicaciones.',
+      emphasized: true,
     );
   }
 
   Widget _buildErrorState(BuildContext context, RemoteArticlesState state) {
     final presentation = _mapDashboardError(state.error);
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cloud_off_outlined, size: 48),
-            const SizedBox(height: 12),
-            Text(
-              presentation.title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(presentation.message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                context.read<RemoteArticlesBloc>().add(
-                  GetArticles(selectedDate: state.selectedDate),
-                );
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-            ),
-          ],
-        ),
-      ),
+    return AppCenteredMessageState(
+      icon: Icons.cloud_off_outlined,
+      title: presentation.title,
+      message: presentation.message,
+      actionLabel: 'Reintentar',
+      actionIcon: Icons.refresh,
+      emphasized: true,
+      onPressed: () {
+        context.read<RemoteArticlesBloc>().add(
+          GetArticles(selectedDate: state.selectedDate),
+        );
+      },
     );
   }
 

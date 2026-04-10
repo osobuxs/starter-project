@@ -1,57 +1,64 @@
 import 'package:flutter/material.dart';
 
+Future<bool> showConfirmationDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  String cancelLabel = 'Cancelar',
+  required String confirmLabel,
+  bool isDestructive = false,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(cancelLabel),
+          ),
+          ElevatedButton(
+            style: isDestructive
+                ? ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade700,
+                    foregroundColor: Colors.white,
+                  )
+                : null,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      );
+    },
+  );
+
+  return result ?? false;
+}
+
 Future<bool> showAuthenticationRequiredDialog(
   BuildContext context, {
   required String actionLabel,
   String successMessage = 'Después te llevamos automáticamente.',
 }) async {
-  final shouldContinue = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) {
-      return AlertDialog(
-        title: const Text('Necesitás iniciar sesión'),
-        content: Text(
-          'Para $actionLabel primero necesitás iniciar sesión. $successMessage',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Ir al login'),
-          ),
-        ],
-      );
-    },
+  return showConfirmationDialog(
+    context,
+    title: 'Necesitás iniciar sesión',
+    message:
+        'Para $actionLabel primero necesitás iniciar sesión. $successMessage',
+    confirmLabel: 'Ir al login',
   );
-
-  return shouldContinue ?? false;
 }
 
 Future<bool> showDiscardChangesDialog(BuildContext context) async {
-  final shouldLeave = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) {
-      return AlertDialog(
-        title: const Text('Tenés cambios sin guardar'),
-        content: const Text(
-          'Si salís ahora, vas a perder los cambios pendientes. ¿Querés salir igual?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Seguir editando'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Salir sin guardar'),
-          ),
-        ],
-      );
-    },
+  return showConfirmationDialog(
+    context,
+    title: 'Tenés cambios sin guardar',
+    message:
+        'Si salís ahora, vas a perder los cambios pendientes. ¿Querés salir igual?',
+    cancelLabel: 'Seguir editando',
+    confirmLabel: 'Salir sin guardar',
+    isDestructive: true,
   );
-
-  return shouldLeave ?? false;
 }

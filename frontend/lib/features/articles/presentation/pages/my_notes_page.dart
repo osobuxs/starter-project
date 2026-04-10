@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_feedback.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_state_views.dart';
 import 'package:news_app_clean_architecture/features/articles/domain/entities/article_authoring_entity.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_state.dart';
@@ -41,18 +43,20 @@ class _MyNotesPageState extends State<MyNotesPage> {
           previous.errorMessage != current.errorMessage ||
           previous.successMessage != current.successMessage,
       listener: (context, state) {
-        final messenger = ScaffoldMessenger.of(context);
-
         if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
-          messenger
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+          showAppSnackBar(
+            context,
+            message: state.errorMessage!,
+            variant: AppSnackBarVariant.error,
+          );
         } else if (state.successMessage != null &&
             state.successMessage!.isNotEmpty) {
           _refreshDashboard(context);
-          messenger
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(state.successMessage!)));
+          showAppSnackBar(
+            context,
+            message: state.successMessage!,
+            variant: AppSnackBarVariant.success,
+          );
         }
       },
       builder: (context, state) {
@@ -76,22 +80,26 @@ class _MyNotesPageState extends State<MyNotesPage> {
     }
 
     if (state.status == MyNotesStatus.failure && state.articles.isEmpty) {
-      return _MyNotesMessageState(
+      return AppCenteredMessageState(
         icon: Icons.article_outlined,
         title: 'No pudimos cargar tus notas',
         message: 'Probá de nuevo en unos segundos.',
         actionLabel: 'Reintentar',
+        actionIcon: Icons.refresh,
+        emphasized: true,
         onPressed: context.read<MyNotesCubit>().refresh,
       );
     }
 
     if (state.articles.isEmpty) {
-      return _MyNotesMessageState(
+      return AppCenteredMessageState(
         icon: Icons.edit_note_outlined,
         title: 'Todavía no creaste notas',
         message:
-            'Cuando guardes un borrador o publiques una nota, la vas a ver acá.',
+            'Cuando guardes un borrador o publiques una nota, la vas a ver en esta sección.',
         actionLabel: 'Crear nota',
+        actionIcon: Icons.add,
+        emphasized: true,
         onPressed: () => _openCreateArticle(context),
       );
     }
@@ -421,45 +429,4 @@ class _BadgePresentation {
     required this.backgroundColor,
     required this.foregroundColor,
   });
-}
-
-class _MyNotesMessageState extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String message;
-  final String actionLabel;
-  final VoidCallback onPressed;
-
-  const _MyNotesMessageState({
-    required this.icon,
-    required this.title,
-    required this.message,
-    required this.actionLabel,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 56),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton(onPressed: onPressed, child: Text(actionLabel)),
-          ],
-        ),
-      ),
-    );
-  }
 }

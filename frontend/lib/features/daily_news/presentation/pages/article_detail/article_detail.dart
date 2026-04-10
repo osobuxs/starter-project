@@ -6,7 +6,10 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:intl/intl.dart';
 import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_feedback.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_section_card.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_state_views.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 
@@ -32,16 +35,11 @@ class ArticleDetailsView extends HookWidget {
             current is LocalArticlesDone || current is LocalArticlesError,
         listener: (context, state) {
           if (state is LocalArticlesError) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(
-                  backgroundColor: Colors.red.shade700,
-                  content: Text(
-                    state.message ?? 'No pudimos actualizar favoritos.',
-                  ),
-                ),
-              );
+            showAppSnackBar(
+              context,
+              message: state.message ?? 'No pudimos actualizar favoritos.',
+              variant: AppSnackBarVariant.error,
+            );
             return;
           }
 
@@ -59,11 +57,11 @@ class ArticleDetailsView extends HookWidget {
             return;
           }
 
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(backgroundColor: Colors.black, content: Text(message)),
-            );
+          showAppSnackBar(
+            context,
+            message: message,
+            variant: AppSnackBarVariant.success,
+          );
         },
         child: AppSectionScaffold(
           title: 'Detalle de noticia',
@@ -78,7 +76,12 @@ class ArticleDetailsView extends HookWidget {
   Widget _buildBody(BuildContext context) {
     final currentArticle = article;
     if (currentArticle == null) {
-      return const Center(child: Text('No encontramos la noticia.'));
+      return const AppCenteredMessageState(
+        icon: Icons.article_outlined,
+        title: 'No encontramos la noticia',
+        message: 'Volvé al dashboard y elegí otra nota para ver el detalle.',
+        emphasized: true,
+      );
     }
 
     return SingleChildScrollView(
@@ -138,15 +141,12 @@ class ArticleDetailsView extends HookWidget {
   Widget _buildContentCard(ArticleEntity article) {
     return SizedBox(
       width: double.infinity,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-          child: SizedBox(
-            width: double.infinity,
-            child: Text(
-              _resolveBody(article),
-              style: const TextStyle(fontSize: 18, height: 1.75),
-            ),
+      child: AppSectionCard(
+        child: SizedBox(
+          width: double.infinity,
+          child: Text(
+            _resolveBody(article),
+            style: const TextStyle(fontSize: 18, height: 1.75),
           ),
         ),
       ),
@@ -157,8 +157,9 @@ class ArticleDetailsView extends HookWidget {
     final imageUrl = article.urlToImage?.trim();
     final hasImage = imageUrl != null && imageUrl.isNotEmpty;
 
-    return Card(
+    return AppSectionCard(
       clipBehavior: Clip.antiAlias,
+      padding: EdgeInsets.zero,
       child: InkWell(
         onTap: hasImage ? () => _showImagePreview(context, article) : null,
         child: Stack(
@@ -226,47 +227,45 @@ class ArticleDetailsView extends HookWidget {
 
     return Builder(
       builder: (context) {
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                if (hasAuthorPhoto) ...[
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundImage: CachedNetworkImageProvider(
-                      article.authorPhotoUrl!.trim(),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Publicado por $authorName',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      if (dateLabel.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Fecha de publicación: $dateLabel',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                      if (category != null && category.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Categoría: $category',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ],
+        return AppSectionCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              if (hasAuthorPhoto) ...[
+                CircleAvatar(
+                  radius: 20,
+                  backgroundImage: CachedNetworkImageProvider(
+                    article.authorPhotoUrl!.trim(),
                   ),
                 ),
+                const SizedBox(width: 12),
               ],
-            ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Publicado por $authorName',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    if (dateLabel.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Fecha de publicación: $dateLabel',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                    if (category != null && category.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Categoría: $category',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },

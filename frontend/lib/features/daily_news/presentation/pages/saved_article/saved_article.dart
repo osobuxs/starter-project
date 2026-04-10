@@ -2,7 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_dialogs.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_state_views.dart';
 import '../../../../../injection_container.dart';
 import '../../../domain/entities/article.dart';
 import '../../bloc/article/local/local_article_bloc.dart';
@@ -48,50 +50,22 @@ class SavedArticles extends StatelessWidget {
   }
 
   Widget _buildErrorState(String? message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          message ?? 'No pudimos cargar tus favoritos.',
-          textAlign: TextAlign.center,
-        ),
-      ),
+    return AppCenteredMessageState(
+      icon: Icons.favorite_outline,
+      title: 'No pudimos cargar tus favoritos',
+      message: message ?? 'Intentá nuevamente en unos segundos.',
+      emphasized: true,
     );
   }
 
   Widget _buildArticlesList(List<ArticleEntity> articles) {
     if (articles.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.favorite_border,
-                    size: 48,
-                    color: Colors.grey.shade700,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Todavía no guardaste favoritos',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Cuando guardes una nota como favorita, la vas a ver acá.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade700, height: 1.5),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+      return const AppCenteredMessageState(
+        icon: Icons.favorite_border,
+        title: 'Todavía no guardaste favoritos',
+        message:
+            'Cuando guardes una nota como favorita, la vas a ver en esta sección.',
+        emphasized: true,
       );
     }
 
@@ -115,26 +89,13 @@ class SavedArticles extends StatelessWidget {
     BuildContext context,
     ArticleEntity article,
   ) async {
-    final shouldRemove = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Quitar de favoritos'),
-          content: Text(
-            '¿Querés quitar "${article.title?.trim().isNotEmpty == true ? article.title!.trim() : 'esta nota'}" de tus favoritos?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Quitar'),
-            ),
-          ],
-        );
-      },
+    final shouldRemove = await showConfirmationDialog(
+      context,
+      title: 'Quitar de favoritos',
+      message:
+          '¿Querés quitar "${article.title?.trim().isNotEmpty == true ? article.title!.trim() : 'esta nota'}" de tus favoritos?',
+      confirmLabel: 'Quitar',
+      isDestructive: true,
     );
 
     if (shouldRemove != true || !context.mounted) {

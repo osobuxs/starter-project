@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_dialogs.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_feedback.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_section_card.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_state.dart';
@@ -68,17 +70,21 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
         _syncControllers(state);
 
         if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+          showAppSnackBar(
+            context,
+            message: state.errorMessage!,
+            variant: AppSnackBarVariant.error,
+          );
         }
 
         if (state.successMessage != null && state.successMessage!.isNotEmpty) {
           _refreshDashboard(context);
 
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(state.successMessage!)));
+          showAppSnackBar(
+            context,
+            message: state.successMessage!,
+            variant: AppSnackBarVariant.success,
+          );
 
           await Future<void>.delayed(const Duration(milliseconds: 400));
           if (!context.mounted) {
@@ -115,77 +121,71 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
         children: [
           _buildPageHeader(context, state),
           const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    controller: _titleController,
-                    onChanged: cubit.onTitleChanged,
-                    textInputAction: TextInputAction.next,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontFamily: 'Butler',
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Título',
-                      hintText: 'Escribí un título claro para tu nota',
-                      border: const OutlineInputBorder(),
-                      errorText: state.titleError,
-                    ),
+          AppSectionCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _titleController,
+                  onChanged: cubit.onTitleChanged,
+                  textInputAction: TextInputAction.next,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontFamily: 'Butler',
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _subtitleController,
-                    onChanged: cubit.onSubtitleChanged,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Subtítulo (opcional)',
-                      border: OutlineInputBorder(),
-                    ),
+                  decoration: InputDecoration(
+                    labelText: 'Título',
+                    hintText: 'Escribí un título claro para tu nota',
+                    border: const OutlineInputBorder(),
+                    errorText: state.titleError,
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _categoryController,
-                    onChanged: cubit.onCategoryChanged,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Categoría (opcional)',
-                      hintText: 'Ej: Tecnología, Cultura o Política',
-                      helperText: 'Si la dejás vacía, guardamos "Varios".',
-                      border: OutlineInputBorder(),
-                    ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _subtitleController,
+                  onChanged: cubit.onSubtitleChanged,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Subtítulo (opcional)',
+                    border: OutlineInputBorder(),
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _contentController,
-                    onChanged: cubit.onContentChanged,
-                    maxLines: 12,
-                    decoration: InputDecoration(
-                      labelText: 'Contenido',
-                      alignLabelWithHint: true,
-                      border: const OutlineInputBorder(),
-                      errorText: state.contentError,
-                    ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _categoryController,
+                  onChanged: cubit.onCategoryChanged,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Categoría (opcional)',
+                    hintText: 'Ej: Tecnología, Cultura o Política',
+                    helperText: 'Si la dejás vacía, guardamos "Varios".',
+                    border: OutlineInputBorder(),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _contentController,
+                  onChanged: cubit.onContentChanged,
+                  maxLines: 12,
+                  decoration: InputDecoration(
+                    labelText: 'Contenido',
+                    alignLabelWithHint: true,
+                    border: const OutlineInputBorder(),
+                    errorText: state.contentError,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 20),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: _ArticleImagePicker(
-                state: state,
-                onPickImage: _onPickImage,
-                onRemoveImage: context
-                    .read<CreateEditArticleCubit>()
-                    .removeSelectedImage,
-              ),
+          AppSectionCard(
+            child: _ArticleImagePicker(
+              state: state,
+              onPickImage: _onPickImage,
+              onRemoveImage: context
+                  .read<CreateEditArticleCubit>()
+                  .removeSelectedImage,
             ),
           ),
           const SizedBox(height: 24),
@@ -224,30 +224,27 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
   }
 
   Widget _buildPageHeader(BuildContext context, CreateEditArticleState state) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              state.isEditMode ? 'Editá tu nota' : 'Creá una nota nueva',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontFamily: 'Butler',
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-              ),
+    return AppSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            state.isEditMode ? 'Editá tu nota' : 'Creá una nota nueva',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontFamily: 'Butler',
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Completá los campos principales, elegí una imagen y después guardá como borrador o publicá cuando esté lista.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.black54,
-                height: 1.5,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Completá los campos principales, elegí una imagen y después guardá como borrador o publicá cuando esté lista.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.black54,
+              height: 1.5,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
