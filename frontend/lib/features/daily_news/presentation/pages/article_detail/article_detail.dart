@@ -292,17 +292,26 @@ class ArticleDetailsView extends HookWidget {
 
             return FloatingActionButton.extended(
               heroTag: 'article_details_favorite_fab',
+              backgroundColor: isFavorite
+                  ? const Color(0xFFF3E5F5)
+                  : const Color(0xFF4A148C),
+              foregroundColor: isFavorite
+                  ? const Color(0xFF4A148C)
+                  : Colors.white,
               onPressed: () => _onFloatingActionButtonPressed(
                 context,
                 isFavorite: isFavorite,
               ),
               icon: Icon(
                 isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: Colors.white,
+                color: isFavorite ? Colors.red : Colors.white,
               ),
               label: Text(
                 isFavorite ? 'En favoritos' : 'Guardar',
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: isFavorite ? const Color(0xFF4A148C) : Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             );
           },
