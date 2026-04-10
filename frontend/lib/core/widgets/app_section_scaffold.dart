@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
@@ -57,60 +58,17 @@ Future<void> navigateToProtectedRoute(
   bool closeCurrentDrawer = false,
   Object? redirectArguments,
 }) async {
-  final authState = context.read<AuthCubit>().state;
-  final isAuthenticated = authState is AuthAuthenticated;
-
-  if (isAuthenticated) {
-    Navigator.of(
-      navigationContext,
-    ).pushNamed(routeName, arguments: redirectArguments);
-    return;
-  }
-
-  if (closeCurrentDrawer) {
-    Navigator.of(context).pop();
-  }
-
-  final shouldContinue = await showDialog<bool>(
-    context: navigationContext,
-    builder: (dialogContext) {
-      return AlertDialog(
-        title: const Text('Necesitás iniciar sesión'),
-        content: Text(
-          'Para abrir "$label" primero necesitás iniciar sesión. Después te llevamos automáticamente.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Ir al login'),
-          ),
-        ],
-      );
-    },
+  await navigateRequiringAuthentication(
+    context,
+    navigationContext: navigationContext,
+    currentRouteName: currentRouteName,
+    destination: AuthRedirectDestination(
+      routeName: routeName,
+      arguments: redirectArguments,
+    ),
+    actionLabel: 'abrir "$label"',
+    closeCurrentNavigator: closeCurrentDrawer,
   );
-
-  if (shouldContinue != true || !navigationContext.mounted) {
-    return;
-  }
-
-  final shouldReplaceCurrent =
-      currentRouteName == AppRouteNames.login ||
-      currentRouteName == AppRouteNames.register;
-
-  if (shouldReplaceCurrent) {
-    Navigator.of(
-      navigationContext,
-    ).pushReplacementNamed(AppRouteNames.login, arguments: routeName);
-    return;
-  }
-
-  Navigator.of(
-    navigationContext,
-  ).pushNamed(AppRouteNames.login, arguments: routeName);
 }
 
 class _AppSectionDrawer extends StatelessWidget {

@@ -326,38 +326,16 @@ class ArticleDetailsView extends HookWidget {
   }) async {
     final authState = context.read<AuthCubit>().state;
     if (authState is! AuthAuthenticated) {
-      final shouldContinue = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text('Necesitás iniciar sesión'),
-            content: const Text(
-              'Para guardar esta nota en favoritos primero necesitás iniciar sesión. Después te llevamos de vuelta a esta nota.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Ir al login'),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (shouldContinue != true || !context.mounted) {
-        return;
-      }
-
-      Navigator.of(context).pushNamed(
-        AppRouteNames.login,
-        arguments: AuthRedirectDestination(
+      await navigateRequiringAuthentication(
+        context,
+        navigationContext: context,
+        currentRouteName: AppRouteNames.articleDetails,
+        destination: AuthRedirectDestination(
           routeName: AppRouteNames.articleDetails,
           arguments: article,
         ),
+        actionLabel: 'guardar esta nota en favoritos',
+        successMessage: 'Después te llevamos de vuelta a esta nota.',
       );
       return;
     }

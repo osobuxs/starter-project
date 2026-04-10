@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
+import 'package:news_app_clean_architecture/core/navigation/route_access_policy.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/pages/create_edit_article_page.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/pages/my_notes_page.dart';
+import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
+import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/pages/login/login_page.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/pages/register/register_page.dart';
 import 'package:news_app_clean_architecture/features/user_profile/presentation/pages/user_profile_page.dart';
@@ -17,31 +21,53 @@ import '../../features/daily_news/presentation/pages/saved_article/saved_article
 
 class AppRoutes {
   static Route onGenerateRoutes(RouteSettings settings) {
+    final routeName = settings.name ?? AppRouteNames.dashboard;
+    final policy = resolveAppRoutePolicy(routeName);
+
     switch (settings.name) {
       case AppRouteNames.dashboard:
-        return _materialRoute(const DailyNews());
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: const DailyNews(),
+        );
 
       case AppRouteNames.articleDetails:
         return _materialRoute(
-          ArticleDetailsView(article: settings.arguments as ArticleEntity),
+          settings,
+          policy: policy,
+          child: ArticleDetailsView(
+            article: settings.arguments as ArticleEntity,
+          ),
         );
 
-      case AppRouteNames.savedArticles:
-        return _materialRoute(const SavedArticles());
-
       case AppRouteNames.login:
-        return _materialRoute(LoginPage(redirectRoute: settings.arguments));
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: LoginPage(redirectRoute: settings.arguments),
+        );
 
       case AppRouteNames.register:
-        return _materialRoute(RegisterPage(redirectRoute: settings.arguments));
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: RegisterPage(redirectRoute: settings.arguments),
+        );
 
       case AppRouteNames.userProfile:
-        return _materialRoute(const UserProfilePage());
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: const UserProfilePage(),
+        );
 
       case AppRouteNames.createArticle:
         final args = settings.arguments as CreateEditArticlePageArgs?;
         return _materialRoute(
-          BlocProvider<CreateEditArticleCubit>(
+          settings,
+          policy: policy,
+          child: BlocProvider<CreateEditArticleCubit>(
             create: (_) => sl<CreateEditArticleCubit>(),
             child: CreateEditArticlePage(args: args),
           ),
@@ -49,21 +75,156 @@ class AppRoutes {
 
       case AppRouteNames.myNotes:
         return _materialRoute(
-          BlocProvider<MyNotesCubit>(
+          settings,
+          policy: policy,
+          child: BlocProvider<MyNotesCubit>(
             create: (_) => sl<MyNotesCubit>(),
             child: const MyNotesPage(),
           ),
         );
 
       case AppRouteNames.myFavorites:
-        return _materialRoute(const SavedArticles());
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: const SavedArticles(),
+        );
 
       default:
-        return _materialRoute(const DailyNews());
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: const DailyNews(),
+        );
     }
   }
 
-  static Route<dynamic> _materialRoute(Widget view) {
-    return MaterialPageRoute(builder: (_) => view);
+  static Route<dynamic> _materialRoute(
+    RouteSettings settings, {
+    required AppRoutePolicy policy,
+    required Widget child,
+  }) {
+    return MaterialPageRoute(
+      settings: settings,
+      builder: (_) =>
+          _RouteAccessGate(settings: settings, policy: policy, child: child),
+    );
+  }
+}
+
+class _RouteAccessGate extends StatefulWidget {
+  final RouteSettings settings;
+  final AppRoutePolicy policy;
+  final Widget child;
+
+  const _RouteAccessGate({
+    required this.settings,
+    required this.policy,
+    required this.child,
+  });
+
+  @override
+  State<_RouteAccessGate> createState() => _RouteAccessGateState();
+}
+
+class _RouteAccessGateState extends State<_RouteAccessGate> {
+  bool _redirectScheduled = false;
+  bool _hasRenderedAuthOnlyChild = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthCubit, AuthState>(
+      builder: (context, authState) {
+        if (!widget.policy.requiresAuthentication &&
+            !widget.policy.requiresAnonymousUser) {
+          return widget.child;
+        }
+
+        final isAuthPending =
+            authState is AuthInitial || authState is AuthLoading;
+
+        if (widget.policy.requiresAuthentication) {
+          if (authState is AuthAuthenticated) {
+            _redirectScheduled = false;
+            return widget.child;
+          }
+
+          if (isAuthPending) {
+            return const _RouteRedirectPlaceholder();
+          }
+
+          _scheduleProtectedRedirect(context);
+          return const _RouteRedirectPlaceholder();
+        }
+
+        if (authState is AuthAuthenticated) {
+          if (_hasRenderedAuthOnlyChild) {
+            return widget.child;
+          }
+
+          _scheduleAuthOnlyRedirect(context);
+          return const _RouteRedirectPlaceholder();
+        }
+
+        if (isAuthPending) {
+          return const _RouteRedirectPlaceholder();
+        }
+
+        _redirectScheduled = false;
+        _hasRenderedAuthOnlyChild = true;
+        return widget.child;
+      },
+    );
+  }
+
+  void _scheduleProtectedRedirect(BuildContext context) {
+    if (_redirectScheduled) {
+      return;
+    }
+
+    _redirectScheduled = true;
+    final destination = AuthRedirectDestination(
+      routeName: widget.settings.name ?? AppRouteNames.dashboard,
+      arguments: widget.settings.arguments,
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(
+        context,
+      ).pushReplacementNamed(AppRouteNames.login, arguments: destination);
+    });
+  }
+
+  void _scheduleAuthOnlyRedirect(BuildContext context) {
+    if (_redirectScheduled) {
+      return;
+    }
+
+    _redirectScheduled = true;
+    final destination = resolvePostAuthDestination(widget.settings.arguments);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pushReplacementNamed(
+        destination.routeName,
+        arguments: destination.arguments,
+      );
+    });
+  }
+}
+
+class _RouteRedirectPlaceholder extends StatelessWidget {
+  const _RouteRedirectPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

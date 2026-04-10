@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_dialogs.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
@@ -344,29 +345,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       return true;
     }
 
-    final shouldLeave = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Tenés cambios sin guardar'),
-          content: const Text(
-            'Si salís ahora, vas a perder los cambios pendientes. ¿Querés salir igual?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Seguir editando'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Salir sin guardar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    return shouldLeave ?? false;
+    return showDiscardChangesDialog(context);
   }
 
   bool _hasUnsavedChanges(UserProfileEntity currentProfile) {

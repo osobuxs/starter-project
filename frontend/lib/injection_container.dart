@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -27,7 +26,6 @@ import 'package:news_app_clean_architecture/features/articles/presentation/cubit
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/my_notes_cubit.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/article_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/favorite_firestore_data_source.dart';
-import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/news_api_service.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/repository/article_repository_impl.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/repository/article_repository.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/usecases/get_article.dart';
@@ -62,11 +60,7 @@ Future<void> initializeDependencies() async {
   sl.registerLazySingleton<FirebaseStorage>(() => FirebaseStorage.instance);
   sl.registerLazySingleton<GoogleSignIn>(() => googleSignIn);
 
-  // Dio
-  sl.registerSingleton<Dio>(Dio());
-
   // Dependencies
-  sl.registerSingleton<NewsApiService>(NewsApiService(sl()));
   sl.registerLazySingleton<ArticleFirestoreDataSource>(
     () => ArticleFirestoreDataSourceImpl(sl()),
   );
