@@ -84,9 +84,9 @@ class ArticleDetailsView extends HookWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeaderCard(currentArticle),
+          _buildHeader(currentArticle),
           const SizedBox(height: 16),
           _buildArticleImage(context, currentArticle),
           const SizedBox(height: 16),
@@ -98,60 +98,56 @@ class ArticleDetailsView extends HookWidget {
     );
   }
 
-  Widget _buildHeaderCard(ArticleEntity article) {
+  Widget _buildHeader(ArticleEntity article) {
     final subtitle = _resolveSubtitle(article);
-    final category = article.category?.trim();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            article.title?.trim().isNotEmpty == true
+                ? article.title!
+                : 'Sin título',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Butler',
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              height: 1.15,
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 10),
             Text(
-              article.title?.trim().isNotEmpty == true
-                  ? article.title!
-                  : 'Sin título',
+              subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Butler',
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade700,
+                height: 1.45,
               ),
             ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey.shade700,
-                  height: 1.4,
-                ),
-              ),
-            ],
-            if (category != null && category.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  category,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ],
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContentCard(ArticleEntity article) {
+    return SizedBox(
+      width: double.infinity,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+          child: SizedBox(
+            width: double.infinity,
+            child: Text(
+              _resolveBody(article),
+              style: const TextStyle(fontSize: 18, height: 1.75),
+            ),
+          ),
         ),
       ),
     );
@@ -220,24 +216,13 @@ class ArticleDetailsView extends HookWidget {
     );
   }
 
-  Widget _buildContentCard(ArticleEntity article) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-        child: Text(
-          _resolveBody(article),
-          style: const TextStyle(fontSize: 18, height: 1.75),
-        ),
-      ),
-    );
-  }
-
   Widget _buildFooterCard(ArticleEntity article) {
     final authorName = article.author?.trim().isNotEmpty == true
         ? article.author!.trim()
         : 'autor desconocido';
     final dateLabel = _formatPublishedAt(article);
     final hasAuthorPhoto = article.authorPhotoUrl?.trim().isNotEmpty == true;
+    final category = article.category?.trim();
 
     return Builder(
       builder: (context) {
@@ -267,6 +252,13 @@ class ArticleDetailsView extends HookWidget {
                         const SizedBox(height: 4),
                         Text(
                           'Fecha de publicación: $dateLabel',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                      if (category != null && category.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Categoría: $category',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
