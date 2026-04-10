@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 
 class UserProfileEntity extends Equatable {
+  static const Object _photoUrlSentinel = Object();
+
   final String uid;
   final String name;
   final String email;
@@ -24,7 +26,7 @@ class UserProfileEntity extends Equatable {
     String? name,
     String? email,
     int? age,
-    String? photoUrl,
+    Object? photoUrl = _photoUrlSentinel,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -33,7 +35,9 @@ class UserProfileEntity extends Equatable {
       name: name ?? this.name,
       email: email ?? this.email,
       age: age ?? this.age,
-      photoUrl: photoUrl ?? this.photoUrl,
+      photoUrl: identical(photoUrl, _photoUrlSentinel)
+          ? this.photoUrl
+          : photoUrl as String?,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

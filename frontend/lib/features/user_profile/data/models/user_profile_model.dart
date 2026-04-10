@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:news_app_clean_architecture/features/user_profile/domain/entities/user_profile_entity.dart';
 
 class UserProfileModel extends UserProfileEntity {
+  static const Object _photoUrlSentinel = Object();
+
   const UserProfileModel({
     required super.uid,
     required super.name,
@@ -71,7 +73,7 @@ class UserProfileModel extends UserProfileEntity {
     String? name,
     String? email,
     int? age,
-    String? photoUrl,
+    Object? photoUrl = _photoUrlSentinel,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -80,7 +82,9 @@ class UserProfileModel extends UserProfileEntity {
       name: name ?? this.name,
       email: email ?? this.email,
       age: age ?? this.age,
-      photoUrl: photoUrl ?? this.photoUrl,
+      photoUrl: identical(photoUrl, _photoUrlSentinel)
+          ? this.photoUrl
+          : photoUrl as String?,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

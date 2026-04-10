@@ -29,7 +29,7 @@ class CreateEditArticleState extends Equatable {
     this.articleId,
     this.title = '',
     this.subtitle = '',
-    this.category = 'Varios',
+    this.category = '',
     this.content = '',
     this.imageUrl,
     this.localImagePath,

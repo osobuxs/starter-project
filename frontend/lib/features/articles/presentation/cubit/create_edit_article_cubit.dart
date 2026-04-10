@@ -82,7 +82,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
           articleId: null,
           title: '',
           subtitle: '',
-          category: 'Varios',
+          category: '',
           content: '',
           clearImageUrl: true,
           clearLocalImagePath: true,

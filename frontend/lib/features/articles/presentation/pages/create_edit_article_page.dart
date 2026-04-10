@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_cubit.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_state.dart';
 import 'package:news_app_clean_architecture/features/daily_news/presentation/bloc/article/remote/remote_article_bloc.dart';
@@ -27,7 +28,7 @@ class CreateEditArticlePage extends StatefulWidget {
 class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
   final _titleController = TextEditingController();
   final _subtitleController = TextEditingController();
-  final _categoryController = TextEditingController(text: 'Varios');
+  final _categoryController = TextEditingController();
   final _contentController = TextEditingController();
   bool _didInitialize = false;
 
@@ -90,10 +91,9 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
         final isLoading = state.status == CreateEditArticleStatus.loading;
         return WillPopScope(
           onWillPop: () => _confirmDiscardIfNeeded(context, state),
-          child: Scaffold(
-            appBar: AppBar(
-              title: Text(state.isEditMode ? 'Editar nota' : 'Crear nota'),
-            ),
+          child: AppSectionScaffold(
+            title: state.isEditMode ? 'Editar nota' : 'Crear nota',
+            currentRouteName: AppRouteNames.createArticle,
             body: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _buildBody(context, state),
@@ -111,56 +111,80 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
-            controller: _titleController,
-            onChanged: cubit.onTitleChanged,
-            textInputAction: TextInputAction.next,
-            decoration: InputDecoration(
-              labelText: 'Título',
-              border: const OutlineInputBorder(),
-              errorText: state.titleError,
-            ),
-          ),
+          _buildPageHeader(context, state),
           const SizedBox(height: 16),
-          TextField(
-            controller: _subtitleController,
-            onChanged: cubit.onSubtitleChanged,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Subtítulo (opcional)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _categoryController,
-            onChanged: cubit.onCategoryChanged,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Categoría (opcional)',
-              helperText: 'Si la dejás vacía, guardamos "Varios".',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _contentController,
-            onChanged: cubit.onContentChanged,
-            maxLines: 12,
-            decoration: InputDecoration(
-              labelText: 'Contenido',
-              alignLabelWithHint: true,
-              border: const OutlineInputBorder(),
-              errorText: state.contentError,
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _titleController,
+                    onChanged: cubit.onTitleChanged,
+                    textInputAction: TextInputAction.next,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontFamily: 'Butler',
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Título',
+                      hintText: 'Escribí un título claro para tu nota',
+                      border: const OutlineInputBorder(),
+                      errorText: state.titleError,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _subtitleController,
+                    onChanged: cubit.onSubtitleChanged,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Subtítulo (opcional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _categoryController,
+                    onChanged: cubit.onCategoryChanged,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Categoría (opcional)',
+                      hintText: 'Ej: Tecnología, Cultura o Política',
+                      helperText: 'Si la dejás vacía, guardamos "Varios".',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _contentController,
+                    onChanged: cubit.onContentChanged,
+                    maxLines: 12,
+                    decoration: InputDecoration(
+                      labelText: 'Contenido',
+                      alignLabelWithHint: true,
+                      border: const OutlineInputBorder(),
+                      errorText: state.contentError,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 20),
-          _ArticleImagePicker(
-            state: state,
-            onPickImage: _onPickImage,
-            onRemoveImage: context
-                .read<CreateEditArticleCubit>()
-                .removeSelectedImage,
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: _ArticleImagePicker(
+                state: state,
+                onPickImage: _onPickImage,
+                onRemoveImage: context
+                    .read<CreateEditArticleCubit>()
+                    .removeSelectedImage,
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           Row(
@@ -193,6 +217,35 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
             const Center(child: CircularProgressIndicator()),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildPageHeader(BuildContext context, CreateEditArticleState state) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              state.isEditMode ? 'Editá tu nota' : 'Creá una nota nueva',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontFamily: 'Butler',
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Completá los campos principales, elegí una imagen y después guardá como borrador o publicá cuando esté lista.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.black54,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

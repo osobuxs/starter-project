@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,6 +23,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   bool _didLoad = false;
+  String? _pendingPhotoPath;
+  bool _removePhotoRequested = false;
 
   @override
   void initState() {
@@ -59,11 +63,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Future<void> _onPickPhoto() async {
-    final authState = context.read<AuthCubit>().state;
-    if (authState is! AuthAuthenticated) {
-      return;
-    }
-
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
 
@@ -71,10 +70,18 @@ class _UserProfilePageState extends State<UserProfilePage> {
       return;
     }
 
-    await context.read<UserProfileCubit>().uploadPhoto(
-      uid: authState.user.id,
-      imagePath: image.path,
-    );
+    setState(() {
+      _pendingPhotoPath = image.path;
+      _removePhotoRequested = false;
+    });
+  }
+
+  void _onRemovePhoto(UserProfileEntity currentProfile) {
+    setState(() {
+      _pendingPhotoPath = null;
+      _removePhotoRequested =
+          currentProfile.photoUrl?.trim().isNotEmpty == true;
+    });
   }
 
   void _retryLoadProfile() {
@@ -127,6 +134,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
       age: _ageController.text.trim().isEmpty
           ? null
           : int.tryParse(_ageController.text.trim()),
+      pendingPhotoPath: _removePhotoRequested ? null : _pendingPhotoPath,
+      removePhoto: _removePhotoRequested,
     );
   }
 
@@ -140,6 +149,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
           if (state is UserProfileLoaded) {
             _nameController.text = state.profile.name;
             _ageController.text = state.profile.age?.toString() ?? '';
+            if (_pendingPhotoPath != null || _removePhotoRequested) {
+              setState(() {
+                _pendingPhotoPath = null;
+                _removePhotoRequested = false;
+              });
+            }
           }
 
           if (state is UserProfileError) {
@@ -158,8 +173,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
           final currentProfile = state is UserProfileLoaded
               ? state.profile
               : state is UserProfileUpdating
-              ? state.profile
-              : state is UserProfilePhotoUploading
               ? state.profile
               : state is UserProfileError
               ? state.profile
@@ -189,10 +202,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
             );
           }
 
-          final isBusy =
-              state is UserProfileUpdating ||
-              state is UserProfilePhotoUploading;
+          final isBusy = state is UserProfileUpdating;
           final hasUnsavedChanges = _hasUnsavedChanges(currentProfile);
+          final photoProvider = _resolvePhotoProvider(currentProfile);
+          final hasDisplayedPhoto = photoProvider != null;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -205,18 +218,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     child: Column(
                       children: [
                         GestureDetector(
-                          onTap:
-                              currentProfile.photoUrl?.trim().isNotEmpty == true
+                          onTap: hasDisplayedPhoto
                               ? () {
                                   _showProfilePhotoPreview(currentProfile);
                                 }
                               : null,
                           child: CircleAvatar(
                             radius: 42,
-                            backgroundImage: currentProfile.photoUrl != null
-                                ? NetworkImage(currentProfile.photoUrl!)
-                                : null,
-                            child: currentProfile.photoUrl == null
+                            backgroundImage: photoProvider,
+                            child: !hasDisplayedPhoto
                                 ? Text(
                                     currentProfile.name.isEmpty
                                         ? '?'
@@ -227,9 +237,24 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        TextButton(
-                          onPressed: isBusy ? null : _onPickPhoto,
-                          child: const Text('Cambiar foto'),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            TextButton(
+                              onPressed: isBusy ? null : _onPickPhoto,
+                              child: const Text('Cambiar foto'),
+                            ),
+                            if (hasDisplayedPhoto)
+                              OutlinedButton.icon(
+                                onPressed: isBusy
+                                    ? null
+                                    : () => _onRemovePhoto(currentProfile),
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Quitar foto'),
+                              ),
+                          ],
                         ),
                       ],
                     ),
@@ -305,12 +330,39 @@ class _UserProfilePageState extends State<UserProfilePage> {
         : int.tryParse(normalizedAgeText);
 
     return currentProfile.name.trim() != normalizedName ||
-        currentProfile.age != parsedAge;
+        currentProfile.age != parsedAge ||
+        _pendingPhotoPath != null ||
+        (_removePhotoRequested &&
+            currentProfile.photoUrl?.trim().isNotEmpty == true);
+  }
+
+  ImageProvider<Object>? _resolvePhotoProvider(
+    UserProfileEntity currentProfile,
+  ) {
+    if (_pendingPhotoPath != null) {
+      return FileImage(File(_pendingPhotoPath!));
+    }
+
+    if (_removePhotoRequested) {
+      return null;
+    }
+
+    final photoUrl = currentProfile.photoUrl?.trim();
+    if (photoUrl == null || photoUrl.isEmpty) {
+      return null;
+    }
+
+    return NetworkImage(photoUrl);
   }
 
   Future<void> _showProfilePhotoPreview(UserProfileEntity currentProfile) {
-    final photoUrl = currentProfile.photoUrl?.trim();
-    if (photoUrl == null || photoUrl.isEmpty) {
+    final pendingPhotoPath = _pendingPhotoPath?.trim();
+    final photoUrl = _removePhotoRequested
+        ? null
+        : currentProfile.photoUrl?.trim();
+
+    if ((pendingPhotoPath == null || pendingPhotoPath.isEmpty) &&
+        (photoUrl == null || photoUrl.isEmpty)) {
       return Future<void>.value();
     }
 
@@ -326,7 +378,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 child: InteractiveViewer(
                   minScale: 0.8,
                   maxScale: 4,
-                  child: Image.network(photoUrl, fit: BoxFit.contain),
+                  child: pendingPhotoPath != null && pendingPhotoPath.isNotEmpty
+                      ? Image.file(File(pendingPhotoPath), fit: BoxFit.contain)
+                      : Image.network(photoUrl!, fit: BoxFit.contain),
                 ),
               ),
               Positioned(

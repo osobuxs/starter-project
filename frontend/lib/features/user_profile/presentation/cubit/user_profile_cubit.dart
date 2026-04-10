@@ -59,15 +59,48 @@ class UserProfileCubit extends Cubit<UserProfileState> {
     required String uid,
     required String name,
     int? age,
+    String? pendingPhotoPath,
+    bool removePhoto = false,
   }) async {
     final currentState = state;
     if (currentState is! UserProfileLoaded) return;
 
     emit(UserProfileUpdating(currentState.profile));
 
-    final updatedProfile = currentState.profile.copyWith(name: name, age: age);
-
     try {
+      String? photoUrl = currentState.profile.photoUrl;
+
+      final normalizedPendingPhotoPath = pendingPhotoPath?.trim();
+      if (normalizedPendingPhotoPath != null &&
+          normalizedPendingPhotoPath.isNotEmpty) {
+        final uploadResult = await _uploadPhoto(
+          params: UploadProfilePhotoParams(
+            uid: uid,
+            imagePath: normalizedPendingPhotoPath,
+          ),
+        ).timeout(_profileTimeout);
+
+        if (uploadResult is DataFailed<String>) {
+          emit(
+            UserProfileError(
+              'No se pudo subir la foto. Intentá nuevamente.',
+              profile: currentState.profile,
+            ),
+          );
+          return;
+        }
+
+        photoUrl = uploadResult.data;
+      } else if (removePhoto) {
+        photoUrl = null;
+      }
+
+      final updatedProfile = currentState.profile.copyWith(
+        name: name,
+        age: age,
+        photoUrl: photoUrl,
+      );
+
       final result = await _updateUserProfile(
         params: UpdateUserProfileParams(profile: updatedProfile),
       ).timeout(_profileTimeout);
@@ -88,59 +121,6 @@ class UserProfileCubit extends Cubit<UserProfileState> {
       emit(
         UserProfileError(
           'Guardar los cambios tardó demasiado. Intentá nuevamente.',
-          profile: currentState.profile,
-        ),
-      );
-    }
-  }
-
-  Future<void> uploadPhoto({
-    required String uid,
-    required String imagePath,
-  }) async {
-    final currentState = state;
-    if (currentState is! UserProfileLoaded) return;
-
-    emit(UserProfilePhotoUploading(currentState.profile));
-
-    try {
-      final uploadResult = await _uploadPhoto(
-        params: UploadProfilePhotoParams(uid: uid, imagePath: imagePath),
-      ).timeout(_profileTimeout);
-
-      if (uploadResult is DataFailed<String>) {
-        emit(
-          UserProfileError(
-            'No se pudo subir la foto. Intentá nuevamente.',
-            profile: currentState.profile,
-          ),
-        );
-        return;
-      }
-
-      final updatedProfile = currentState.profile.copyWith(
-        photoUrl: uploadResult.data,
-      );
-      final updateResult = await _updateUserProfile(
-        params: UpdateUserProfileParams(profile: updatedProfile),
-      ).timeout(_profileTimeout);
-
-      if (updateResult is DataSuccess<UserProfileEntity>) {
-        emit(UserProfileLoaded(updateResult.data!));
-      }
-
-      if (updateResult is DataFailed<UserProfileEntity>) {
-        emit(
-          UserProfileError(
-            'La foto se subió, pero no se pudo guardar en tu perfil.',
-            profile: currentState.profile,
-          ),
-        );
-      }
-    } on TimeoutException {
-      emit(
-        UserProfileError(
-          'La carga de la foto tardó demasiado. Intentá nuevamente.',
           profile: currentState.profile,
         ),
       );
