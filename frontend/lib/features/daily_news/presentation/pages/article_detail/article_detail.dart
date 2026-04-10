@@ -68,14 +68,14 @@ class ArticleDetailsView extends HookWidget {
         child: AppSectionScaffold(
           title: 'Detalle de noticia',
           currentRouteName: AppRouteNames.articleDetails,
-          body: _buildBody(),
+          body: _buildBody(context),
           floatingActionButton: _buildFloatingActionButton(),
         ),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(BuildContext context) {
     final currentArticle = article;
     if (currentArticle == null) {
       return const Center(child: Text('No encontramos la noticia.'));
@@ -88,7 +88,7 @@ class ArticleDetailsView extends HookWidget {
         children: [
           _buildHeaderCard(currentArticle),
           const SizedBox(height: 16),
-          _buildArticleImage(currentArticle),
+          _buildArticleImage(context, currentArticle),
           const SizedBox(height: 16),
           _buildContentCard(currentArticle),
           const SizedBox(height: 16),
@@ -100,20 +100,22 @@ class ArticleDetailsView extends HookWidget {
 
   Widget _buildHeaderCard(ArticleEntity article) {
     final subtitle = _resolveSubtitle(article);
+    final category = article.category?.trim();
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               article.title?.trim().isNotEmpty == true
                   ? article.title!
                   : 'Sin título',
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'Butler',
-                fontSize: 28,
+                fontSize: 30,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -121,10 +123,31 @@ class ArticleDetailsView extends HookWidget {
               const SizedBox(height: 8),
               Text(
                 subtitle,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 15,
                   color: Colors.grey.shade700,
                   height: 1.4,
+                ),
+              ),
+            ],
+            if (category != null && category.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  category,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
             ],
@@ -134,29 +157,65 @@ class ArticleDetailsView extends HookWidget {
     );
   }
 
-  Widget _buildArticleImage(ArticleEntity article) {
+  Widget _buildArticleImage(BuildContext context, ArticleEntity article) {
     final imageUrl = article.urlToImage?.trim();
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: SizedBox(
-        width: double.infinity,
-        height: 240,
-        child: imageUrl == null || imageUrl.isEmpty
-            ? DecoratedBox(
-                decoration: BoxDecoration(color: Colors.grey.shade200),
-                child: const Icon(Icons.image_outlined, size: 48),
-              )
-            : CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) =>
-                    const Center(child: CupertinoActivityIndicator()),
-                errorWidget: (_, __, ___) => DecoratedBox(
-                  decoration: BoxDecoration(color: Colors.grey.shade200),
-                  child: const Icon(Icons.broken_image_outlined, size: 48),
+      child: InkWell(
+        onTap: hasImage ? () => _showImagePreview(context, article) : null,
+        child: Stack(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: 260,
+              child: !hasImage
+                  ? DecoratedBox(
+                      decoration: BoxDecoration(color: Colors.grey.shade200),
+                      child: const Icon(Icons.image_outlined, size: 48),
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) =>
+                          const Center(child: CupertinoActivityIndicator()),
+                      errorWidget: (_, __, ___) => DecoratedBox(
+                        decoration: BoxDecoration(color: Colors.grey.shade200),
+                        child: const Icon(
+                          Icons.broken_image_outlined,
+                          size: 48,
+                        ),
+                      ),
+                    ),
+            ),
+            if (hasImage)
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.65),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.zoom_out_map, color: Colors.white, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'Tocar para ampliar',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+          ],
+        ),
       ),
     );
   }
@@ -164,10 +223,10 @@ class ArticleDetailsView extends HookWidget {
   Widget _buildContentCard(ArticleEntity article) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
         child: Text(
           _resolveBody(article),
-          style: const TextStyle(fontSize: 16, height: 1.6),
+          style: const TextStyle(fontSize: 18, height: 1.75),
         ),
       ),
     );
@@ -372,5 +431,51 @@ class ArticleDetailsView extends HookWidget {
     }
 
     return article.publishedAt ?? '';
+  }
+
+  Future<void> _showImagePreview(BuildContext context, ArticleEntity article) {
+    final imageUrl = article.urlToImage?.trim();
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return Future<void>.value();
+    }
+
+    return showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (dialogContext) {
+        return Dialog.fullscreen(
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4,
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.contain,
+                    placeholder: (_, __) =>
+                        const Center(child: CupertinoActivityIndicator()),
+                    errorWidget: (_, __, ___) => const Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 24,
+                right: 24,
+                child: IconButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  icon: const Icon(Icons.close, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
