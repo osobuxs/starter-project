@@ -14,6 +14,7 @@ class AppSectionScaffold extends StatelessWidget {
   final Widget? floatingActionButton;
   final AppSectionDrawerVariant drawerVariant;
   final Object? redirectRouteName;
+  final Future<bool> Function()? onWillLeaveSection;
 
   const AppSectionScaffold({
     super.key,
@@ -24,6 +25,7 @@ class AppSectionScaffold extends StatelessWidget {
     this.floatingActionButton,
     this.drawerVariant = AppSectionDrawerVariant.full,
     this.redirectRouteName,
+    this.onWillLeaveSection,
   });
 
   @override
@@ -38,6 +40,7 @@ class AppSectionScaffold extends StatelessWidget {
         currentRouteName: currentRouteName,
         drawerVariant: drawerVariant,
         redirectRouteName: redirectRouteName,
+        onWillLeaveSection: onWillLeaveSection,
       ),
       body: body,
       floatingActionButton: floatingActionButton,
@@ -115,12 +118,14 @@ class _AppSectionDrawer extends StatelessWidget {
   final String currentRouteName;
   final AppSectionDrawerVariant drawerVariant;
   final Object? redirectRouteName;
+  final Future<bool> Function()? onWillLeaveSection;
 
   const _AppSectionDrawer({
     required this.navigationContext,
     required this.currentRouteName,
     required this.drawerVariant,
     required this.redirectRouteName,
+    required this.onWillLeaveSection,
   });
 
   @override
@@ -242,6 +247,13 @@ class _AppSectionDrawer extends StatelessWidget {
     required String routeName,
     required String label,
   }) async {
+    final shouldLeave = await _confirmLeaveSectionIfNeeded(
+      routeName: routeName,
+    );
+    if (!shouldLeave) {
+      return;
+    }
+
     await navigateToProtectedRoute(
       context,
       navigationContext: navigationContext,
@@ -254,6 +266,11 @@ class _AppSectionDrawer extends StatelessWidget {
   }
 
   Future<void> _onLogoutTapped(BuildContext context) async {
+    final shouldLeave = await _confirmLeaveSectionIfNeeded();
+    if (!shouldLeave) {
+      return;
+    }
+
     Navigator.of(context).pop();
 
     final shouldLogout = await showDialog<bool>(
@@ -284,19 +301,31 @@ class _AppSectionDrawer extends StatelessWidget {
     navigationContext.read<AuthCubit>().logout();
   }
 
-  void _navigateToRoute(
+  Future<void> _navigateToRoute(
     BuildContext context, {
     required String routeName,
     Object? arguments,
     bool replaceCurrent = false,
     bool closeDrawer = true,
-  }) {
-    if (closeDrawer) {
-      Navigator.of(context).pop();
+  }) async {
+    if (currentRouteName == routeName && arguments == redirectRouteName) {
+      if (closeDrawer) {
+        Navigator.of(context).pop();
+      }
+      return;
     }
 
-    if (currentRouteName == routeName && arguments == redirectRouteName) {
+    final shouldLeave = await _confirmLeaveSectionIfNeeded(
+      routeName: routeName,
+      arguments: arguments,
+      skipIfSameDestination: true,
+    );
+    if (!shouldLeave) {
       return;
+    }
+
+    if (closeDrawer) {
+      Navigator.of(context).pop();
     }
 
     if (replaceCurrent) {
@@ -307,6 +336,24 @@ class _AppSectionDrawer extends StatelessWidget {
     }
 
     Navigator.of(navigationContext).pushNamed(routeName, arguments: arguments);
+  }
+
+  Future<bool> _confirmLeaveSectionIfNeeded({
+    String? routeName,
+    Object? arguments,
+    bool skipIfSameDestination = false,
+  }) async {
+    final isSameDestination =
+        skipIfSameDestination &&
+        routeName != null &&
+        currentRouteName == routeName &&
+        arguments == redirectRouteName;
+
+    if (isSameDestination || onWillLeaveSection == null) {
+      return true;
+    }
+
+    return await onWillLeaveSection!();
   }
 }
 

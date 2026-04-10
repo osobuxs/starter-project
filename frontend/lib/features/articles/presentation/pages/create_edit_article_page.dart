@@ -94,6 +94,7 @@ class _CreateEditArticlePageState extends State<CreateEditArticlePage> {
           child: AppSectionScaffold(
             title: state.isEditMode ? 'Editar nota' : 'Crear nota',
             currentRouteName: AppRouteNames.createArticle,
+            onWillLeaveSection: () => _confirmDiscardIfNeeded(context, state),
             body: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _buildBody(context, state),
