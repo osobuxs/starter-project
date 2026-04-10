@@ -7,9 +7,9 @@ import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 
 class RegisterPage extends StatefulWidget {
-  final String? redirectRouteName;
+  final Object? redirectRoute;
 
-  const RegisterPage({Key? key, this.redirectRouteName}) : super(key: key);
+  const RegisterPage({Key? key, this.redirectRoute}) : super(key: key);
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -64,12 +64,12 @@ class _RegisterPageState extends State<RegisterPage> {
       title: 'Crear cuenta',
       currentRouteName: AppRouteNames.register,
       drawerVariant: AppSectionDrawerVariant.auth,
-      redirectRouteName: widget.redirectRouteName,
+      redirectRouteName: widget.redirectRoute,
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
             try {
-              completeAuthRedirect(context, widget.redirectRouteName);
+              completeAuthRedirect(context, widget.redirectRoute);
             } catch (_) {
               _showAuthErrorDialog(
                 'La cuenta se creó, pero no pudimos abrir la pantalla solicitada. Intentá nuevamente.',
@@ -201,7 +201,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             onPressed: () {
                               Navigator.of(context).pushReplacementNamed(
                                 AppRouteNames.login,
-                                arguments: widget.redirectRouteName,
+                                arguments: widget.redirectRoute,
                               );
                             },
                             child: const Text('Iniciá sesión'),

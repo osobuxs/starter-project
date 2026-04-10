@@ -7,9 +7,9 @@ import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 
 class LoginPage extends StatefulWidget {
-  final String? redirectRouteName;
+  final Object? redirectRoute;
 
-  const LoginPage({Key? key, this.redirectRouteName}) : super(key: key);
+  const LoginPage({Key? key, this.redirectRoute}) : super(key: key);
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -65,12 +65,12 @@ class _LoginPageState extends State<LoginPage> {
       title: 'Iniciar sesión',
       currentRouteName: AppRouteNames.login,
       drawerVariant: AppSectionDrawerVariant.auth,
-      redirectRouteName: widget.redirectRouteName,
+      redirectRouteName: widget.redirectRoute,
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
             try {
-              completeAuthRedirect(context, widget.redirectRouteName);
+              completeAuthRedirect(context, widget.redirectRoute);
             } catch (_) {
               _showAuthErrorDialog(
                 'Se inició la sesión, pero no pudimos abrir la pantalla solicitada. Intentá nuevamente.',
@@ -217,7 +217,7 @@ class _LoginPageState extends State<LoginPage> {
                             onPressed: () {
                               Navigator.of(context).pushReplacementNamed(
                                 AppRouteNames.register,
-                                arguments: widget.redirectRouteName,
+                                arguments: widget.redirectRoute,
                               );
                             },
                             child: const Text('Registrate'),

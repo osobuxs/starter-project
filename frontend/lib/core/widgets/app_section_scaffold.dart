@@ -13,7 +13,7 @@ class AppSectionScaffold extends StatelessWidget {
   final List<Widget> actions;
   final Widget? floatingActionButton;
   final AppSectionDrawerVariant drawerVariant;
-  final String? redirectRouteName;
+  final Object? redirectRouteName;
 
   const AppSectionScaffold({
     super.key,
@@ -52,12 +52,15 @@ Future<void> navigateToProtectedRoute(
   required String routeName,
   required String label,
   bool closeCurrentDrawer = false,
+  Object? redirectArguments,
 }) async {
   final authState = context.read<AuthCubit>().state;
   final isAuthenticated = authState is AuthAuthenticated;
 
   if (isAuthenticated) {
-    Navigator.of(navigationContext).pushNamed(routeName);
+    Navigator.of(
+      navigationContext,
+    ).pushNamed(routeName, arguments: redirectArguments);
     return;
   }
 
@@ -111,7 +114,7 @@ class _AppSectionDrawer extends StatelessWidget {
   final BuildContext navigationContext;
   final String currentRouteName;
   final AppSectionDrawerVariant drawerVariant;
-  final String? redirectRouteName;
+  final Object? redirectRouteName;
 
   const _AppSectionDrawer({
     required this.navigationContext,
@@ -246,6 +249,7 @@ class _AppSectionDrawer extends StatelessWidget {
       routeName: routeName,
       label: label,
       closeCurrentDrawer: true,
+      redirectArguments: null,
     );
   }
 

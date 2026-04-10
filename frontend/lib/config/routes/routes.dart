@@ -30,14 +30,10 @@ class AppRoutes {
         return _materialRoute(const SavedArticles());
 
       case AppRouteNames.login:
-        return _materialRoute(
-          LoginPage(redirectRouteName: settings.arguments as String?),
-        );
+        return _materialRoute(LoginPage(redirectRoute: settings.arguments));
 
       case AppRouteNames.register:
-        return _materialRoute(
-          RegisterPage(redirectRouteName: settings.arguments as String?),
-        );
+        return _materialRoute(RegisterPage(redirectRoute: settings.arguments));
 
       case AppRouteNames.userProfile:
         return _materialRoute(const UserProfilePage());

@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:intl/intl.dart';
+import 'package:news_app_clean_architecture/core/navigation/auth_redirect.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
+import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
+import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 
 import '../../../../../injection_container.dart';
 import '../../../domain/entities/article.dart';
@@ -25,8 +28,23 @@ class ArticleDetailsView extends HookWidget {
     return BlocProvider(
       create: (_) => sl<LocalArticleBloc>()..add(const GetSavedArticles()),
       child: BlocListener<LocalArticleBloc, LocalArticlesState>(
-        listenWhen: (previous, current) => current is LocalArticlesDone,
+        listenWhen: (previous, current) =>
+            current is LocalArticlesDone || current is LocalArticlesError,
         listener: (context, state) {
+          if (state is LocalArticlesError) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                  backgroundColor: Colors.red.shade700,
+                  content: Text(
+                    state.message ?? 'No pudimos actualizar favoritos.',
+                  ),
+                ),
+              );
+            return;
+          }
+
           if (state is! LocalArticlesDone) {
             return;
           }
@@ -36,10 +54,10 @@ class ArticleDetailsView extends HookWidget {
             return;
           }
 
-          final isFavorite = _isFavorite(state.articles ?? const []);
-          final message = isFavorite
-              ? 'Se agregó a favoritos.'
-              : 'Se quitó de favoritos.';
+          final message = state.message;
+          if (message == null || message.isEmpty) {
+            return;
+          }
 
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
@@ -240,7 +258,45 @@ class ArticleDetailsView extends HookWidget {
   void _onFloatingActionButtonPressed(
     BuildContext context, {
     required bool isFavorite,
-  }) {
+  }) async {
+    final authState = context.read<AuthCubit>().state;
+    if (authState is! AuthAuthenticated) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Necesitás iniciar sesión'),
+            content: const Text(
+              'Para guardar esta nota en favoritos primero necesitás iniciar sesión. Después te llevamos de vuelta a esta nota.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Ir al login'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (shouldContinue != true || !context.mounted) {
+        return;
+      }
+
+      Navigator.of(context).pushNamed(
+        AppRouteNames.login,
+        arguments: AuthRedirectDestination(
+          routeName: AppRouteNames.articleDetails,
+          arguments: article,
+        ),
+      );
+      return;
+    }
+
     if (isFavorite) {
       BlocProvider.of<LocalArticleBloc>(context).add(RemoveArticle(article!));
       return;
