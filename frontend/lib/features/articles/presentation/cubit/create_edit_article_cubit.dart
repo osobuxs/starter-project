@@ -4,46 +4,23 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/articles/domain/entities/article_author_entity.dart';
 import 'package:news_app_clean_architecture/features/articles/domain/entities/article_authoring_entity.dart';
-import 'package:news_app_clean_architecture/features/articles/domain/usecases/get_article_by_id_usecase.dart';
-import 'package:news_app_clean_architecture/features/articles/domain/usecases/publish_article_usecase.dart';
-import 'package:news_app_clean_architecture/features/articles/domain/usecases/save_article_draft_usecase.dart';
-import 'package:news_app_clean_architecture/features/articles/domain/usecases/upload_article_image_usecase.dart';
-import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_mapper.dart';
+import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_orchestrator.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_state.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_validators.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/entities/user_entity.dart';
-import 'package:news_app_clean_architecture/features/auth/domain/usecases/get_current_user_usecase.dart';
-import 'package:news_app_clean_architecture/features/user_profile/domain/entities/user_profile_entity.dart';
-import 'package:news_app_clean_architecture/features/user_profile/domain/usecases/get_user_profile_usecase.dart';
 
 class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
   static const Duration _timeout = Duration(seconds: 15);
 
-  final SaveArticleDraftUseCase _saveArticleDraft;
-  final PublishArticleUseCase _publishArticle;
-  final UploadArticleImageUseCase _uploadArticleImage;
-  final GetArticleByIdUseCase _getArticleById;
-  final GetCurrentUserUseCase _getCurrentUser;
-  final GetUserProfileUseCase _getUserProfile;
+  final CreateEditArticleOrchestrator _orchestrator;
 
   UserEntity? _currentUser;
   ArticleAuthorEntity? _currentAuthor;
   ArticleAuthoringEntity? _initialArticle;
 
-  CreateEditArticleCubit({
-    required SaveArticleDraftUseCase saveArticleDraft,
-    required PublishArticleUseCase publishArticle,
-    required UploadArticleImageUseCase uploadArticleImage,
-    required GetArticleByIdUseCase getArticleById,
-    required GetCurrentUserUseCase getCurrentUser,
-    required GetUserProfileUseCase getUserProfile,
-  }) : _saveArticleDraft = saveArticleDraft,
-       _publishArticle = publishArticle,
-       _uploadArticleImage = uploadArticleImage,
-       _getArticleById = getArticleById,
-       _getCurrentUser = getCurrentUser,
-       _getUserProfile = getUserProfile,
-       super(const CreateEditArticleState());
+  CreateEditArticleCubit({required CreateEditArticleOrchestrator orchestrator})
+    : _orchestrator = orchestrator,
+      super(const CreateEditArticleState());
 
   Future<void> initialize({String? articleId}) async {
     emit(
@@ -55,7 +32,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
     );
 
     try {
-      _currentUser = await _getCurrentUser().timeout(_timeout);
+      _currentUser = await _orchestrator.getCurrentUser().timeout(_timeout);
       if (_currentUser == null) {
         emit(
           state.copyWith(
@@ -68,14 +45,16 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
         return;
       }
 
-      _currentAuthor = await _buildAuthor(_currentUser!);
+      _currentAuthor = await _orchestrator
+          .buildAuthor(_currentUser!)
+          .timeout(_timeout);
 
       if (articleId != null && articleId.isNotEmpty) {
         await _loadArticle(articleId);
         return;
       }
 
-      _initialArticle = _buildEmptyArticle(_currentAuthor!);
+      _initialArticle = _orchestrator.buildEmptyArticle(_currentAuthor!);
       emit(
         state.copyWith(
           status: CreateEditArticleStatus.ready,
@@ -183,12 +162,9 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
     );
 
     try {
-      final result = await _uploadArticleImage(
-        params: UploadArticleImageParams(
-          authorId: currentUser.id,
-          imagePath: imagePath,
-        ),
-      ).timeout(_timeout);
+      final result = await _orchestrator
+          .uploadImage(authorId: currentUser.id, imagePath: imagePath)
+          .timeout(_timeout);
 
       if (result is DataFailed<String>) {
         emit(
@@ -243,7 +219,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
   }
 
   Future<void> saveDraft() async {
-    final validation = CreateEditArticleValidators.validateDraft(state);
+    final validation = _orchestrator.validateDraft(state);
     if (!validation.isValid) {
       _emitValidationErrors(validation);
       return;
@@ -253,7 +229,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
   }
 
   Future<void> publish() async {
-    final validation = CreateEditArticleValidators.validatePublish(state);
+    final validation = _orchestrator.validatePublish(state);
     if (!validation.isValid) {
       _emitValidationErrors(validation);
       return;
@@ -263,9 +239,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
   }
 
   Future<void> _loadArticle(String articleId) async {
-    final result = await _getArticleById(
-      params: GetArticleByIdParams(articleId: articleId),
-    ).timeout(_timeout);
+    final result = await _orchestrator.loadArticle(articleId).timeout(_timeout);
 
     if (result is DataFailed<ArticleAuthoringEntity> || result.data == null) {
       emit(
@@ -342,12 +316,8 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
 
     try {
       final result = saveAsDraft
-          ? await _saveArticleDraft(
-              params: SaveArticleDraftParams(article: article),
-            ).timeout(_timeout)
-          : await _publishArticle(
-              params: PublishArticleParams(article: article),
-            ).timeout(_timeout);
+          ? await _orchestrator.saveDraft(article).timeout(_timeout)
+          : await _orchestrator.publish(article).timeout(_timeout);
 
       if (result is DataFailed<ArticleAuthoringEntity> || result.data == null) {
         emit(
@@ -396,78 +366,16 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
     }
   }
 
-  Future<ArticleAuthorEntity> _buildAuthor(UserEntity user) async {
-    try {
-      final profileResult = await _getUserProfile(
-        params: GetUserProfileParams(uid: user.id),
-      ).timeout(_timeout);
-
-      if (profileResult is DataSuccess<UserProfileEntity> &&
-          profileResult.data != null) {
-        final profile = profileResult.data!;
-        return ArticleAuthorEntity(
-          id: user.id,
-          name: profile.name.trim().isEmpty
-              ? _fallbackAuthorName(user)
-              : profile.name,
-          email: profile.email,
-          photoUrl: profile.photoUrl,
-        );
-      }
-    } on Exception {
-      // Fallback to auth context below.
-    }
-
-    return ArticleAuthorEntity(
-      id: user.id,
-      name: _fallbackAuthorName(user),
-      email: user.email,
-      photoUrl: null,
-    );
-  }
-
-  ArticleAuthoringEntity _buildEmptyArticle(ArticleAuthorEntity author) {
-    final now = DateTime.now();
-    return ArticleAuthoringEntity(
-      author: author,
-      title: '',
-      subtitle: null,
-      category: 'Varios',
-      content: '',
-      imageUrl: null,
-      isPublished: false,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    );
-  }
-
   ArticleAuthoringEntity _buildArticleFromState({
     required ArticleAuthorEntity author,
     required bool publish,
   }) {
-    final baseline = _initialArticle ?? _buildEmptyArticle(author);
-    final now = DateTime.now();
-    return CreateEditArticleMapper.buildArticleFromState(
+    return _orchestrator.buildArticleFromState(
       state: state,
-      baseline: baseline,
       author: author,
+      baseline: _initialArticle,
       publish: publish,
-      now: now,
     );
-  }
-
-  String _fallbackAuthorName(UserEntity user) {
-    final displayName = user.displayName?.trim();
-    if (displayName != null && displayName.isNotEmpty) {
-      return displayName;
-    }
-
-    if (user.email.trim().isNotEmpty) {
-      return user.email.trim();
-    }
-
-    return 'Autor';
   }
 
   bool _resolveUnsavedChanges({
@@ -478,7 +386,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
     String? imageUrl,
     String? localImagePath,
   }) {
-    return CreateEditArticleMapper.hasUnsavedChanges(
+    return _orchestrator.hasUnsavedChanges(
       state: state,
       baseline: _initialArticle,
       title: title,
