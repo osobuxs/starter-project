@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:news_app_clean_architecture/features/auth/data/models/user_model.dart';
+import 'package:news_app_clean_architecture/features/auth/domain/entities/auth_failure.dart';
 
 abstract class AuthFirebaseDataSource {
   Future<UserModel> login({required String email, required String password});
@@ -31,20 +32,24 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
     required String email,
     required String password,
   }) async {
-    final credential = await _firebaseAuth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    final user = credential.user!;
-    await _ensureUserProfile(
-      uid: user.uid,
-      email: user.email ?? email,
-      displayName: _resolveDisplayName(
-        user.displayName,
-        fallbackEmail: user.email ?? email,
-      ),
-    );
-    return UserModel.fromFirebaseUser(user);
+    try {
+      final credential = await _firebaseAuth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final user = credential.user!;
+      await _ensureUserProfile(
+        uid: user.uid,
+        email: user.email ?? email,
+        displayName: _resolveDisplayName(
+          user.displayName,
+          fallbackEmail: user.email ?? email,
+        ),
+      );
+      return UserModel.fromFirebaseUser(user);
+    } on FirebaseAuthException catch (error) {
+      throw _mapFirebaseAuthException(error);
+    }
   }
 
   @override
@@ -72,28 +77,34 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
       if (error.code == 'email-already-in-use') {
         throw await _resolveEmailAlreadyInUseError(email, error);
       }
-      rethrow;
+      throw _mapFirebaseAuthException(error);
     }
   }
 
   @override
   Future<UserModel> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.authenticate();
-    final googleAuth = await googleUser.authentication;
-    final idToken = googleAuth.idToken;
-    if (idToken == null) {
-      throw Exception('Google sign-in did not return an ID token');
-    }
+    try {
+      final googleUser = await _googleSignIn.authenticate();
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null) {
+        throw const AuthFailure(code: AuthFailureCode.googleAborted);
+      }
 
-    final credential = GoogleAuthProvider.credential(idToken: idToken);
-    final userCredential = await _firebaseAuth.signInWithCredential(credential);
-    final user = userCredential.user!;
-    await _ensureUserProfile(
-      uid: user.uid,
-      email: user.email ?? '',
-      displayName: user.displayName ?? 'Usuario',
-    );
-    return UserModel.fromFirebaseUser(userCredential.user!);
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
+      final user = userCredential.user!;
+      await _ensureUserProfile(
+        uid: user.uid,
+        email: user.email ?? '',
+        displayName: user.displayName ?? 'Usuario',
+      );
+      return UserModel.fromFirebaseUser(userCredential.user!);
+    } on FirebaseAuthException catch (error) {
+      throw _mapFirebaseAuthException(error);
+    }
   }
 
   @override
@@ -159,14 +170,69 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
     return 'Usuario';
   }
 
-  Future<FirebaseAuthException> _resolveEmailAlreadyInUseError(
+  Future<AuthFailure> _resolveEmailAlreadyInUseError(
     String email,
     FirebaseAuthException originalError,
   ) async {
-    return FirebaseAuthException(
-      code: 'email-already-in-use-friendly',
-      email: email,
-      message: originalError.message,
+    return AuthFailure(
+      code: AuthFailureCode.emailAlreadyInUse,
+      message: originalError.message ?? email,
     );
+  }
+
+  AuthFailure _mapFirebaseAuthException(FirebaseAuthException error) {
+    switch (error.code) {
+      case 'user-not-found':
+        return AuthFailure(
+          code: AuthFailureCode.userNotFound,
+          message: error.message,
+        );
+      case 'wrong-password':
+        return AuthFailure(
+          code: AuthFailureCode.wrongPassword,
+          message: error.message,
+        );
+      case 'email-already-in-use':
+      case 'email-already-in-use-friendly':
+        return AuthFailure(
+          code: AuthFailureCode.emailAlreadyInUse,
+          message: error.message,
+        );
+      case 'email-already-in-use-google':
+        return AuthFailure(
+          code: AuthFailureCode.emailAlreadyInUseGoogle,
+          message: error.message,
+        );
+      case 'email-already-in-use-provider':
+        return AuthFailure(
+          code: AuthFailureCode.emailAlreadyInUseProvider,
+          message: error.message,
+        );
+      case 'weak-password':
+        return AuthFailure(
+          code: AuthFailureCode.weakPassword,
+          message: error.message,
+        );
+      case 'invalid-email':
+        return AuthFailure(
+          code: AuthFailureCode.invalidEmail,
+          message: error.message,
+        );
+      case 'invalid-credential':
+        return AuthFailure(
+          code: AuthFailureCode.invalidCredential,
+          message: error.message,
+        );
+      case 'account-exists-with-different-credential':
+        return AuthFailure(
+          code: AuthFailureCode.accountExistsWithDifferentCredential,
+          message: error.message,
+        );
+      default:
+        return AuthFailure(
+          code: AuthFailureCode.unknown,
+          message: error.message,
+        );
+    }
   }
 }

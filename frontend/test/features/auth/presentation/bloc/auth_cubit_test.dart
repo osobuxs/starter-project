@@ -1,7 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
+import 'package:news_app_clean_architecture/features/auth/domain/entities/auth_failure.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/entities/user_entity.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
@@ -91,7 +91,7 @@ void main() {
       'emits [AuthLoading, AuthError] on failure',
       build: () {
         mockRegisterUseCase.handler = ({params}) async => DataFailed(
-          FirebaseAuthException(code: 'email-already-in-use-google'),
+          const AuthFailure(code: AuthFailureCode.emailAlreadyInUseGoogle),
         );
         return cubit;
       },
@@ -125,7 +125,7 @@ void main() {
       'emits [AuthLoading, AuthError] when aborted',
       build: () {
         mockSignInWithGoogleUseCase.handler = ({params}) async =>
-            DataFailed(Exception('Google sign-in aborted'));
+            DataFailed(const AuthFailure(code: AuthFailureCode.googleAborted));
         return cubit;
       },
       act: (c) => c.signInWithGoogle(),

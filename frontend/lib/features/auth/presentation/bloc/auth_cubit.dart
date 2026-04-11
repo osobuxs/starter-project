@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
+import 'package:news_app_clean_architecture/features/auth/domain/entities/auth_failure.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/usecases/get_current_user_usecase.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/usecases/login_usecase.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/usecases/logout_usecase.dart';
@@ -250,29 +250,31 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   String _mapFirebaseError(Exception? error) {
-    if (error is FirebaseAuthException) {
+    if (error is AuthFailure) {
       switch (error.code) {
-        case 'user-not-found':
+        case AuthFailureCode.userNotFound:
           return 'No existe una cuenta con ese email.';
-        case 'wrong-password':
+        case AuthFailureCode.wrongPassword:
           return 'Contraseña incorrecta.';
-        case 'email-already-in-use':
+        case AuthFailureCode.emailAlreadyInUse:
           return 'Ya existe una cuenta con ese email. Probá iniciar sesión en lugar de registrarte.';
-        case 'email-already-in-use-friendly':
-          return 'Ya existe una cuenta con ese email. Probá iniciar sesión en lugar de registrarte.';
-        case 'email-already-in-use-google':
+        case AuthFailureCode.emailAlreadyInUseGoogle:
           return 'Ese email ya está asociado a una cuenta creada con Google. Usá “Continuar con Google” para ingresar.';
-        case 'email-already-in-use-provider':
+        case AuthFailureCode.emailAlreadyInUseProvider:
           return 'Ese email ya está asociado a una cuenta creada con otro proveedor. Iniciá sesión con ese método para continuar.';
-        case 'weak-password':
+        case AuthFailureCode.weakPassword:
           return 'La contraseña debe tener al menos 6 caracteres.';
-        case 'invalid-email':
+        case AuthFailureCode.invalidEmail:
           return 'El email no es válido.';
-        case 'invalid-credential':
+        case AuthFailureCode.invalidCredential:
           return 'Credenciales incorrectas.';
-        case 'account-exists-with-different-credential':
+        case AuthFailureCode.accountExistsWithDifferentCredential:
           return 'Ese email ya está vinculado a otro método de acceso. Probá ingresar con el proveedor original.';
-        default:
+        case AuthFailureCode.googleAborted:
+          return 'Se canceló el inicio con Google. Intentá nuevamente.';
+        case AuthFailureCode.network:
+          return 'No hay conexión. Verificá tu red e intentá de nuevo.';
+        case AuthFailureCode.unknown:
           return error.message ?? 'Ocurrió un error. Intentá de nuevo.';
       }
     }
