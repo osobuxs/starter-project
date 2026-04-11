@@ -8,7 +8,9 @@ import 'package:news_app_clean_architecture/features/articles/domain/usecases/ge
 import 'package:news_app_clean_architecture/features/articles/domain/usecases/publish_article_usecase.dart';
 import 'package:news_app_clean_architecture/features/articles/domain/usecases/save_article_draft_usecase.dart';
 import 'package:news_app_clean_architecture/features/articles/domain/usecases/upload_article_image_usecase.dart';
+import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_mapper.dart';
 import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_state.dart';
+import 'package:news_app_clean_architecture/features/articles/presentation/cubit/create_edit_article_validators.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/entities/user_entity.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/usecases/get_current_user_usecase.dart';
 import 'package:news_app_clean_architecture/features/user_profile/domain/entities/user_profile_entity.dart';
@@ -241,7 +243,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
   }
 
   Future<void> saveDraft() async {
-    final validation = _validateDraft();
+    final validation = CreateEditArticleValidators.validateDraft(state);
     if (!validation.isValid) {
       _emitValidationErrors(validation);
       return;
@@ -251,7 +253,7 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
   }
 
   Future<void> publish() async {
-    final validation = _validatePublish();
+    final validation = CreateEditArticleValidators.validatePublish(state);
     if (!validation.isValid) {
       _emitValidationErrors(validation);
       return;
@@ -445,25 +447,13 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
     required bool publish,
   }) {
     final baseline = _initialArticle ?? _buildEmptyArticle(author);
-    final normalizedCategory = _normalizeCategory(state.category);
     final now = DateTime.now();
-    final shouldRemainPublished = publish || baseline.isPublished;
-
-    return ArticleAuthoringEntity(
-      firestoreId: state.articleId,
+    return CreateEditArticleMapper.buildArticleFromState(
+      state: state,
+      baseline: baseline,
       author: author,
-      title: state.title.trim(),
-      subtitle: _normalizeOptionalValue(state.subtitle),
-      category: normalizedCategory,
-      content: state.content.trim(),
-      imageUrl: state.imageUrl,
-      isPublished: shouldRemainPublished,
-      isActive: baseline.isActive,
-      createdAt: baseline.createdAt,
-      updatedAt: now,
-      publishedAt: shouldRemainPublished
-          ? (baseline.publishedAt ?? (publish ? now : baseline.createdAt))
-          : null,
+      publish: publish,
+      now: now,
     );
   }
 
@@ -480,16 +470,6 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
     return 'Autor';
   }
 
-  String _normalizeCategory(String value) {
-    final trimmed = value.trim();
-    return trimmed.isEmpty ? 'Varios' : trimmed;
-  }
-
-  String? _normalizeOptionalValue(String value) {
-    final trimmed = value.trim();
-    return trimmed.isEmpty ? null : trimmed;
-  }
-
   bool _resolveUnsavedChanges({
     String? title,
     String? subtitle,
@@ -498,53 +478,19 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
     String? imageUrl,
     String? localImagePath,
   }) {
-    final baseline = _initialArticle;
-    if (baseline == null) {
-      return (title ?? state.title).trim().isNotEmpty ||
-          (subtitle ?? state.subtitle).trim().isNotEmpty ||
-          _normalizeCategory(category ?? state.category) != 'Varios' ||
-          (content ?? state.content).trim().isNotEmpty ||
-          ((imageUrl ?? state.imageUrl)?.trim().isNotEmpty ?? false) ||
-          ((localImagePath ?? state.localImagePath)?.trim().isNotEmpty ??
-              false);
-    }
-
-    return baseline.title != (title ?? state.title).trim() ||
-        (baseline.subtitle ?? '') != (subtitle ?? state.subtitle).trim() ||
-        baseline.category != _normalizeCategory(category ?? state.category) ||
-        baseline.content != (content ?? state.content).trim() ||
-        (baseline.imageUrl ?? '') != ((imageUrl ?? state.imageUrl) ?? '') ||
-        ((localImagePath ?? state.localImagePath)?.trim().isNotEmpty ?? false);
-  }
-
-  _ArticleValidation _validateDraft() {
-    final title = state.title.trim();
-    return _ArticleValidation(
-      titleError: title.isEmpty
-          ? 'Ingresá al menos un título para guardar el borrador.'
-          : null,
+    return CreateEditArticleMapper.hasUnsavedChanges(
+      state: state,
+      baseline: _initialArticle,
+      title: title,
+      subtitle: subtitle,
+      category: category,
+      content: content,
+      imageUrl: imageUrl,
+      localImagePath: localImagePath,
     );
   }
 
-  _ArticleValidation _validatePublish() {
-    final title = state.title.trim();
-    final content = state.content.trim();
-    final imageUrl = state.imageUrl?.trim() ?? '';
-
-    return _ArticleValidation(
-      titleError: title.isEmpty
-          ? 'El título es obligatorio para publicar.'
-          : null,
-      contentError: content.isEmpty
-          ? 'El contenido es obligatorio para publicar.'
-          : null,
-      imageError: imageUrl.isEmpty
-          ? 'La imagen es obligatoria para publicar.'
-          : null,
-    );
-  }
-
-  void _emitValidationErrors(_ArticleValidation validation) {
+  void _emitValidationErrors(CreateEditArticleValidation validation) {
     emit(
       state.copyWith(
         status: CreateEditArticleStatus.ready,
@@ -556,19 +502,4 @@ class CreateEditArticleCubit extends Cubit<CreateEditArticleState> {
       ),
     );
   }
-}
-
-class _ArticleValidation {
-  final String? titleError;
-  final String? contentError;
-  final String? imageError;
-
-  const _ArticleValidation({
-    this.titleError,
-    this.contentError,
-    this.imageError,
-  });
-
-  bool get isValid =>
-      titleError == null && contentError == null && imageError == null;
 }
