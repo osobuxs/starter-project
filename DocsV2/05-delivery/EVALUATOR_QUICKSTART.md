@@ -10,11 +10,18 @@ Antes de empezar, asegurate de tener lo siguiente:
 
 - repositorio clonado y branch `main`
 - **Flutter SDK** instalado y disponible en PATH
+- **JDK instalado** (necesario para compilar/correr Android con Flutter y para Firebase Emulators en backend tests)
+- **Android SDK / Android toolchain** correctamente instalado
+  - Android Studio **o** command-line tools con platform tools disponibles
+  - `adb` funcionando
 - **Android device físico** conectado por cable **o** un **emulador Android** levantado
+- **Node.js + npm** instalados (necesarios para correr los tests de reglas del backend)
 - acceso a internet
 - `google-services.json` ya presente en `frontend/android/app/`
 
 > Nota: para evaluación funcional del frontend, el proyecto se conecta a **Firebase/Firestore en la nube**. No hace falta levantar backend local para usar la app.
+>
+> Nota 2: para ejecutar `npm run test:rules`, **no hace falta instalar `firebase-tools` globalmente**, porque el proyecto ya lo incluye como dependencia de desarrollo en `backend/package.json`.
 
 ---
 
@@ -27,6 +34,12 @@ cd frontend
 flutter pub get
 flutter run
 ```
+
+### Qué usa internamente este paso
+
+- `flutter run` usa **Flutter SDK**
+- compila Android usando **Gradle + JDK**
+- instala la app vía **Android SDK / adb**
 
 ### Resultado esperado
 
@@ -144,6 +157,11 @@ flutter test
 ### 4.2 Backend security tests
 
 Aunque la app usa Firebase cloud para la evaluación funcional, las reglas de seguridad se validan con emuladores.
+
+Este paso requiere:
+
+- **Node.js + npm**
+- **JDK** (Firestore Emulator corre sobre Java)
 
 ```bash
 cd backend
