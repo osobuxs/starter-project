@@ -109,5 +109,48 @@ void main() {
             .having((state) => state.isLoadingMore, 'isLoadingMore', false),
       ],
     );
+
+    blocTest<RemoteArticlesBloc, RemoteArticlesState>(
+      'changing date filter resets cursor and requests first page again',
+      build: () {
+        final useCase = _StubGetArticleUseCase(
+          handler: ({params}) async {
+            expect(params?.after, isNull);
+            expect(params?.dateFilter, DateTime(2026, 1, 10));
+            return const DataSuccess(
+              PaginatedArticlesEntity(
+                articles: [secondArticle],
+                nextCursor: secondCursor,
+                hasReachedMax: false,
+              ),
+            );
+          },
+        );
+        return RemoteArticlesBloc(useCase);
+      },
+      seed: () => const RemoteArticlesState(
+        articles: [firstArticle],
+        isLoading: false,
+        currentPage: 3,
+        nextCursor: firstCursor,
+        hasReachedMax: false,
+      ),
+      act: (bloc) =>
+          bloc.add(const GetArticles(selectedDate: DateTime(2026, 1, 10))),
+      expect: () => [
+        isA<RemoteArticlesState>()
+            .having((state) => state.currentPage, 'currentPage', 0)
+            .having((state) => state.nextCursor, 'nextCursor', isNull)
+            .having(
+              (state) => state.selectedDate,
+              'selectedDate',
+              DateTime(2026, 1, 10),
+            ),
+        isA<RemoteArticlesState>()
+            .having((state) => state.currentPage, 'currentPage', 1)
+            .having((state) => state.articles.length, 'articles length', 1)
+            .having((state) => state.nextCursor, 'nextCursor', secondCursor),
+      ],
+    );
   });
 }

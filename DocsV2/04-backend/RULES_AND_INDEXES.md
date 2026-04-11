@@ -48,6 +48,13 @@ varios documentos con el mismo `createdAt`.
 Si el entorno exige índice compuesto adicional para el order + filtros (`isActive`, `isPublished`),
 crearlo desde el link que devuelve Firestore en el error de índice faltante.
 
+### Checklist de validación B1.2
+
+- [ ] Dashboard inicial carga `kDashboardPageSize` sin re-descargar páginas previas.
+- [ ] Load-more usa cursor (`startAfter`) y agrega sólo la siguiente página.
+- [ ] Cambio de filtro por fecha reinicia cursor y vuelve a primera página.
+- [ ] Si Firebase reporta índice faltante, se crea y se versiona en `backend/firestore.indexes.json`.
+
 ## Nota para evaluadores
 
 La app pasó por una evolución fuerte respecto del starter inicial. Por eso los artifacts de backend legacy se mantienen, pero la fuente de verdad actual es esta carpeta `DocsV2/` junto con los archivos efectivos de `backend/`.
