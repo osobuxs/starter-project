@@ -287,7 +287,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         children: [
                           TextFormField(
                             controller: _nameController,
-                            inputFormatters: const [
+                            inputFormatters: [
                               LengthLimitingTextInputFormatter(_maxNameLength),
                             ],
                             decoration: const InputDecoration(
@@ -319,7 +319,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           TextFormField(
                             controller: _ageController,
                             keyboardType: TextInputType.number,
-                            inputFormatters: const [
+                            inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                               LengthLimitingTextInputFormatter(_maxAgeLength),
                             ],
