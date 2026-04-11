@@ -39,7 +39,7 @@ class MockRegisterUseCase implements RegisterUseCase {
 }
 
 class MockSignInWithGoogleUseCase implements SignInWithGoogleUseCase {
-  Future<DataState<UserEntity>> Function({void params})? handler;
+  Future<DataState<UserEntity>> Function()? handler;
 
   @override
   Future<DataState<UserEntity>> call({void params}) {
@@ -51,12 +51,12 @@ class MockSignInWithGoogleUseCase implements SignInWithGoogleUseCase {
         ),
       );
     }
-    return current(params: params);
+    return current();
   }
 }
 
 class MockLogoutUseCase implements LogoutUseCase {
-  Future<DataState<void>> Function({void params})? handler;
+  Future<DataState<void>> Function()? handler;
 
   @override
   Future<DataState<void>> call({void params}) {
@@ -66,7 +66,7 @@ class MockLogoutUseCase implements LogoutUseCase {
         DataFailed(Exception('MockLogoutUseCase.handler not configured')),
       );
     }
-    return current(params: params);
+    return current();
   }
 }
 
