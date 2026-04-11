@@ -65,6 +65,10 @@ void main() {
       act: (bloc) => bloc.add(const GetArticles()),
       expect: () => [
         isA<RemoteArticlesState>()
+            .having((state) => state.articles.length, 'articles length', 0)
+            .having((state) => state.currentPage, 'currentPage', 0)
+            .having((state) => state.nextCursor, 'nextCursor', isNull),
+        isA<RemoteArticlesState>()
             .having((state) => state.articles.length, 'articles length', 1)
             .having((state) => state.currentPage, 'currentPage', 1)
             .having((state) => state.nextCursor, 'nextCursor', firstCursor)
