@@ -132,6 +132,14 @@ class _RouteAccessGate extends StatefulWidget {
 class _RouteAccessGateState extends State<_RouteAccessGate> {
   bool _redirectScheduled = false;
 
+  bool _shouldHoldProtectedRoute(AuthState authState) {
+    return authState is AuthInitial || authState is AuthLoading;
+  }
+
+  bool _shouldHoldAnonymousRoute(AuthState authState) {
+    return authState is AuthInitial;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthCubit, AuthState>(
@@ -141,16 +149,13 @@ class _RouteAccessGateState extends State<_RouteAccessGate> {
           return widget.child;
         }
 
-        final isAuthPending =
-            authState is AuthInitial || authState is AuthLoading;
-
         if (widget.policy.requiresAuthentication) {
           if (authState is AuthAuthenticated) {
             _redirectScheduled = false;
             return widget.child;
           }
 
-          if (isAuthPending) {
+          if (_shouldHoldProtectedRoute(authState)) {
             return const _RouteRedirectPlaceholder();
           }
 
@@ -163,7 +168,7 @@ class _RouteAccessGateState extends State<_RouteAccessGate> {
           return const _RouteRedirectPlaceholder();
         }
 
-        if (isAuthPending) {
+        if (_shouldHoldAnonymousRoute(authState)) {
           return const _RouteRedirectPlaceholder();
         }
 
