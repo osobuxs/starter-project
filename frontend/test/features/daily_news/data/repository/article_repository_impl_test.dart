@@ -42,10 +42,7 @@ void main() {
 
     test('returns DataSuccess with List<ArticleEntity>', () async {
       when(
-        mockFirestoreDataSource.getPublishedArticles(
-          page: anyNamed('page') as int,
-          dateFilter: anyNamed('dateFilter'),
-        ),
+        mockFirestoreDataSource.getPublishedArticles(page: 1, dateFilter: null),
       ).thenAnswer((_) async => tArticles);
 
       final result = await repository.getNewsArticles(page: 1);
@@ -56,10 +53,7 @@ void main() {
 
     test('returns DataFailed when data source throws', () async {
       when(
-        mockFirestoreDataSource.getPublishedArticles(
-          page: anyNamed('page') as int,
-          dateFilter: anyNamed('dateFilter'),
-        ),
+        mockFirestoreDataSource.getPublishedArticles(page: 1, dateFilter: null),
       ).thenThrow(Exception('firestore failed'));
 
       final result = await repository.getNewsArticles(page: 1);
@@ -98,18 +92,14 @@ void main() {
       'saveArticle persists favorite through firestore data source',
       () async {
         when(
-          mockFavoriteFirestoreDataSource.saveFavoriteArticle(
-            any as ArticleModel,
-          ),
+          mockFavoriteFirestoreDataSource.saveFavoriteArticle(tArticle),
         ).thenAnswer((_) async {});
 
         final result = await repository.saveArticle(tArticle);
 
         expect(result, isA<DataSuccess<void>>());
         verify(
-          mockFavoriteFirestoreDataSource.saveFavoriteArticle(
-            any as ArticleModel,
-          ),
+          mockFavoriteFirestoreDataSource.saveFavoriteArticle(tArticle),
         ).called(1);
       },
     );

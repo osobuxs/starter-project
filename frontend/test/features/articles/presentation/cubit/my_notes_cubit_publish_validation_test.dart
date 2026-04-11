@@ -11,8 +11,14 @@ import 'package:news_app_clean_architecture/features/articles/presentation/cubit
 import 'package:news_app_clean_architecture/features/auth/domain/entities/user_entity.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/usecases/get_current_user_usecase.dart';
 
-class _MockGetCurrentUserUseCase extends Mock
-    implements GetCurrentUserUseCase {}
+class _StubGetCurrentUserUseCase extends Fake implements GetCurrentUserUseCase {
+  final UserEntity? user;
+
+  _StubGetCurrentUserUseCase(this.user);
+
+  @override
+  Future<UserEntity?> call({void params}) async => user;
+}
 
 class _MockGetMyArticlesUseCase extends Mock implements GetMyArticlesUseCase {}
 
@@ -23,7 +29,7 @@ class _MockUpdateArticleActiveStateUseCase extends Mock
     implements UpdateArticleActiveStateUseCase {}
 
 void main() {
-  late _MockGetCurrentUserUseCase getCurrentUser;
+  late GetCurrentUserUseCase getCurrentUser;
   late _MockGetMyArticlesUseCase getMyArticles;
   late _MockPublishArticleUseCase publishArticle;
   late _MockUpdateArticleActiveStateUseCase updateArticleActiveState;
@@ -59,7 +65,7 @@ void main() {
   }
 
   setUp(() {
-    getCurrentUser = _MockGetCurrentUserUseCase();
+    getCurrentUser = _StubGetCurrentUserUseCase(user);
     getMyArticles = _MockGetMyArticlesUseCase();
     publishArticle = _MockPublishArticleUseCase();
     updateArticleActiveState = _MockUpdateArticleActiveStateUseCase();
@@ -71,9 +77,6 @@ void main() {
       updateArticleActiveState: updateArticleActiveState,
     );
 
-    when(
-      getCurrentUser(params: anyNamed('params')),
-    ).thenAnswer((_) async => user);
     when(getMyArticles(params: anyNamed('params'))).thenAnswer(
       (_) async => DataSuccess<List<ArticleAuthoringEntity>>([article()]),
     );
