@@ -68,6 +68,7 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
       );
       return UserModel.fromFirebaseUser(updatedUser);
     } on FirebaseAuthException catch (error) {
+      await _firebaseAuth.signOut();
       if (error.code == 'email-already-in-use') {
         throw await _resolveEmailAlreadyInUseError(email, error);
       }
