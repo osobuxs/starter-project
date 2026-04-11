@@ -7,6 +7,7 @@ import 'package:news_app_clean_architecture/core/widgets/app_state_views.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/validation/auth_form_validators.dart';
+import 'package:news_app_clean_architecture/features/auth/presentation/widgets/auth_inline_error_banner.dart';
 
 class LoginPage extends StatefulWidget {
   final Object? redirectRoute;
@@ -22,15 +23,43 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  String? _authErrorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_clearAuthError);
+    _passwordController.addListener(_clearAuthError);
+  }
 
   @override
   void dispose() {
+    _emailController.removeListener(_clearAuthError);
+    _passwordController.removeListener(_clearAuthError);
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  void _clearAuthError() {
+    if (_authErrorMessage == null || !mounted) {
+      return;
+    }
+
+    setState(() => _authErrorMessage = null);
+  }
+
+  void _syncAuthError(AuthState state) {
+    final nextMessage = state is AuthError ? state.message : null;
+    if (_authErrorMessage == nextMessage || !mounted) {
+      return;
+    }
+
+    setState(() => _authErrorMessage = nextMessage);
+  }
+
   void _onLogin() {
+    _clearAuthError();
     if (_formKey.currentState!.validate()) {
       context.read<AuthCubit>().login(
         email: _emailController.text.trim(),
@@ -40,25 +69,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _onGoogleSignIn() {
+    _clearAuthError();
     context.read<AuthCubit>().signInWithGoogle();
-  }
-
-  Future<void> _showAuthErrorDialog(String message) {
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('No pudimos continuar'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Entendido'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -69,11 +81,7 @@ class _LoginPageState extends State<LoginPage> {
       drawerVariant: AppSectionDrawerVariant.auth,
       redirectRouteName: widget.redirectRoute,
       body: BlocListener<AuthCubit, AuthState>(
-        listener: (context, state) {
-          if (state is AuthError) {
-            _showAuthErrorDialog(state.message);
-          }
-        },
+        listener: (context, state) => _syncAuthError(state),
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -133,6 +141,10 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         validator: AuthFormValidators.validatePassword,
                       ),
+                      if (_authErrorMessage != null) ...[
+                        const SizedBox(height: 16),
+                        AuthInlineErrorBanner(message: _authErrorMessage!),
+                      ],
                       const SizedBox(height: 24),
                       BlocBuilder<AuthCubit, AuthState>(
                         builder: (context, state) {
