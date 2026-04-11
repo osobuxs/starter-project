@@ -24,11 +24,11 @@ class _StubGetArticleUseCase implements GetArticleUseCase {
 }
 
 void main() {
-  const firstCursor = ArticlePaginationCursor(
+  final firstCursor = ArticlePaginationCursor(
     createdAt: DateTime(2026, 1, 1),
     firestoreId: 'article-1',
   );
-  const secondCursor = ArticlePaginationCursor(
+  final secondCursor = ArticlePaginationCursor(
     createdAt: DateTime(2026, 1, 2),
     firestoreId: 'article-2',
   );
@@ -51,7 +51,7 @@ void main() {
         final useCase = _StubGetArticleUseCase(
           handler: ({params}) async {
             expect(params?.after, isNull);
-            return const DataSuccess(
+            return DataSuccess(
               PaginatedArticlesEntity(
                 articles: [firstArticle],
                 nextCursor: firstCursor,
@@ -78,7 +78,7 @@ void main() {
         final useCase = _StubGetArticleUseCase(
           handler: ({params}) async {
             expect(params?.after, firstCursor);
-            return const DataSuccess(
+            return DataSuccess(
               PaginatedArticlesEntity(
                 articles: [secondArticle],
                 nextCursor: secondCursor,
@@ -117,7 +117,7 @@ void main() {
           handler: ({params}) async {
             expect(params?.after, isNull);
             expect(params?.dateFilter, DateTime(2026, 1, 10));
-            return const DataSuccess(
+            return DataSuccess(
               PaginatedArticlesEntity(
                 articles: [secondArticle],
                 nextCursor: secondCursor,
@@ -135,8 +135,7 @@ void main() {
         nextCursor: firstCursor,
         hasReachedMax: false,
       ),
-      act: (bloc) =>
-          bloc.add(const GetArticles(selectedDate: DateTime(2026, 1, 10))),
+      act: (bloc) => bloc.add(GetArticles(selectedDate: DateTime(2026, 1, 10))),
       expect: () => [
         isA<RemoteArticlesState>()
             .having((state) => state.currentPage, 'currentPage', 0)
