@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:news_app_clean_architecture/core/constants/constants.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/models/article.dart';
 
+bool isVisibleFavoriteArticle(ArticleModel article) {
+  return article.isActive == true && article.isPublished == true;
+}
+
 abstract class FavoriteFirestoreDataSource {
   Future<List<ArticleModel>> getFavoriteArticles();
 
@@ -129,17 +133,6 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
     QueryDocumentSnapshot<Map<String, dynamic>> favoriteDocument,
   ) async {
     final favoriteData = favoriteDocument.data();
-    final articleFromFavorite = _tryResolveArticleFromFavoriteData(
-      favoriteDocument.id,
-      favoriteData,
-    );
-
-    if (articleFromFavorite != null) {
-      return _FavoriteArticleLookupResult.keep(
-        favoriteId: favoriteDocument.id,
-        article: articleFromFavorite,
-      );
-    }
 
     final articleId = _resolveFavoriteDocumentArticleId(
       favoriteDocument.id,
@@ -163,13 +156,8 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
         documentId: articleSnapshot.id,
       );
 
-      final storedVersion = _toInt(favoriteData['favoritesVersion']) ?? 0;
-      final currentVersion = article.favoritesVersion ?? 0;
-
-      if (article.isActive != true ||
-          article.isPublished != true ||
-          storedVersion != currentVersion) {
-        return _FavoriteArticleLookupResult.delete(favoriteDocument.id);
+      if (!isVisibleFavoriteArticle(article)) {
+        return _FavoriteArticleLookupResult.hidden(favoriteDocument.id);
       }
 
       await favoritesCollection
@@ -185,7 +173,7 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
       );
     } on FirebaseException catch (error) {
       if (error.code == 'permission-denied') {
-        return _FavoriteArticleLookupResult.delete(favoriteDocument.id);
+        return _FavoriteArticleLookupResult.hidden(favoriteDocument.id);
       }
 
       rethrow;
@@ -215,33 +203,6 @@ class FavoriteFirestoreDataSourceImpl implements FavoriteFirestoreDataSource {
     }
 
     return fallbackId;
-  }
-
-  int? _toInt(dynamic value) {
-    if (value is int) {
-      return value;
-    }
-
-    if (value is num) {
-      return value.toInt();
-    }
-
-    return null;
-  }
-
-  ArticleModel? _tryResolveArticleFromFavoriteData(
-    String documentId,
-    Map<String, dynamic> favoriteData,
-  ) {
-    final title = (favoriteData['title'] as String?)?.trim();
-    if (title == null || title.isEmpty) {
-      return null;
-    }
-
-    return ArticleModel.fromRawData(
-      _normalizeDocumentData(favoriteData),
-      documentId: documentId,
-    );
   }
 
   Map<String, dynamic> _buildFavoriteDocument({
@@ -288,6 +249,14 @@ class _FavoriteArticleLookupResult {
     return _FavoriteArticleLookupResult._(
       favoriteId: favoriteId,
       article: article,
+      shouldDelete: false,
+    );
+  }
+
+  factory _FavoriteArticleLookupResult.hidden(String favoriteId) {
+    return _FavoriteArticleLookupResult._(
+      favoriteId: favoriteId,
+      article: null,
       shouldDelete: false,
     );
   }
