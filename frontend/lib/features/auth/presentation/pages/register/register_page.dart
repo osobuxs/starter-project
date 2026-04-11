@@ -72,16 +72,6 @@ class _RegisterPageState extends State<RegisterPage> {
       redirectRouteName: widget.redirectRoute,
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
-          if (state is AuthAuthenticated) {
-            try {
-              completeAuthRedirect(context, widget.redirectRoute);
-            } catch (_) {
-              _showAuthErrorDialog(
-                'La cuenta se creó, pero no pudimos abrir la pantalla solicitada. Intentá nuevamente.',
-              );
-            }
-          }
-
           if (state is AuthError) {
             _showAuthErrorDialog(state.message);
           }
