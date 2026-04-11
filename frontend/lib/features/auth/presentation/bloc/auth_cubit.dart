@@ -128,13 +128,19 @@ class AuthCubit extends Cubit<AuthState> {
         case 'wrong-password':
           return 'Contraseña incorrecta.';
         case 'email-already-in-use':
-          return 'Ya existe una cuenta con ese email.';
+          return 'Ya existe una cuenta con ese email. Probá iniciar sesión en lugar de registrarte.';
+        case 'email-already-in-use-google':
+          return 'Ese email ya está asociado a una cuenta creada con Google. Usá “Continuar con Google” para ingresar.';
+        case 'email-already-in-use-provider':
+          return 'Ese email ya está asociado a una cuenta creada con otro proveedor. Iniciá sesión con ese método para continuar.';
         case 'weak-password':
           return 'La contraseña debe tener al menos 6 caracteres.';
         case 'invalid-email':
           return 'El email no es válido.';
         case 'invalid-credential':
           return 'Credenciales incorrectas.';
+        case 'account-exists-with-different-credential':
+          return 'Ese email ya está vinculado a otro método de acceso. Probá ingresar con el proveedor original.';
         default:
           return error.message ?? 'Ocurrió un error. Intentá de nuevo.';
       }

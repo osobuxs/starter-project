@@ -6,6 +6,7 @@ import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.da
 import 'package:news_app_clean_architecture/core/widgets/app_state_views.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
+import 'package:news_app_clean_architecture/features/auth/presentation/validation/auth_form_validators.dart';
 
 class RegisterPage extends StatefulWidget {
   final Object? redirectRoute;
@@ -101,41 +102,34 @@ class _RegisterPageState extends State<RegisterPage> {
                       TextFormField(
                         controller: _displayNameController,
                         textCapitalization: TextCapitalization.words,
+                        inputFormatters:
+                            AuthFormValidators.displayNameInputFormatters,
                         decoration: const InputDecoration(
                           labelText: 'Nombre completo',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.person_outlined),
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Ingresá tu nombre';
-                          }
-                          return null;
-                        },
+                        validator: AuthFormValidators.validateDisplayName,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        inputFormatters:
+                            AuthFormValidators.emailInputFormatters,
                         decoration: const InputDecoration(
                           labelText: 'Email',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.email_outlined),
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Ingresá tu email';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Email inválido';
-                          }
-                          return null;
-                        },
+                        validator: AuthFormValidators.validateEmail,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
+                        inputFormatters:
+                            AuthFormValidators.passwordInputFormatters,
                         decoration: InputDecoration(
                           labelText: 'Contraseña',
                           border: const OutlineInputBorder(),
@@ -153,15 +147,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             },
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Ingresá tu contraseña';
-                          }
-                          if (value.length < 6) {
-                            return 'Mínimo 6 caracteres';
-                          }
-                          return null;
-                        },
+                        validator: AuthFormValidators.validatePassword,
                       ),
                       const SizedBox(height: 24),
                       BlocBuilder<AuthCubit, AuthState>(

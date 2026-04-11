@@ -53,19 +53,26 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
     required String password,
     required String displayName,
   }) async {
-    final credential = await _firebaseAuth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    await credential.user!.updateDisplayName(displayName);
-    await credential.user!.reload();
-    final updatedUser = _firebaseAuth.currentUser!;
-    await _ensureUserProfile(
-      uid: updatedUser.uid,
-      email: updatedUser.email ?? email,
-      displayName: updatedUser.displayName ?? displayName,
-    );
-    return UserModel.fromFirebaseUser(updatedUser);
+    try {
+      final credential = await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      await credential.user!.updateDisplayName(displayName);
+      await credential.user!.reload();
+      final updatedUser = _firebaseAuth.currentUser!;
+      await _ensureUserProfile(
+        uid: updatedUser.uid,
+        email: updatedUser.email ?? email,
+        displayName: updatedUser.displayName ?? displayName,
+      );
+      return UserModel.fromFirebaseUser(updatedUser);
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'email-already-in-use') {
+        throw await _resolveEmailAlreadyInUseError(email, error);
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -149,5 +156,34 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
     }
 
     return 'Usuario';
+  }
+
+  Future<FirebaseAuthException> _resolveEmailAlreadyInUseError(
+    String email,
+    FirebaseAuthException originalError,
+  ) async {
+    try {
+      final methods = await _firebaseAuth.fetchSignInMethodsForEmail(email);
+
+      if (methods.contains('google.com')) {
+        return FirebaseAuthException(
+          code: 'email-already-in-use-google',
+          email: email,
+          message: originalError.message,
+        );
+      }
+
+      if (methods.any((method) => method != 'password')) {
+        return FirebaseAuthException(
+          code: 'email-already-in-use-provider',
+          email: email,
+          message: originalError.message,
+        );
+      }
+    } on FirebaseAuthException {
+      return originalError;
+    }
+
+    return originalError;
   }
 }

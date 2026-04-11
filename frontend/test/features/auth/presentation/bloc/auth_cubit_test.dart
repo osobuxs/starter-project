@@ -1,5 +1,6 @@
 // dart run build_runner build --delete-conflicting-outputs
 import 'package:bloc_test/bloc_test.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -30,8 +31,16 @@ void main() {
   late MockGetCurrentUserUseCase mockGetCurrentUserUseCase;
   late AuthCubit cubit;
 
-  const tUser = UserEntity(id: 'uid1', email: 'test@test.com', displayName: 'Test User');
-  const tGoogleUser = UserEntity(id: 'uid_google', email: 'google@test.com', displayName: 'Google User');
+  const tUser = UserEntity(
+    id: 'uid1',
+    email: 'test@test.com',
+    displayName: 'Test User',
+  );
+  const tGoogleUser = UserEntity(
+    id: 'uid_google',
+    email: 'google@test.com',
+    displayName: 'Google User',
+  );
 
   setUp(() {
     mockLoginUseCase = MockLoginUseCase();
@@ -58,8 +67,9 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, AuthAuthenticated] on success',
       build: () {
-        when(mockLoginUseCase(params: anyNamed('params')))
-            .thenAnswer((_) async => const DataSuccess(tUser));
+        when(
+          mockLoginUseCase(params: anyNamed('params')),
+        ).thenAnswer((_) async => const DataSuccess(tUser));
         return cubit;
       },
       act: (c) => c.login(email: 'test@test.com', password: '123456'),
@@ -69,8 +79,9 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, AuthError] on failure',
       build: () {
-        when(mockLoginUseCase(params: anyNamed('params')))
-            .thenAnswer((_) async => DataFailed(Exception('wrong-password')));
+        when(
+          mockLoginUseCase(params: anyNamed('params')),
+        ).thenAnswer((_) async => DataFailed(Exception('wrong-password')));
         return cubit;
       },
       act: (c) => c.login(email: 'test@test.com', password: 'wrong'),
@@ -82,8 +93,9 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, AuthAuthenticated] on success',
       build: () {
-        when(mockRegisterUseCase(params: anyNamed('params')))
-            .thenAnswer((_) async => const DataSuccess(tUser));
+        when(
+          mockRegisterUseCase(params: anyNamed('params')),
+        ).thenAnswer((_) async => const DataSuccess(tUser));
         return cubit;
       },
       act: (c) => c.register(
@@ -97,8 +109,11 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, AuthError] on failure',
       build: () {
-        when(mockRegisterUseCase(params: anyNamed('params')))
-            .thenAnswer((_) async => DataFailed(Exception('email-already-in-use')));
+        when(mockRegisterUseCase(params: anyNamed('params'))).thenAnswer(
+          (_) async => DataFailed(
+            FirebaseAuthException(code: 'email-already-in-use-google'),
+          ),
+        );
         return cubit;
       },
       act: (c) => c.register(
@@ -106,7 +121,12 @@ void main() {
         password: '123456',
         displayName: 'Test User',
       ),
-      expect: () => [const AuthLoading(), isA<AuthError>()],
+      expect: () => [
+        const AuthLoading(),
+        const AuthError(
+          'Ese email ya está asociado a una cuenta creada con Google. Usá “Continuar con Google” para ingresar.',
+        ),
+      ],
     );
   });
 
@@ -114,8 +134,9 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, AuthAuthenticated] on success',
       build: () {
-        when(mockSignInWithGoogleUseCase())
-            .thenAnswer((_) async => const DataSuccess(tGoogleUser));
+        when(
+          mockSignInWithGoogleUseCase(),
+        ).thenAnswer((_) async => const DataSuccess(tGoogleUser));
         return cubit;
       },
       act: (c) => c.signInWithGoogle(),
@@ -125,8 +146,9 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, AuthError] when aborted',
       build: () {
-        when(mockSignInWithGoogleUseCase())
-            .thenAnswer((_) async => DataFailed(Exception('Google sign-in aborted')));
+        when(mockSignInWithGoogleUseCase()).thenAnswer(
+          (_) async => DataFailed(Exception('Google sign-in aborted')),
+        );
         return cubit;
       },
       act: (c) => c.signInWithGoogle(),
@@ -138,7 +160,9 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, AuthUnauthenticated] on success',
       build: () {
-        when(mockLogoutUseCase()).thenAnswer((_) async => const DataSuccess(null));
+        when(
+          mockLogoutUseCase(),
+        ).thenAnswer((_) async => const DataSuccess(null));
         return cubit;
       },
       act: (c) => c.logout(),
