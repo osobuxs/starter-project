@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -47,8 +49,6 @@ class DailyNews extends StatelessWidget {
   }
 
   Widget _buildArticlesPage(BuildContext context, RemoteArticlesState state) {
-    final articles = state.articles;
-
     return AppSectionScaffold(
       title: 'Inicio',
       currentRouteName: AppRouteNames.dashboard,
@@ -61,51 +61,7 @@ class DailyNews extends StatelessWidget {
       body: Column(
         children: [
           _buildDateFilter(context, state),
-          Expanded(
-            child: articles.isEmpty
-                ? _buildEmptyState()
-                : NotificationListener<ScrollNotification>(
-                    onNotification: (notification) {
-                      if (notification.metrics.pixels >=
-                              notification.metrics.maxScrollExtent - 200 &&
-                          !state.isLoadingMore &&
-                          !state.hasReachedMax) {
-                        context.read<RemoteArticlesBloc>().add(
-                          const GetArticles(loadMore: true),
-                        );
-                      }
-
-                      return false;
-                    },
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      itemCount:
-                          articles.length + (state.isLoadingMore ? 1 : 0),
-                      separatorBuilder: (_, index) {
-                        if (index >= articles.length - 1) {
-                          return const SizedBox(height: 0);
-                        }
-
-                        return const SizedBox(height: 12);
-                      },
-                      itemBuilder: (_, index) {
-                        if (index >= articles.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(child: CupertinoActivityIndicator()),
-                          );
-                        }
-
-                        return ArticleWidget(
-                          article: articles[index],
-                          showCardContainer: true,
-                          onArticlePressed: (article) =>
-                              _onArticlePressed(context, article),
-                        );
-                      },
-                    ),
-                  ),
-          ),
+          Expanded(child: _buildRefreshableArticlesList(context, state)),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -149,14 +105,76 @@ class DailyNews extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
-    return const AppCenteredMessageState(
-      icon: Icons.newspaper_outlined,
-      title: 'No encontramos noticias',
-      message:
-          'Probá con otra fecha o volvé más tarde para ver nuevas publicaciones.',
-      emphasized: true,
+  Widget _buildRefreshableArticlesList(
+    BuildContext context,
+    RemoteArticlesState state,
+  ) {
+    return RefreshIndicator(
+      onRefresh: () => _refreshArticles(context, state),
+      child: state.articles.isEmpty
+          ? CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: const [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _DashboardEmptyStateSliver(),
+                ),
+              ],
+            )
+          : NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification.metrics.pixels >=
+                        notification.metrics.maxScrollExtent - 200 &&
+                    !state.isLoadingMore &&
+                    !state.hasReachedMax) {
+                  context.read<RemoteArticlesBloc>().add(
+                    const GetArticles(loadMore: true),
+                  );
+                }
+
+                return false;
+              },
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                itemCount:
+                    state.articles.length + (state.isLoadingMore ? 1 : 0),
+                separatorBuilder: (_, index) {
+                  if (index >= state.articles.length - 1) {
+                    return const SizedBox(height: 0);
+                  }
+
+                  return const SizedBox(height: 12);
+                },
+                itemBuilder: (_, index) {
+                  if (index >= state.articles.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(child: CupertinoActivityIndicator()),
+                    );
+                  }
+
+                  return ArticleWidget(
+                    article: state.articles[index],
+                    showCardContainer: true,
+                    onArticlePressed: (article) =>
+                        _onArticlePressed(context, article),
+                  );
+                },
+              ),
+            ),
     );
+  }
+
+  Future<void> _refreshArticles(
+    BuildContext context,
+    RemoteArticlesState state,
+  ) {
+    final completer = Completer<void>();
+    context.read<RemoteArticlesBloc>().add(
+      GetArticles(selectedDate: state.selectedDate, completer: completer),
+    );
+    return completer.future;
   }
 
   Widget _buildErrorState(BuildContext context, RemoteArticlesState state) {
@@ -257,6 +275,21 @@ class DailyNews extends StatelessWidget {
 
     context.read<RemoteArticlesBloc>().add(
       GetArticles(selectedDate: pickedDate),
+    );
+  }
+}
+
+class _DashboardEmptyStateSliver extends StatelessWidget {
+  const _DashboardEmptyStateSliver();
+
+  @override
+  Widget build(BuildContext context) {
+    return const AppCenteredMessageState(
+      icon: Icons.newspaper_outlined,
+      title: 'No encontramos noticias',
+      message:
+          'Probá con otra fecha o volvé más tarde para ver nuevas publicaciones.',
+      emphasized: true,
     );
   }
 }

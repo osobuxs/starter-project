@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/constants/constants.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
@@ -20,9 +22,11 @@ class RemoteArticlesBloc
     Emitter<RemoteArticlesState> emit,
   ) async {
     if (event.loadMore && (state.isLoadingMore || state.hasReachedMax)) {
+      _completeRefresh(event.completer);
       return;
     }
 
+    final isRefreshRequest = !event.loadMore && event.completer != null;
     final selectedDate = event.clearDateFilter
         ? null
         : (event.selectedDate ?? state.selectedDate);
@@ -30,8 +34,11 @@ class RemoteArticlesBloc
 
     emit(
       state.copyWith(
-        articles: event.loadMore ? state.articles : const [],
-        isLoading: !event.loadMore,
+        articles: isRefreshRequest
+            ? state.articles
+            : (event.loadMore ? state.articles : const []),
+        isLoading: !event.loadMore && !isRefreshRequest,
+        isRefreshing: isRefreshRequest,
         isLoadingMore: event.loadMore,
         hasReachedMax: event.loadMore ? state.hasReachedMax : false,
         currentPage: event.loadMore ? state.currentPage : 0,
@@ -41,43 +48,57 @@ class RemoteArticlesBloc
       ),
     );
 
-    final dataState = await _getArticleUseCase(
-      params: GetArticlesParams(page: nextPage, dateFilter: selectedDate),
-    );
-
-    if (dataState is DataSuccess) {
-      final incomingArticles = dataState.data ?? const <ArticleEntity>[];
-      final articles = event.loadMore
-          ? _mergeArticles(state.articles, incomingArticles)
-          : incomingArticles;
-
-      emit(
-        state.copyWith(
-          articles: articles,
-          isLoading: false,
-          isLoadingMore: false,
-          hasReachedMax:
-              incomingArticles.length < (nextPage * kDashboardPageSize),
-          currentPage: nextPage,
-          selectedDate: selectedDate,
-          clearSelectedDate: event.clearDateFilter,
-          clearError: true,
-        ),
+    try {
+      final dataState = await _getArticleUseCase(
+        params: GetArticlesParams(page: nextPage, dateFilter: selectedDate),
       );
+
+      if (dataState is DataSuccess) {
+        final incomingArticles = dataState.data ?? const <ArticleEntity>[];
+        final articles = event.loadMore
+            ? _mergeArticles(state.articles, incomingArticles)
+            : incomingArticles;
+
+        emit(
+          state.copyWith(
+            articles: articles,
+            isLoading: false,
+            isRefreshing: false,
+            isLoadingMore: false,
+            hasReachedMax:
+                incomingArticles.length < (nextPage * kDashboardPageSize),
+            currentPage: nextPage,
+            selectedDate: selectedDate,
+            clearSelectedDate: event.clearDateFilter,
+            clearError: true,
+          ),
+        );
+        return;
+      }
+
+      if (dataState is DataFailed) {
+        emit(
+          state.copyWith(
+            isLoading: false,
+            isRefreshing: false,
+            isLoadingMore: false,
+            error: dataState.error,
+            selectedDate: selectedDate,
+            clearSelectedDate: event.clearDateFilter,
+          ),
+        );
+      }
+    } finally {
+      _completeRefresh(event.completer);
+    }
+  }
+
+  void _completeRefresh(Completer<void>? completer) {
+    if (completer == null || completer.isCompleted) {
       return;
     }
 
-    if (dataState is DataFailed) {
-      emit(
-        state.copyWith(
-          isLoading: false,
-          isLoadingMore: false,
-          error: dataState.error,
-          selectedDate: selectedDate,
-          clearSelectedDate: event.clearDateFilter,
-        ),
-      );
-    }
+    completer.complete();
   }
 
   List<ArticleEntity> _mergeArticles(

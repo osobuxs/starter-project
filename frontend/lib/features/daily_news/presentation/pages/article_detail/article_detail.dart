@@ -74,45 +74,59 @@ class ArticleDetailsView extends HookWidget {
         child: AppSectionScaffold(
           title: 'Detalle de noticia',
           currentRouteName: AppRouteNames.articleDetails,
-          body: BlocBuilder<ArticleDetailCubit, ArticleEntity?>(
-            builder: (context, currentArticle) {
-              return _buildBody(context, currentArticle);
+          body: BlocBuilder<ArticleDetailCubit, ArticleDetailState>(
+            builder: (context, state) {
+              return _buildBody(context, state);
             },
           ),
-          floatingActionButton: BlocBuilder<ArticleDetailCubit, ArticleEntity?>(
-            builder: (context, currentArticle) {
-              return _buildFloatingActionButton(currentArticle);
-            },
-          ),
+          floatingActionButton:
+              BlocBuilder<ArticleDetailCubit, ArticleDetailState>(
+                builder: (context, state) {
+                  return _buildFloatingActionButton(state.article);
+                },
+              ),
         ),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, ArticleEntity? currentArticle) {
-    if (currentArticle == null) {
-      return const AppCenteredMessageState(
-        icon: Icons.article_outlined,
-        title: 'No encontramos la noticia',
-        message: 'Volvé a inicio y elegí otra noticia para ver el detalle.',
-        emphasized: true,
-      );
-    }
+  Widget _buildBody(BuildContext context, ArticleDetailState state) {
+    final currentArticle = state.article;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildHeader(currentArticle),
-          const SizedBox(height: 16),
-          _buildArticleImage(context, currentArticle),
-          const SizedBox(height: 16),
-          _buildContentCard(currentArticle),
-          const SizedBox(height: 16),
-          _buildFooterCard(currentArticle),
-        ],
-      ),
+    final content = currentArticle == null
+        ? const AppCenteredMessageState(
+            icon: Icons.article_outlined,
+            title: 'No encontramos la noticia',
+            message: 'Volvé a inicio y elegí otra noticia para ver el detalle.',
+            emphasized: true,
+          )
+        : SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeader(currentArticle),
+                const SizedBox(height: 16),
+                _buildArticleImage(context, currentArticle),
+                const SizedBox(height: 16),
+                _buildContentCard(currentArticle),
+                const SizedBox(height: 16),
+                _buildFooterCard(currentArticle),
+              ],
+            ),
+          );
+
+    return Stack(
+      children: [
+        Positioned.fill(child: content),
+        if (state.isRefreshing)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
+      ],
     );
   }
 

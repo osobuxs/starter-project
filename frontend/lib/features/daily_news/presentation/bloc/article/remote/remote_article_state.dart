@@ -5,6 +5,7 @@ class RemoteArticlesState extends Equatable {
   final List<ArticleEntity> articles;
   final Exception? error;
   final bool isLoading;
+  final bool isRefreshing;
   final bool isLoadingMore;
   final bool hasReachedMax;
   final int currentPage;
@@ -14,6 +15,7 @@ class RemoteArticlesState extends Equatable {
     this.articles = const [],
     this.error,
     this.isLoading = true,
+    this.isRefreshing = false,
     this.isLoadingMore = false,
     this.hasReachedMax = false,
     this.currentPage = 0,
@@ -25,6 +27,7 @@ class RemoteArticlesState extends Equatable {
     Exception? error,
     bool clearError = false,
     bool? isLoading,
+    bool? isRefreshing,
     bool? isLoadingMore,
     bool? hasReachedMax,
     int? currentPage,
@@ -35,6 +38,7 @@ class RemoteArticlesState extends Equatable {
       articles: articles ?? this.articles,
       error: clearError ? null : (error ?? this.error),
       isLoading: isLoading ?? this.isLoading,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasReachedMax: hasReachedMax ?? this.hasReachedMax,
       currentPage: currentPage ?? this.currentPage,
@@ -49,6 +53,7 @@ class RemoteArticlesState extends Equatable {
     articles,
     error,
     isLoading,
+    isRefreshing,
     isLoadingMore,
     hasReachedMax,
     currentPage,
