@@ -39,10 +39,10 @@ class MockRegisterUseCase implements RegisterUseCase {
 }
 
 class MockSignInWithGoogleUseCase implements SignInWithGoogleUseCase {
-  Future<DataState<UserEntity>> Function()? handler;
+  Future<DataState<UserEntity>> Function({void params})? handler;
 
   @override
-  Future<DataState<UserEntity>> call() {
+  Future<DataState<UserEntity>> call({void params}) {
     final current = handler;
     if (current == null) {
       return Future<DataState<UserEntity>>.value(
@@ -51,27 +51,27 @@ class MockSignInWithGoogleUseCase implements SignInWithGoogleUseCase {
         ),
       );
     }
-    return current();
+    return current(params: params);
   }
 }
 
 class MockLogoutUseCase implements LogoutUseCase {
-  Future<DataState<void>> Function()? handler;
+  Future<DataState<void>> Function({void params})? handler;
 
   @override
-  Future<DataState<void>> call() {
+  Future<DataState<void>> call({void params}) {
     final current = handler;
     if (current == null) {
       return Future<DataState<void>>.value(
         DataFailed(Exception('MockLogoutUseCase.handler not configured')),
       );
     }
-    return current();
+    return current(params: params);
   }
 }
 
 class MockGetCurrentUserUseCase implements GetCurrentUserUseCase {
-  Future<UserEntity?> Function({void params})? handler;
+  Future<UserEntity?> Function()? handler;
 
   @override
   Future<UserEntity?> call({void params}) {
@@ -79,6 +79,6 @@ class MockGetCurrentUserUseCase implements GetCurrentUserUseCase {
     if (current == null) {
       return Future<UserEntity?>.value(null);
     }
-    return current(params: params);
+    return current();
   }
 }

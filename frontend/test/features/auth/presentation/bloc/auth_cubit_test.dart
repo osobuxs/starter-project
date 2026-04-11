@@ -113,7 +113,7 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, AuthAuthenticated] on success',
       build: () {
-        mockSignInWithGoogleUseCase.handler = () async =>
+        mockSignInWithGoogleUseCase.handler = ({params}) async =>
             const DataSuccess(tGoogleUser);
         return cubit;
       },
@@ -124,7 +124,7 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, AuthError] when aborted',
       build: () {
-        mockSignInWithGoogleUseCase.handler = () async =>
+        mockSignInWithGoogleUseCase.handler = ({params}) async =>
             DataFailed(Exception('Google sign-in aborted'));
         return cubit;
       },
@@ -137,7 +137,7 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, AuthUnauthenticated] on success',
       build: () {
-        mockLogoutUseCase.handler = () async => const DataSuccess(null);
+        mockLogoutUseCase.handler = ({params}) async => const DataSuccess(null);
         return cubit;
       },
       act: (c) => c.logout(),
@@ -149,7 +149,7 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits AuthAuthenticated when user is logged in',
       build: () {
-        mockGetCurrentUserUseCase.handler = ({params}) async => tUser;
+        mockGetCurrentUserUseCase.handler = () async => tUser;
         return cubit;
       },
       act: (c) => c.checkCurrentUser(),
@@ -159,7 +159,7 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits AuthUnauthenticated when no user',
       build: () {
-        mockGetCurrentUserUseCase.handler = ({params}) async => null;
+        mockGetCurrentUserUseCase.handler = () async => null;
         return cubit;
       },
       act: (c) => c.checkCurrentUser(),

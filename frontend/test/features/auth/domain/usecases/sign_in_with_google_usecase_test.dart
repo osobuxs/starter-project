@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/entities/user_entity.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/usecases/sign_in_with_google_usecase.dart';
-import 'package:news_app_clean_architecture/features/auth/support/fake_auth_repository.dart';
+import '../../support/fake_auth_repository.dart';
 
 void main() {
   late FakeAuthRepository authRepository;
