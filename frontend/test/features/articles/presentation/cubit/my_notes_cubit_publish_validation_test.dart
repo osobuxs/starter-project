@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/articles/domain/entities/article_author_entity.dart';
 import 'package:news_app_clean_architecture/features/articles/domain/entities/article_authoring_entity.dart';
@@ -20,19 +19,42 @@ class _StubGetCurrentUserUseCase extends Fake implements GetCurrentUserUseCase {
   Future<UserEntity?> call({void params}) async => user;
 }
 
-class _MockGetMyArticlesUseCase extends Mock implements GetMyArticlesUseCase {}
+class _StubGetMyArticlesUseCase extends Fake implements GetMyArticlesUseCase {
+  final DataState<List<ArticleAuthoringEntity>> result;
 
-class _MockPublishArticleUseCase extends Mock
-    implements PublishArticleUseCase {}
+  _StubGetMyArticlesUseCase(this.result);
 
-class _MockUpdateArticleActiveStateUseCase extends Mock
-    implements UpdateArticleActiveStateUseCase {}
+  @override
+  Future<DataState<List<ArticleAuthoringEntity>>> call({
+    GetMyArticlesParams? params,
+  }) async => result;
+}
+
+class _SpyPublishArticleUseCase extends Fake implements PublishArticleUseCase {
+  int callCount = 0;
+
+  @override
+  Future<DataState<ArticleAuthoringEntity>> call({
+    PublishArticleParams? params,
+  }) async {
+    callCount += 1;
+    return DataFailed(Exception('not expected in this test'));
+  }
+}
+
+class _StubUpdateArticleActiveStateUseCase extends Fake
+    implements UpdateArticleActiveStateUseCase {
+  @override
+  Future<DataState<ArticleAuthoringEntity>> call({
+    UpdateArticleActiveStateParams? params,
+  }) async => DataFailed(Exception('not used in this test'));
+}
 
 void main() {
   late GetCurrentUserUseCase getCurrentUser;
-  late _MockGetMyArticlesUseCase getMyArticles;
-  late _MockPublishArticleUseCase publishArticle;
-  late _MockUpdateArticleActiveStateUseCase updateArticleActiveState;
+  late GetMyArticlesUseCase getMyArticles;
+  late _SpyPublishArticleUseCase publishArticle;
+  late UpdateArticleActiveStateUseCase updateArticleActiveState;
   late MyNotesCubit cubit;
 
   const user = UserEntity(id: 'user-1', email: 'user@example.com');
@@ -66,19 +88,17 @@ void main() {
 
   setUp(() {
     getCurrentUser = _StubGetCurrentUserUseCase(user);
-    getMyArticles = _MockGetMyArticlesUseCase();
-    publishArticle = _MockPublishArticleUseCase();
-    updateArticleActiveState = _MockUpdateArticleActiveStateUseCase();
+    getMyArticles = _StubGetMyArticlesUseCase(
+      DataSuccess<List<ArticleAuthoringEntity>>([article()]),
+    );
+    publishArticle = _SpyPublishArticleUseCase();
+    updateArticleActiveState = _StubUpdateArticleActiveStateUseCase();
 
     cubit = MyNotesCubit(
       getCurrentUser: getCurrentUser,
       getMyArticles: getMyArticles,
       publishArticle: publishArticle,
       updateArticleActiveState: updateArticleActiveState,
-    );
-
-    when(getMyArticles(params: anyNamed('params'))).thenAnswer(
-      (_) async => DataSuccess<List<ArticleAuthoringEntity>>([article()]),
     );
   });
 
@@ -94,6 +114,6 @@ void main() {
     expect(cubit.state.status, MyNotesStatus.ready);
     expect(cubit.state.errorMessage, isNotNull);
 
-    verifyNever(publishArticle(params: anyNamed('params')));
+    expect(publishArticle.callCount, 0);
   });
 }

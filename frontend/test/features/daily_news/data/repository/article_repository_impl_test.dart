@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/article_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/favorite_firestore_data_source.dart';
@@ -7,24 +6,67 @@ import 'package:news_app_clean_architecture/features/daily_news/data/models/arti
 import 'package:news_app_clean_architecture/features/daily_news/data/repository/article_repository_impl.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article.dart';
 
-class MockArticleFirestoreDataSource extends Mock
-    implements ArticleFirestoreDataSource {}
+class _StubArticleFirestoreDataSource implements ArticleFirestoreDataSource {
+  List<ArticleModel> articles;
+  Object? error;
 
-class MockFavoriteFirestoreDataSource extends Mock
-    implements FavoriteFirestoreDataSource {}
+  _StubArticleFirestoreDataSource({this.articles = const [], this.error});
+
+  @override
+  Future<ArticleModel?> getArticleByFirestoreId(String articleId) async {
+    if (error != null) throw Exception(error.toString());
+    return articles.cast<ArticleModel?>().firstWhere(
+      (article) => article?.firestoreId == articleId,
+      orElse: () => null,
+    );
+  }
+
+  @override
+  Future<List<ArticleModel>> getPublishedArticles({
+    required int page,
+    DateTime? dateFilter,
+  }) async {
+    if (error != null) throw Exception(error.toString());
+    return articles;
+  }
+}
+
+class _StubFavoriteFirestoreDataSource implements FavoriteFirestoreDataSource {
+  List<ArticleModel> favorites;
+  Object? error;
+  ArticleModel? lastSaved;
+  String? lastRemovedId;
+
+  _StubFavoriteFirestoreDataSource({this.favorites = const [], this.error});
+
+  @override
+  Future<List<ArticleModel>> getFavoriteArticles() async {
+    if (error != null) throw Exception(error.toString());
+    return favorites;
+  }
+
+  @override
+  Future<void> removeFavoriteArticle(String articleId) async {
+    if (error != null) throw Exception(error.toString());
+    lastRemovedId = articleId;
+  }
+
+  @override
+  Future<void> saveFavoriteArticle(ArticleModel article) async {
+    if (error != null) throw Exception(error.toString());
+    lastSaved = article;
+  }
+}
 
 void main() {
-  late MockArticleFirestoreDataSource mockFirestoreDataSource;
-  late MockFavoriteFirestoreDataSource mockFavoriteFirestoreDataSource;
+  late _StubArticleFirestoreDataSource firestoreDataSource;
+  late _StubFavoriteFirestoreDataSource favoriteDataSource;
   late ArticleRepositoryImpl repository;
 
   setUp(() {
-    mockFirestoreDataSource = MockArticleFirestoreDataSource();
-    mockFavoriteFirestoreDataSource = MockFavoriteFirestoreDataSource();
-    repository = ArticleRepositoryImpl(
-      mockFirestoreDataSource,
-      mockFavoriteFirestoreDataSource,
-    );
+    firestoreDataSource = _StubArticleFirestoreDataSource();
+    favoriteDataSource = _StubFavoriteFirestoreDataSource();
+    repository = ArticleRepositoryImpl(firestoreDataSource, favoriteDataSource);
   });
 
   group('getNewsArticles', () {
@@ -41,9 +83,7 @@ void main() {
     ];
 
     test('returns DataSuccess with List<ArticleEntity>', () async {
-      when(
-        mockFirestoreDataSource.getPublishedArticles(page: 1, dateFilter: null),
-      ).thenAnswer((_) async => tArticles);
+      firestoreDataSource.articles = tArticles;
 
       final result = await repository.getNewsArticles(page: 1);
 
@@ -52,9 +92,7 @@ void main() {
     });
 
     test('returns DataFailed when data source throws', () async {
-      when(
-        mockFirestoreDataSource.getPublishedArticles(page: 1, dateFilter: null),
-      ).thenThrow(Exception('firestore failed'));
+      firestoreDataSource.error = 'firestore failed';
 
       final result = await repository.getNewsArticles(page: 1);
 
@@ -76,9 +114,7 @@ void main() {
     test(
       'getSavedArticles returns DataSuccess with favorite entities',
       () async {
-        when(
-          mockFavoriteFirestoreDataSource.getFavoriteArticles(),
-        ).thenAnswer((_) async => const [tArticle]);
+        favoriteDataSource.favorites = const [tArticle];
 
         final result = await repository.getSavedArticles();
 
@@ -91,30 +127,18 @@ void main() {
     test(
       'saveArticle persists favorite through firestore data source',
       () async {
-        when(
-          mockFavoriteFirestoreDataSource.saveFavoriteArticle(tArticle),
-        ).thenAnswer((_) async {});
-
         final result = await repository.saveArticle(tArticle);
 
         expect(result, isA<DataSuccess<void>>());
-        verify(
-          mockFavoriteFirestoreDataSource.saveFavoriteArticle(tArticle),
-        ).called(1);
+        expect(favoriteDataSource.lastSaved?.firestoreId, 'article-1');
       },
     );
 
     test('removeArticle deletes favorite by firestore id', () async {
-      when(
-        mockFavoriteFirestoreDataSource.removeFavoriteArticle('article-1'),
-      ).thenAnswer((_) async {});
-
       final result = await repository.removeArticle(tArticle);
 
       expect(result, isA<DataSuccess<void>>());
-      verify(
-        mockFavoriteFirestoreDataSource.removeFavoriteArticle('article-1'),
-      ).called(1);
+      expect(favoriteDataSource.lastRemovedId, 'article-1');
     });
   });
 }
