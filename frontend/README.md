@@ -15,6 +15,12 @@ See [Android evaluation](./docs/ANDROID_EVALUATION.md) for the zero-setup Androi
 
 If you are wiring the project to a different Firebase backend, follow the [backend tutorial](../backend/README.md) and your normal Firebase setup flow for that separate project.
 
+## Screenshots (proof of project)
+
+Las capturas funcionales de la app usadas como evidencia están en:
+
+- [`./screenshots/`](./screenshots/)
+
 ### Generate files for routing, di etc.:
 `flutter pub run build_runner build --delete-conflicting-outputs`
 ### Generate the icons:
