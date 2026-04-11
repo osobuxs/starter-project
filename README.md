@@ -1,4 +1,14 @@
 # Applicant Showcase App
+
+> **Evaluator note:** the original challenge brief is intentionally preserved below as historical context.
+>
+> For the **final delivered system**, start here instead:
+> - [`FINAL_DELIVERY_README.md`](./FINAL_DELIVERY_README.md)
+> - [`DocsV2/README.md`](./DocsV2/README.md)
+> - [`docs/REPORT.md`](./docs/REPORT.md)
+>
+> Canonical implementation documentation now lives in `DocsV2/`. The original README remains below so reviewers can compare the starter/challenge framing against the final delivery.
+
 Welcome to the repository for our Applicant Showcase App - an application designed for job applicants of Symmetry to showcase their capacity to learn and program good code.
 
 ## Who will see this project?
