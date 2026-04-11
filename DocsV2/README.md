@@ -25,8 +25,16 @@ La documentación legacy del root, `docs/` y parte de `backend/` se conserva com
 Si sos evaluador y querés entender rápido el proyecto, empezá por:
 
 1. `02-scope/IMPLEMENTATION_MATRIX.md`
-2. `03-frontend/ARCHITECTURE.md`
-3. `04-backend/FIREBASE_CONTRACT.md`
+2. `05-delivery/EVALUATOR_QUICKSTART.md`
+3. `05-delivery/EVALUATOR_GUIDE.md`
+4. `03-frontend/ARCHITECTURE.md`
+5. `04-backend/FIREBASE_CONTRACT.md`
+
+## Cómo usar las guías de delivery
+
+- `05-delivery/EVALUATOR_QUICKSTART.md` → guía de instalación y prueba local en una PC: precondiciones, dependencias, `flutter run`, `flutter test` y backend rules tests.
+- `05-delivery/EVALUATOR_GUIDE.md` → guía funcional: qué features probar dentro de la app, en qué orden y qué resultado esperar.
+- `05-delivery/QUALITY_GATE.md` → comandos y criterios de validación técnica.
 
 ## Nota importante
 

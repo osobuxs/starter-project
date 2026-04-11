@@ -17,7 +17,7 @@ This file is the **lowest-friction evaluation entry point** for the current deli
 ## Read these first
 
 1. `DocsV2/02-scope/IMPLEMENTATION_MATRIX.md`
-2. `DocsV2/05-delivery/EVALUATOR_GUIDE.md`
+2. `DocsV2/05-delivery/EVALUATOR_QUICKSTART.md`
 3. `docs/REPORT.md`
 
 That sequence gives the fastest path to understanding:
@@ -48,9 +48,17 @@ That sequence gives the fastest path to understanding:
 ## Recommended reading path (evaluators)
 
 1. `DocsV2/02-scope/IMPLEMENTATION_MATRIX.md` (starter vs challenge vs delivered)
-2. `DocsV2/03-frontend/ARCHITECTURE.md` (frontend design)
-3. `DocsV2/04-backend/FIREBASE_CONTRACT.md` + `DocsV2/04-backend/RULES_AND_INDEXES.md` (backend contract/security)
-4. `DocsV2/05-delivery/EVALUATOR_GUIDE.md` + `docs/REPORT.md` (final evaluation context)
+2. `DocsV2/05-delivery/EVALUATOR_QUICKSTART.md` (cómo instalar dependencias, correr la app y ejecutar validaciones en una PC)
+3. `DocsV2/05-delivery/EVALUATOR_GUIDE.md` (qué probar manualmente y en qué orden funcional)
+4. `DocsV2/03-frontend/ARCHITECTURE.md` (frontend design)
+5. `DocsV2/04-backend/FIREBASE_CONTRACT.md` + `DocsV2/04-backend/RULES_AND_INDEXES.md` (backend contract/security)
+6. `docs/REPORT.md` (final evaluation context)
+
+## Evaluation docs split
+
+- `DocsV2/05-delivery/EVALUATOR_QUICKSTART.md` → guía de instalación, setup local, ejecución de la app y comandos de test.
+- `DocsV2/05-delivery/EVALUATOR_GUIDE.md` → guía funcional: qué probar dentro de la app, flujos sugeridos y resultados esperados.
+- `DocsV2/05-delivery/QUALITY_GATE.md` → comandos de validación y criterios mínimos de calidad técnica.
 
 ## What to test first
 
