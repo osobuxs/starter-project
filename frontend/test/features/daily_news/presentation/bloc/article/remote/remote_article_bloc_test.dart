@@ -89,7 +89,7 @@ void main() {
         );
         return RemoteArticlesBloc(useCase);
       },
-      seed: () => const RemoteArticlesState(
+      seed: () => RemoteArticlesState(
         articles: [firstArticle],
         isLoading: false,
         currentPage: 1,
@@ -128,7 +128,7 @@ void main() {
         );
         return RemoteArticlesBloc(useCase);
       },
-      seed: () => const RemoteArticlesState(
+      seed: () => RemoteArticlesState(
         articles: [firstArticle],
         isLoading: false,
         currentPage: 3,
