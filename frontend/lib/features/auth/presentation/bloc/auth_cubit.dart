@@ -129,6 +129,8 @@ class AuthCubit extends Cubit<AuthState> {
           return 'Contraseña incorrecta.';
         case 'email-already-in-use':
           return 'Ya existe una cuenta con ese email. Probá iniciar sesión en lugar de registrarte.';
+        case 'email-already-in-use-friendly':
+          return 'Ya existe una cuenta con ese email. Probá iniciar sesión en lugar de registrarte.';
         case 'email-already-in-use-google':
           return 'Ese email ya está asociado a una cuenta creada con Google. Usá “Continuar con Google” para ingresar.';
         case 'email-already-in-use-provider':

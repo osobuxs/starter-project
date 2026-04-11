@@ -245,6 +245,9 @@ class _AppSectionDrawer extends StatelessWidget {
 
     Navigator.of(navigationContext).popUntil((route) => route.isFirst);
     navigationContext.read<AuthCubit>().logout();
+    Navigator.of(
+      navigationContext,
+    ).pushReplacementNamed(AppRouteNames.dashboard);
   }
 
   Future<void> _navigateToRoute(
