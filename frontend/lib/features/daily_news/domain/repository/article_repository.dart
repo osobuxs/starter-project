@@ -11,6 +11,8 @@ abstract class ArticleRepository {
   // Favorites methods
   Future<DataState<List<ArticleEntity>>> getSavedArticles();
 
+  Future<DataState<ArticleEntity>> getArticleByFirestoreId(String articleId);
+
   Future<DataState<void>> saveArticle(ArticleEntity article);
 
   Future<DataState<void>> removeArticle(ArticleEntity article);

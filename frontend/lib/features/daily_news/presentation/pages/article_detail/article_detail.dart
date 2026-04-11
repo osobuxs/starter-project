@@ -18,6 +18,7 @@ import '../../../domain/entities/article.dart';
 import '../../bloc/article/local/local_article_bloc.dart';
 import '../../bloc/article/local/local_article_event.dart';
 import '../../bloc/article/local/local_article_state.dart';
+import '../../cubit/article_detail_cubit.dart';
 
 class ArticleDetailsView extends HookWidget {
   final ArticleEntity? article;
@@ -28,8 +29,15 @@ class ArticleDetailsView extends HookWidget {
   Widget build(BuildContext context) {
     final hasLoadedFavorites = useRef(false);
 
-    return BlocProvider(
-      create: (_) => sl<LocalArticleBloc>()..add(const GetSavedArticles()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => sl<ArticleDetailCubit>()..loadArticle(article),
+        ),
+        BlocProvider(
+          create: (_) => sl<LocalArticleBloc>()..add(const GetSavedArticles()),
+        ),
+      ],
       child: BlocListener<LocalArticleBloc, LocalArticlesState>(
         listenWhen: (previous, current) =>
             current is LocalArticlesDone || current is LocalArticlesError,
@@ -66,15 +74,22 @@ class ArticleDetailsView extends HookWidget {
         child: AppSectionScaffold(
           title: 'Detalle de noticia',
           currentRouteName: AppRouteNames.articleDetails,
-          body: _buildBody(context),
-          floatingActionButton: _buildFloatingActionButton(),
+          body: BlocBuilder<ArticleDetailCubit, ArticleEntity?>(
+            builder: (context, currentArticle) {
+              return _buildBody(context, currentArticle);
+            },
+          ),
+          floatingActionButton: BlocBuilder<ArticleDetailCubit, ArticleEntity?>(
+            builder: (context, currentArticle) {
+              return _buildFloatingActionButton(currentArticle);
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context) {
-    final currentArticle = article;
+  Widget _buildBody(BuildContext context, ArticleEntity? currentArticle) {
     if (currentArticle == null) {
       return const AppCenteredMessageState(
         icon: Icons.article_outlined,
@@ -272,8 +287,7 @@ class ArticleDetailsView extends HookWidget {
     );
   }
 
-  Widget _buildFloatingActionButton() {
-    final currentArticle = article;
+  Widget _buildFloatingActionButton(ArticleEntity? currentArticle) {
     if (currentArticle == null) {
       return const SizedBox.shrink();
     }
@@ -287,7 +301,7 @@ class ArticleDetailsView extends HookWidget {
         return BlocBuilder<LocalArticleBloc, LocalArticlesState>(
           builder: (context, state) {
             final savedArticles = state.articles ?? const <ArticleEntity>[];
-            final isFavorite = _isFavorite(savedArticles);
+            final isFavorite = _isFavorite(savedArticles, currentArticle);
 
             return FloatingActionButton.extended(
               heroTag: 'article_details_favorite_fab',
@@ -299,6 +313,7 @@ class ArticleDetailsView extends HookWidget {
                   : Colors.white,
               onPressed: () => _onFloatingActionButtonPressed(
                 context,
+                article: currentArticle,
                 isFavorite: isFavorite,
               ),
               icon: Icon(
@@ -321,6 +336,7 @@ class ArticleDetailsView extends HookWidget {
 
   void _onFloatingActionButtonPressed(
     BuildContext context, {
+    required ArticleEntity article,
     required bool isFavorite,
   }) async {
     final authState = context.read<AuthCubit>().state;
@@ -340,19 +356,17 @@ class ArticleDetailsView extends HookWidget {
     }
 
     if (isFavorite) {
-      BlocProvider.of<LocalArticleBloc>(context).add(RemoveArticle(article!));
+      BlocProvider.of<LocalArticleBloc>(context).add(RemoveArticle(article));
       return;
     }
 
-    BlocProvider.of<LocalArticleBloc>(context).add(SaveArticle(article!));
+    BlocProvider.of<LocalArticleBloc>(context).add(SaveArticle(article));
   }
 
-  bool _isFavorite(List<ArticleEntity> savedArticles) {
-    final currentArticle = article;
-    if (currentArticle == null) {
-      return false;
-    }
-
+  bool _isFavorite(
+    List<ArticleEntity> savedArticles,
+    ArticleEntity currentArticle,
+  ) {
     return savedArticles.any((savedArticle) {
       final firestoreId = currentArticle.firestoreId;
       if (firestoreId != null && firestoreId.isNotEmpty) {

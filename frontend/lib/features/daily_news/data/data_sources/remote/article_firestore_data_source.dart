@@ -7,6 +7,8 @@ abstract class ArticleFirestoreDataSource {
     required int page,
     DateTime? dateFilter,
   });
+
+  Future<ArticleModel?> getArticleByFirestoreId(String articleId);
 }
 
 class ArticleFirestoreDataSourceImpl implements ArticleFirestoreDataSource {
@@ -53,6 +55,24 @@ class ArticleFirestoreDataSourceImpl implements ArticleFirestoreDataSource {
           ),
         )
         .toList();
+  }
+
+  @override
+  Future<ArticleModel?> getArticleByFirestoreId(String articleId) async {
+    final snapshot = await _firestore
+        .collection(kArticlesCollection)
+        .doc(articleId)
+        .get();
+
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      return null;
+    }
+
+    return ArticleModel.fromRawData(
+      _normalizeDocumentData(data),
+      documentId: snapshot.id,
+    );
   }
 
   Map<String, dynamic> _normalizeDocumentData(Map<String, dynamic> data) {

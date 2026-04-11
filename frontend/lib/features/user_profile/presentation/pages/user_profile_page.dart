@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/core/widgets/app_feedback.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_dialogs.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_card.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
@@ -22,12 +24,16 @@ class UserProfilePage extends StatefulWidget {
 }
 
 class _UserProfilePageState extends State<UserProfilePage> {
+  static const int _maxNameLength = 50;
+  static const int _maxAgeLength = 3;
+
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   bool _didLoad = false;
   String? _pendingPhotoPath;
   bool _removePhotoRequested = false;
+  bool _showSaveSuccessOnNextLoad = false;
 
   @override
   void initState() {
@@ -120,6 +126,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       return;
     }
 
+    _showSaveSuccessOnNextLoad = true;
     context.read<UserProfileCubit>().updateProfile(
       uid: authState.user.id,
       name: _nameController.text.trim(),
@@ -144,9 +151,19 @@ class _UserProfilePageState extends State<UserProfilePage> {
               _removePhotoRequested = false;
             });
           }
+
+          if (_showSaveSuccessOnNextLoad) {
+            _showSaveSuccessOnNextLoad = false;
+            showAppSnackBar(
+              context,
+              message: 'Perfil actualizado correctamente.',
+              variant: AppSnackBarVariant.success,
+            );
+          }
         }
 
         if (state is UserProfileError) {
+          _showSaveSuccessOnNextLoad = false;
           _showProfileErrorDialog(state.message);
         }
       },
@@ -270,6 +287,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         children: [
                           TextFormField(
                             controller: _nameController,
+                            inputFormatters: const [
+                              LengthLimitingTextInputFormatter(_maxNameLength),
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'Nombre',
                               border: OutlineInputBorder(),
@@ -278,6 +298,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Ingresá tu nombre';
                               }
+
+                              if (value.trim().length > _maxNameLength) {
+                                return 'Máximo 50 caracteres';
+                              }
+
                               return null;
                             },
                           ),
@@ -294,6 +319,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           TextFormField(
                             controller: _ageController,
                             keyboardType: TextInputType.number,
+                            inputFormatters: const [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(_maxAgeLength),
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'Edad',
                               border: OutlineInputBorder(),

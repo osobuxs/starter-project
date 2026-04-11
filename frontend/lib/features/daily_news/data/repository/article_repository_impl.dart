@@ -47,6 +47,25 @@ class ArticleRepositoryImpl implements ArticleRepository {
   }
 
   @override
+  Future<DataState<ArticleEntity>> getArticleByFirestoreId(
+    String articleId,
+  ) async {
+    try {
+      final article = await _articleFirestoreDataSource.getArticleByFirestoreId(
+        articleId,
+      );
+
+      if (article == null) {
+        return DataFailed(Exception('Article not found'));
+      }
+
+      return DataSuccess(article.toEntity());
+    } on Exception catch (e) {
+      return DataFailed(e);
+    }
+  }
+
+  @override
   Future<DataState<void>> removeArticle(ArticleEntity article) async {
     try {
       final articleId = article.firestoreId?.trim();

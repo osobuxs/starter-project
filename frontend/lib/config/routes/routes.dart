@@ -131,7 +131,6 @@ class _RouteAccessGate extends StatefulWidget {
 
 class _RouteAccessGateState extends State<_RouteAccessGate> {
   bool _redirectScheduled = false;
-  bool _hasRenderedAuthOnlyChild = false;
 
   @override
   Widget build(BuildContext context) {
@@ -160,10 +159,6 @@ class _RouteAccessGateState extends State<_RouteAccessGate> {
         }
 
         if (authState is AuthAuthenticated) {
-          if (_hasRenderedAuthOnlyChild) {
-            return widget.child;
-          }
-
           _scheduleAuthOnlyRedirect(context);
           return const _RouteRedirectPlaceholder();
         }
@@ -173,7 +168,6 @@ class _RouteAccessGateState extends State<_RouteAccessGate> {
         }
 
         _redirectScheduled = false;
-        _hasRenderedAuthOnlyChild = true;
         return widget.child;
       },
     );
