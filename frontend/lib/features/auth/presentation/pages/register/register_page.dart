@@ -24,7 +24,10 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isSubmitting = false;
   String? _authErrorMessage;
+  String? _activeRequestId;
+  int _submitSequence = 0;
 
   @override
   void initState() {
@@ -53,29 +56,86 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _authErrorMessage = null);
   }
 
-  void _syncAuthError(AuthState state) {
-    final nextMessage = state is AuthError ? state.message : null;
-    if (_authErrorMessage == nextMessage || !mounted) {
+  String _nextRequestId() {
+    _submitSequence += 1;
+    return 'register-${DateTime.now().microsecondsSinceEpoch}-$_submitSequence';
+  }
+
+  bool _matchesCurrentRequest(AuthState state) {
+    final activeRequestId = _activeRequestId;
+    if (activeRequestId == null) {
+      return false;
+    }
+
+    if (state is AuthLoading) {
+      return state.source == AuthRequestSource.registerScreen &&
+          state.requestId == activeRequestId;
+    }
+
+    if (state is AuthAuthenticated) {
+      return state.source == AuthRequestSource.registerScreen &&
+          state.requestId == activeRequestId;
+    }
+
+    if (state is AuthError) {
+      return state.source == AuthRequestSource.registerScreen &&
+          state.requestId == activeRequestId;
+    }
+
+    return false;
+  }
+
+  void _startSubmit() {
+    setState(() {
+      _authErrorMessage = null;
+      _isSubmitting = true;
+      _activeRequestId = _nextRequestId();
+    });
+  }
+
+  void _finishSubmit({String? errorMessage}) {
+    if (!mounted) {
       return;
     }
 
-    setState(() => _authErrorMessage = nextMessage);
+    setState(() {
+      _isSubmitting = false;
+      _activeRequestId = null;
+      _authErrorMessage = errorMessage;
+    });
   }
 
   void _onRegister() {
-    _clearAuthError();
-    if (_formKey.currentState!.validate()) {
-      context.read<AuthCubit>().register(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        displayName: _displayNameController.text.trim(),
-      );
+    if (_isSubmitting) {
+      return;
     }
+
+    _clearAuthError();
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    _startSubmit();
+    context.read<AuthCubit>().register(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      displayName: _displayNameController.text.trim(),
+      source: AuthRequestSource.registerScreen,
+      requestId: _activeRequestId,
+    );
   }
 
   void _onGoogleSignIn() {
+    if (_isSubmitting) {
+      return;
+    }
+
     _clearAuthError();
-    context.read<AuthCubit>().signInWithGoogle();
+    _startSubmit();
+    context.read<AuthCubit>().signInWithGoogle(
+      source: AuthRequestSource.registerScreen,
+      requestId: _activeRequestId,
+    );
   }
 
   @override
@@ -86,7 +146,17 @@ class _RegisterPageState extends State<RegisterPage> {
       drawerVariant: AppSectionDrawerVariant.auth,
       redirectRouteName: widget.redirectRoute,
       body: BlocListener<AuthCubit, AuthState>(
-        listener: (context, state) => _syncAuthError(state),
+        listenWhen: (previous, current) => _matchesCurrentRequest(current),
+        listener: (context, state) {
+          if (state is AuthError) {
+            _finishSubmit(errorMessage: state.message);
+            return;
+          }
+
+          if (state is AuthAuthenticated) {
+            _finishSubmit();
+          }
+        },
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -164,22 +234,17 @@ class _RegisterPageState extends State<RegisterPage> {
                         AuthInlineErrorBanner(message: _authErrorMessage!),
                       ],
                       const SizedBox(height: 24),
-                      BlocBuilder<AuthCubit, AuthState>(
-                        builder: (context, state) {
-                          final isLoading = state is AuthLoading;
-                          return ElevatedButton(
-                            onPressed: isLoading ? null : _onRegister,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: isLoading
-                                ? const AppInlineLoadingIndicator()
-                                : const Text('Crear cuenta'),
-                          );
-                        },
+                      ElevatedButton(
+                        onPressed: _isSubmitting ? null : _onRegister,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: _isSubmitting
+                            ? const AppInlineLoadingIndicator()
+                            : const Text('Crear cuenta'),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -196,21 +261,16 @@ class _RegisterPageState extends State<RegisterPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      BlocBuilder<AuthCubit, AuthState>(
-                        builder: (context, state) {
-                          final isLoading = state is AuthLoading;
-                          return OutlinedButton.icon(
-                            onPressed: isLoading ? null : _onGoogleSignIn,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            icon: const Icon(Icons.g_mobiledata, size: 24),
-                            label: const Text('Continuar con Google'),
-                          );
-                        },
+                      OutlinedButton.icon(
+                        onPressed: _isSubmitting ? null : _onGoogleSignIn,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        icon: const Icon(Icons.g_mobiledata, size: 24),
+                        label: const Text('Continuar con Google'),
                       ),
                       const SizedBox(height: 24),
                       Row(

@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:news_app_clean_architecture/features/auth/domain/entities/user_entity.dart';
 
+enum AuthRequestSource { none, loginScreen, registerScreen, system }
+
 abstract class AuthState extends Equatable {
   const AuthState();
 
@@ -13,16 +15,28 @@ class AuthInitial extends AuthState {
 }
 
 class AuthLoading extends AuthState {
-  const AuthLoading();
+  final AuthRequestSource source;
+  final String? requestId;
+
+  const AuthLoading({this.source = AuthRequestSource.none, this.requestId});
+
+  @override
+  List<Object?> get props => [source, requestId];
 }
 
 class AuthAuthenticated extends AuthState {
   final UserEntity user;
+  final AuthRequestSource source;
+  final String? requestId;
 
-  const AuthAuthenticated(this.user);
+  const AuthAuthenticated(
+    this.user, {
+    this.source = AuthRequestSource.none,
+    this.requestId,
+  });
 
   @override
-  List<Object?> get props => [user];
+  List<Object?> get props => [user, source, requestId];
 }
 
 class AuthUnauthenticated extends AuthState {
@@ -31,9 +45,15 @@ class AuthUnauthenticated extends AuthState {
 
 class AuthError extends AuthState {
   final String message;
+  final AuthRequestSource source;
+  final String? requestId;
 
-  const AuthError(this.message);
+  const AuthError(
+    this.message, {
+    this.source = AuthRequestSource.none,
+    this.requestId,
+  });
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, source, requestId];
 }

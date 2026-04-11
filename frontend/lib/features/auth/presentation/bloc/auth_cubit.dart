@@ -18,6 +18,8 @@ class AuthCubit extends Cubit<AuthState> {
   final SignInWithGoogleUseCase _signInWithGoogleUseCase;
   final LogoutUseCase _logoutUseCase;
   final GetCurrentUserUseCase _getCurrentUserUseCase;
+  String? _activeTrackedRequestId;
+  AuthRequestSource _activeTrackedRequestSource = AuthRequestSource.none;
 
   AuthCubit(
     this._loginUseCase,
@@ -27,21 +29,57 @@ class AuthCubit extends Cubit<AuthState> {
     this._getCurrentUserUseCase,
   ) : super(const AuthInitial());
 
-  Future<void> login({required String email, required String password}) async {
-    emit(const AuthLoading());
+  Future<void> login({
+    required String email,
+    required String password,
+    AuthRequestSource source = AuthRequestSource.none,
+    String? requestId,
+  }) async {
+    _trackRequest(source: source, requestId: requestId);
+    emit(AuthLoading(source: source, requestId: requestId));
     try {
       final result = await _loginUseCase(
         params: LoginParams(email: email, password: password),
       ).timeout(_authTimeout);
+      if (_isStaleRequest(source: source, requestId: requestId)) {
+        return;
+      }
+
       if (result is DataSuccess) {
-        emit(AuthAuthenticated(result.data!));
+        emit(
+          AuthAuthenticated(result.data!, source: source, requestId: requestId),
+        );
       } else {
-        emit(AuthError(_mapFirebaseError(result.error)));
+        emit(
+          AuthError(
+            _mapFirebaseError(result.error),
+            source: source,
+            requestId: requestId,
+          ),
+        );
       }
     } on TimeoutException {
+      if (_isStaleRequest(source: source, requestId: requestId)) {
+        return;
+      }
+
       emit(
-        const AuthError(
+        AuthError(
           'El inicio de sesión tardó demasiado. Verificá tu conexión e intentá de nuevo.',
+          source: source,
+          requestId: requestId,
+        ),
+      );
+    } on Exception catch (error) {
+      if (_isStaleRequest(source: source, requestId: requestId)) {
+        return;
+      }
+
+      emit(
+        AuthError(
+          _mapFirebaseError(error),
+          source: source,
+          requestId: requestId,
         ),
       );
     }
@@ -51,8 +89,11 @@ class AuthCubit extends Cubit<AuthState> {
     required String email,
     required String password,
     required String displayName,
+    AuthRequestSource source = AuthRequestSource.none,
+    String? requestId,
   }) async {
-    emit(const AuthLoading());
+    _trackRequest(source: source, requestId: requestId);
+    emit(AuthLoading(source: source, requestId: requestId));
     try {
       final result = await _registerUseCase(
         params: RegisterParams(
@@ -61,36 +102,124 @@ class AuthCubit extends Cubit<AuthState> {
           displayName: displayName,
         ),
       ).timeout(_authTimeout);
+      if (_isStaleRequest(source: source, requestId: requestId)) {
+        return;
+      }
+
       if (result is DataSuccess) {
-        emit(AuthAuthenticated(result.data!));
+        emit(
+          AuthAuthenticated(result.data!, source: source, requestId: requestId),
+        );
       } else {
-        emit(AuthError(_mapFirebaseError(result.error)));
+        emit(
+          AuthError(
+            _mapFirebaseError(result.error),
+            source: source,
+            requestId: requestId,
+          ),
+        );
       }
     } on TimeoutException {
+      if (_isStaleRequest(source: source, requestId: requestId)) {
+        return;
+      }
+
       emit(
-        const AuthError(
+        AuthError(
           'La creación de la cuenta tardó demasiado. Intentá nuevamente en unos segundos.',
+          source: source,
+          requestId: requestId,
+        ),
+      );
+    } on Exception catch (error) {
+      if (_isStaleRequest(source: source, requestId: requestId)) {
+        return;
+      }
+
+      emit(
+        AuthError(
+          _mapFirebaseError(error),
+          source: source,
+          requestId: requestId,
         ),
       );
     }
   }
 
-  Future<void> signInWithGoogle() async {
-    emit(const AuthLoading());
+  Future<void> signInWithGoogle({
+    AuthRequestSource source = AuthRequestSource.none,
+    String? requestId,
+  }) async {
+    _trackRequest(source: source, requestId: requestId);
+    emit(AuthLoading(source: source, requestId: requestId));
     try {
       final result = await _signInWithGoogleUseCase().timeout(_authTimeout);
+      if (_isStaleRequest(source: source, requestId: requestId)) {
+        return;
+      }
+
       if (result is DataSuccess) {
-        emit(AuthAuthenticated(result.data!));
+        emit(
+          AuthAuthenticated(result.data!, source: source, requestId: requestId),
+        );
       } else {
-        emit(AuthError(_mapFirebaseError(result.error)));
+        emit(
+          AuthError(
+            _mapFirebaseError(result.error),
+            source: source,
+            requestId: requestId,
+          ),
+        );
       }
     } on TimeoutException {
+      if (_isStaleRequest(source: source, requestId: requestId)) {
+        return;
+      }
+
       emit(
-        const AuthError(
+        AuthError(
           'Google tardó demasiado en responder. Intentá nuevamente.',
+          source: source,
+          requestId: requestId,
+        ),
+      );
+    } on Exception catch (error) {
+      if (_isStaleRequest(source: source, requestId: requestId)) {
+        return;
+      }
+
+      emit(
+        AuthError(
+          _mapFirebaseError(error),
+          source: source,
+          requestId: requestId,
         ),
       );
     }
+  }
+
+  void _trackRequest({
+    required AuthRequestSource source,
+    required String? requestId,
+  }) {
+    if (requestId == null) {
+      return;
+    }
+
+    _activeTrackedRequestSource = source;
+    _activeTrackedRequestId = requestId;
+  }
+
+  bool _isStaleRequest({
+    required AuthRequestSource source,
+    required String? requestId,
+  }) {
+    if (requestId == null) {
+      return false;
+    }
+
+    return _activeTrackedRequestSource != source ||
+        _activeTrackedRequestId != requestId;
   }
 
   Future<void> logout() async {
