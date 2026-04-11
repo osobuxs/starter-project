@@ -9,8 +9,9 @@ Esta guía está pensada para que un evaluador pueda **levantar, probar y valida
 Antes de empezar, asegurate de tener lo siguiente:
 
 - repositorio clonado y branch `main`
-- **Flutter SDK** instalado y disponible en PATH
-- **JDK instalado** (necesario para compilar/correr Android con Flutter y para Firebase Emulators en backend tests)
+- **Flutter SDK** instalado y disponible en PATH (recomendado: versión estable actual)
+- **JDK instalado** (recomendado JDK 17+, ideal JDK 21)
+  - necesario para compilar/correr Android con Flutter y para Firebase Emulators en backend tests
 - **Android SDK / Android toolchain** correctamente instalado
   - Android Studio **o** command-line tools con platform tools disponibles
   - `adb` funcionando
@@ -22,6 +23,18 @@ Antes de empezar, asegurate de tener lo siguiente:
 > Nota: para evaluación funcional del frontend, el proyecto se conecta a **Firebase/Firestore en la nube**. No hace falta levantar backend local para usar la app.
 >
 > Nota 2: para ejecutar `npm run test:rules`, **no hace falta instalar `firebase-tools` globalmente**, porque el proyecto ya lo incluye como dependencia de desarrollo en `backend/package.json`.
+
+### Verificación rápida de entorno
+
+Desde terminal, estos comandos deberían funcionar:
+
+```bash
+flutter --version
+java -version
+node -v
+npm -v
+adb devices
+```
 
 ---
 
@@ -176,7 +189,25 @@ npm run test:rules
 
 ---
 
-## 5. Fast evaluator checklist
+## 5. Build APK (optional artifact)
+
+Si querés generar un APK instalable de evaluación desde comando:
+
+```bash
+cd frontend
+dart run tool/build_apk.dart
+```
+
+Resultado esperado:
+
+- `frontend/apk/symmetry-news-v<version>-release.apk`
+- `frontend/apk/latest-release.apk`
+
+La versión se toma de `frontend/pubspec.yaml`.
+
+---
+
+## 6. Fast evaluator checklist
 
 - [ ] `flutter pub get`
 - [ ] `flutter run`
@@ -190,7 +221,7 @@ npm run test:rules
 
 ---
 
-## 6. Related docs
+## 7. Related docs
 
 - `DocsV2/05-delivery/EVALUATOR_GUIDE.md` — evaluación funcional por feature
 - `DocsV2/05-delivery/QUALITY_GATE.md` — comandos y criterios de calidad

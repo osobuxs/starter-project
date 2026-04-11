@@ -56,7 +56,7 @@ That sequence gives the fastest path to understanding:
 
 ## Evaluation docs split
 
-- `DocsV2/05-delivery/EVALUATOR_QUICKSTART.md` → guía de instalación, setup local, ejecución de la app y comandos de test.
+- `DocsV2/05-delivery/EVALUATOR_QUICKSTART.md` → guía de instalación, setup local, ejecución de la app, comandos de test y build de APK opcional.
 - `DocsV2/05-delivery/EVALUATOR_GUIDE.md` → guía funcional: qué probar dentro de la app, flujos sugeridos y resultados esperados.
 - `DocsV2/05-delivery/QUALITY_GATE.md` → comandos de validación y criterios mínimos de calidad técnica.
 

@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.osobuxs.newsapp.symmetry">
-   <application
-        android:label="news_app_clean_architecture"
+    <application
+        android:label="Symmetry News"
         android:name="androidx.multidex.MultiDexApplication"
         
         android:icon="@mipmap/ic_launcher"

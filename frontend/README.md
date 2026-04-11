@@ -7,6 +7,10 @@ You will be doing most of your work in this folder.
 ## Getting Started
 Android evaluators can use the committed Firebase config and shared demo keystore without adding their own SHA fingerprints once the maintainer has registered the shared keystore fingerprints in Firebase and committed the refreshed `google-services.json`.
 
+For full local prerequisites (Flutter, JDK, Android SDK/adb, Node/npm) and exact evaluation steps, see:
+
+- [`../DocsV2/05-delivery/EVALUATOR_QUICKSTART.md`](../DocsV2/05-delivery/EVALUATOR_QUICKSTART.md)
+
 See [Android evaluation](./docs/ANDROID_EVALUATION.md) for the zero-setup Android flow.
 
 If you are wiring the project to a different Firebase backend, follow the [backend tutorial](../backend/README.md) and your normal Firebase setup flow for that separate project.
@@ -17,6 +21,27 @@ If you are wiring the project to a different Firebase backend, follow the [backe
 `flutter pub run flutter_launcher_icons`
 ### Install the Project Dependencies (in pubsec.yaml)
 `flutter pub get`
+
+## Build APK (one command)
+
+Desde `frontend/`:
+
+```bash
+dart run tool/build_apk.dart
+```
+
+Qué hace este comando:
+
+1. Ejecuta `flutter pub get`
+2. Ejecuta `flutter build apk --release`
+3. Copia el APK generado a `frontend/apk/`
+
+Artefactos de salida:
+
+- `frontend/apk/symmetry-news-v<version>-release.apk`
+- `frontend/apk/latest-release.apk`
+
+La versión se lee automáticamente desde `pubspec.yaml` (`version:`).
 
 ### How can I best understand this project?
 In order to best understand this project and its underlying intricacies, we recommend that you watch this tutorial: [Flutter Clean Architecture Tutorial](https://www.youtube.com/watch?v=7V_P6dovixg).
