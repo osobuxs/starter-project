@@ -12,6 +12,11 @@ class AuthRedirectDestination {
   const AuthRedirectDestination({required this.routeName, this.arguments});
 }
 
+bool isAuthRouteName(String? routeName) {
+  return routeName == AppRouteNames.login ||
+      routeName == AppRouteNames.register;
+}
+
 AuthRedirectDestination? resolveAuthRedirectDestination(Object? rawRedirect) {
   if (rawRedirect is AuthRedirectDestination) {
     return rawRedirect;
@@ -49,9 +54,7 @@ void redirectToLogin(
   required String currentRouteName,
   required AuthRedirectDestination destination,
 }) {
-  final shouldReplaceCurrent =
-      currentRouteName == AppRouteNames.login ||
-      currentRouteName == AppRouteNames.register;
+  final shouldReplaceCurrent = isAuthRouteName(currentRouteName);
 
   if (shouldReplaceCurrent) {
     Navigator.of(
@@ -61,6 +64,14 @@ void redirectToLogin(
   }
 
   Navigator.of(context).pushNamed(AppRouteNames.login, arguments: destination);
+}
+
+bool shouldReplacePostAuthRoot({
+  required String? firstRouteName,
+  required AuthRedirectDestination destination,
+}) {
+  return isAuthRouteName(firstRouteName) ||
+      destination.routeName == AppRouteNames.dashboard;
 }
 
 Future<void> navigateRequiringAuthentication(
@@ -103,13 +114,28 @@ Future<void> navigateRequiringAuthentication(
 
 void completeAuthRedirect(BuildContext context, Object? redirectRoute) {
   final navigator = Navigator.of(context);
-  navigator.popUntil((route) => route.isFirst);
+  final destination = resolvePostAuthDestination(redirectRoute);
+  String? firstRouteName;
 
-  final destination = resolveAuthRedirectDestination(redirectRoute);
-  if (shouldCompleteAuthRedirect(destination)) {
-    navigator.pushNamed(
-      destination!.routeName,
+  navigator.popUntil((route) {
+    if (!route.isFirst) {
+      return false;
+    }
+
+    firstRouteName = route.settings.name;
+    return true;
+  });
+
+  if (shouldReplacePostAuthRoot(
+    firstRouteName: firstRouteName,
+    destination: destination,
+  )) {
+    navigator.pushReplacementNamed(
+      destination.routeName,
       arguments: destination.arguments,
     );
+    return;
   }
+
+  navigator.pushNamed(destination.routeName, arguments: destination.arguments);
 }

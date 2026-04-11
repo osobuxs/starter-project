@@ -1,5 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:news_app_clean_architecture/core/constants/constants.dart';
 import 'package:news_app_clean_architecture/features/user_profile/data/models/user_profile_model.dart';
+
+Map<String, dynamic> buildArticleAuthorSyncPayload(UserProfileModel profile) {
+  return {
+    'authorName': profile.name,
+    'authorPhotoUrl': profile.photoUrl,
+    'authorEmail': profile.email,
+  };
+}
 
 abstract class UserProfileFirestoreDataSource {
   Future<UserProfileModel?> getUserProfile(String uid);
@@ -45,10 +54,21 @@ class UserProfileFirestoreDataSourceImpl
   @override
   Future<UserProfileModel> updateUserProfile(UserProfileModel profile) async {
     final updated = profile.copyWith(updatedAt: DateTime.now());
-    await _firestore
-        .collection('users')
-        .doc(profile.uid)
-        .update(updated.toMap());
+    final userRef = _firestore.collection('users').doc(profile.uid);
+    final articlesSnapshot = await _firestore
+        .collection(kArticlesCollection)
+        .where('authorId', isEqualTo: profile.uid)
+        .get();
+    final batch = _firestore.batch();
+
+    batch.update(userRef, updated.toMap());
+
+    final authorSyncPayload = buildArticleAuthorSyncPayload(updated);
+    for (final articleDoc in articlesSnapshot.docs) {
+      batch.update(articleDoc.reference, authorSyncPayload);
+    }
+
+    await batch.commit();
     return updated;
   }
 }
