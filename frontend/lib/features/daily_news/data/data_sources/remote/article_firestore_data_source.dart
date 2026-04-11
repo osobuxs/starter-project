@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:news_app_clean_architecture/core/constants/constants.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/models/article.dart';
+import 'package:news_app_clean_architecture/features/daily_news/data/models/paginated_articles_model.dart';
+import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article_pagination_cursor.dart';
 
 abstract class ArticleFirestoreDataSource {
-  Future<List<ArticleModel>> getPublishedArticles({
-    required int page,
+  Future<PaginatedArticlesModel> getPublishedArticles({
+    ArticlePaginationCursor? after,
     DateTime? dateFilter,
   });
 
@@ -17,8 +19,8 @@ class ArticleFirestoreDataSourceImpl implements ArticleFirestoreDataSource {
   ArticleFirestoreDataSourceImpl(this._firestore);
 
   @override
-  Future<List<ArticleModel>> getPublishedArticles({
-    required int page,
+  Future<PaginatedArticlesModel> getPublishedArticles({
+    ArticlePaginationCursor? after,
     DateTime? dateFilter,
   }) async {
     Query<Map<String, dynamic>> query = _firestore
@@ -42,12 +44,20 @@ class ArticleFirestoreDataSourceImpl implements ArticleFirestoreDataSource {
           .where('createdAt', isLessThan: Timestamp.fromDate(endOfDay));
     }
 
-    final snapshot = await query
+    query = query
         .orderBy('createdAt', descending: true)
-        .limit(page * kDashboardPageSize)
-        .get();
+        .orderBy(FieldPath.documentId);
 
-    return snapshot.docs
+    if (after != null) {
+      query = query.startAfter([
+        Timestamp.fromDate(after.createdAt),
+        after.firestoreId,
+      ]);
+    }
+
+    final snapshot = await query.limit(kDashboardPageSize).get();
+
+    final articles = snapshot.docs
         .map(
           (document) => ArticleModel.fromRawData(
             _normalizeDocumentData(document.data()),
@@ -55,6 +65,16 @@ class ArticleFirestoreDataSourceImpl implements ArticleFirestoreDataSource {
           ),
         )
         .toList();
+
+    final nextCursor = snapshot.docs.isEmpty
+        ? null
+        : _buildCursor(snapshot.docs.last);
+
+    return PaginatedArticlesModel(
+      articles: articles,
+      nextCursor: nextCursor,
+      hasReachedMax: snapshot.docs.length < kDashboardPageSize,
+    );
   }
 
   @override
@@ -90,5 +110,26 @@ class ArticleFirestoreDataSourceImpl implements ArticleFirestoreDataSource {
     }
 
     return normalized;
+  }
+
+  ArticlePaginationCursor? _buildCursor(
+    QueryDocumentSnapshot<Map<String, dynamic>> document,
+  ) {
+    final createdAtRaw = document.data()['createdAt'];
+    if (createdAtRaw is Timestamp) {
+      return ArticlePaginationCursor(
+        createdAt: createdAtRaw.toDate(),
+        firestoreId: document.id,
+      );
+    }
+
+    if (createdAtRaw is DateTime) {
+      return ArticlePaginationCursor(
+        createdAt: createdAtRaw,
+        firestoreId: document.id,
+      );
+    }
+
+    return null;
   }
 }

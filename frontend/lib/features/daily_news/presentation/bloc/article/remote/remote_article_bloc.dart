@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:news_app_clean_architecture/core/constants/constants.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/usecases/get_article.dart';
@@ -31,6 +30,7 @@ class RemoteArticlesBloc
         ? null
         : (event.selectedDate ?? state.selectedDate);
     final nextPage = event.loadMore ? state.currentPage + 1 : 1;
+    final cursor = event.loadMore ? state.nextCursor : null;
 
     emit(
       state.copyWith(
@@ -44,17 +44,20 @@ class RemoteArticlesBloc
         currentPage: event.loadMore ? state.currentPage : 0,
         selectedDate: selectedDate,
         clearSelectedDate: event.clearDateFilter,
+        clearNextCursor: !event.loadMore,
         clearError: true,
       ),
     );
 
     try {
       final dataState = await _getArticleUseCase(
-        params: GetArticlesParams(page: nextPage, dateFilter: selectedDate),
+        params: GetArticlesParams(after: cursor, dateFilter: selectedDate),
       );
 
       if (dataState is DataSuccess) {
-        final incomingArticles = dataState.data ?? const <ArticleEntity>[];
+        final pageResult = dataState.data;
+        final incomingArticles =
+            pageResult?.articles ?? const <ArticleEntity>[];
         final articles = event.loadMore
             ? _mergeArticles(state.articles, incomingArticles)
             : incomingArticles;
@@ -65,11 +68,12 @@ class RemoteArticlesBloc
             isLoading: false,
             isRefreshing: false,
             isLoadingMore: false,
-            hasReachedMax:
-                incomingArticles.length < (nextPage * kDashboardPageSize),
+            hasReachedMax: pageResult?.hasReachedMax ?? true,
             currentPage: nextPage,
             selectedDate: selectedDate,
             clearSelectedDate: event.clearDateFilter,
+            nextCursor: pageResult?.nextCursor,
+            clearNextCursor: pageResult?.nextCursor == null,
             clearError: true,
           ),
         );
@@ -85,6 +89,7 @@ class RemoteArticlesBloc
             error: dataState.error,
             selectedDate: selectedDate,
             clearSelectedDate: event.clearDateFilter,
+            clearNextCursor: !event.loadMore,
           ),
         );
       }

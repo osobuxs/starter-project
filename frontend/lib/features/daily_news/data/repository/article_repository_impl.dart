@@ -3,6 +3,8 @@ import 'package:news_app_clean_architecture/features/daily_news/data/data_source
 import 'package:news_app_clean_architecture/features/daily_news/data/models/article.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article.dart';
+import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article_pagination_cursor.dart';
+import 'package:news_app_clean_architecture/features/daily_news/domain/entities/paginated_articles_entity.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/repository/article_repository.dart';
 
 class ArticleRepositoryImpl implements ArticleRepository {
@@ -15,19 +17,17 @@ class ArticleRepositoryImpl implements ArticleRepository {
   );
 
   @override
-  Future<DataState<List<ArticleEntity>>> getNewsArticles({
-    required int page,
+  Future<DataState<PaginatedArticlesEntity>> getNewsArticles({
+    ArticlePaginationCursor? after,
     DateTime? dateFilter,
   }) async {
     try {
-      final articles = await _articleFirestoreDataSource.getPublishedArticles(
-        page: page,
+      final paginated = await _articleFirestoreDataSource.getPublishedArticles(
+        after: after,
         dateFilter: dateFilter,
       );
 
-      return DataSuccess(
-        articles.map((article) => article.toEntity()).toList(),
-      );
+      return DataSuccess(paginated.toEntity());
     } on Exception catch (e) {
       return DataFailed(e);
     }

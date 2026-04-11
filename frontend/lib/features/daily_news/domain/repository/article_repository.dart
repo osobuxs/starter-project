@@ -1,10 +1,12 @@
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article.dart';
+import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article_pagination_cursor.dart';
+import 'package:news_app_clean_architecture/features/daily_news/domain/entities/paginated_articles_entity.dart';
 
 abstract class ArticleRepository {
   // API methods
-  Future<DataState<List<ArticleEntity>>> getNewsArticles({
-    required int page,
+  Future<DataState<PaginatedArticlesEntity>> getNewsArticles({
+    ArticlePaginationCursor? after,
     DateTime? dateFilter,
   });
 

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article_pagination_cursor.dart';
 import '../../../../domain/entities/article.dart';
 
 class RemoteArticlesState extends Equatable {
@@ -10,6 +11,7 @@ class RemoteArticlesState extends Equatable {
   final bool hasReachedMax;
   final int currentPage;
   final DateTime? selectedDate;
+  final ArticlePaginationCursor? nextCursor;
 
   const RemoteArticlesState({
     this.articles = const [],
@@ -20,6 +22,7 @@ class RemoteArticlesState extends Equatable {
     this.hasReachedMax = false,
     this.currentPage = 0,
     this.selectedDate,
+    this.nextCursor,
   });
 
   RemoteArticlesState copyWith({
@@ -33,6 +36,8 @@ class RemoteArticlesState extends Equatable {
     int? currentPage,
     DateTime? selectedDate,
     bool clearSelectedDate = false,
+    ArticlePaginationCursor? nextCursor,
+    bool clearNextCursor = false,
   }) {
     return RemoteArticlesState(
       articles: articles ?? this.articles,
@@ -45,6 +50,7 @@ class RemoteArticlesState extends Equatable {
       selectedDate: clearSelectedDate
           ? null
           : (selectedDate ?? this.selectedDate),
+      nextCursor: clearNextCursor ? null : (nextCursor ?? this.nextCursor),
     );
   }
 
@@ -58,5 +64,6 @@ class RemoteArticlesState extends Equatable {
     hasReachedMax,
     currentPage,
     selectedDate,
+    nextCursor,
   ];
 }

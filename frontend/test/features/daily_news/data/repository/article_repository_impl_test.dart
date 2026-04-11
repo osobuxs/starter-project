@@ -3,8 +3,11 @@ import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/article_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/favorite_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/models/article.dart';
+import 'package:news_app_clean_architecture/features/daily_news/data/models/paginated_articles_model.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/repository/article_repository_impl.dart';
 import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article.dart';
+import 'package:news_app_clean_architecture/features/daily_news/domain/entities/article_pagination_cursor.dart';
+import 'package:news_app_clean_architecture/features/daily_news/domain/entities/paginated_articles_entity.dart';
 
 class _StubArticleFirestoreDataSource implements ArticleFirestoreDataSource {
   List<ArticleModel> articles;
@@ -22,12 +25,16 @@ class _StubArticleFirestoreDataSource implements ArticleFirestoreDataSource {
   }
 
   @override
-  Future<List<ArticleModel>> getPublishedArticles({
-    required int page,
+  Future<PaginatedArticlesModel> getPublishedArticles({
+    ArticlePaginationCursor? after,
     DateTime? dateFilter,
   }) async {
     if (error != null) throw Exception(error.toString());
-    return articles;
+    return PaginatedArticlesModel(
+      articles: articles,
+      nextCursor: null,
+      hasReachedMax: true,
+    );
   }
 }
 
@@ -82,21 +89,21 @@ void main() {
       ),
     ];
 
-    test('returns DataSuccess with List<ArticleEntity>', () async {
+    test('returns DataSuccess with paginated articles', () async {
       firestoreDataSource.articles = tArticles;
 
-      final result = await repository.getNewsArticles(page: 1);
+      final result = await repository.getNewsArticles();
 
-      expect(result, isA<DataSuccess<List<ArticleEntity>>>());
-      expect(result.data, isNotEmpty);
+      expect(result, isA<DataSuccess<PaginatedArticlesEntity>>());
+      expect(result.data?.articles, isNotEmpty);
     });
 
     test('returns DataFailed when data source throws', () async {
       firestoreDataSource.error = 'firestore failed';
 
-      final result = await repository.getNewsArticles(page: 1);
+      final result = await repository.getNewsArticles();
 
-      expect(result, isA<DataFailed<List<ArticleEntity>>>());
+      expect(result, isA<DataFailed<PaginatedArticlesEntity>>());
     });
   });
 
