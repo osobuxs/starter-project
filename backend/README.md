@@ -6,8 +6,8 @@ This folder contains the Firebase backend configuration used by the project.
 
 The real current backend contract is documented in:
 
-- `starterV2/backend/CANONICAL_SCHEMA.md`
-- `starterV2/backend/RULES_SUMMARY.md`
+- `DocsV2/04-backend/FIREBASE_CONTRACT.md`
+- `DocsV2/04-backend/RULES_AND_INDEXES.md`
 - `backend/docs/DB_SCHEMA.md` (legacy bridge file)
 
 ## Deploying rules
