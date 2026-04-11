@@ -71,7 +71,9 @@ void main() {
       updateArticleActiveState: updateArticleActiveState,
     );
 
-    when(getCurrentUser()).thenAnswer((_) async => user);
+    when(
+      getCurrentUser(params: anyNamed('params')),
+    ).thenAnswer((_) async => user);
     when(getMyArticles(params: anyNamed('params'))).thenAnswer(
       (_) async => DataSuccess<List<ArticleAuthoringEntity>>([article()]),
     );
