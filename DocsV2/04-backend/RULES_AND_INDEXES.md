@@ -50,10 +50,10 @@ crearlo desde el link que devuelve Firestore en el error de índice faltante.
 
 ### Checklist de validación B1.2
 
-- [ ] Dashboard inicial carga `kDashboardPageSize` sin re-descargar páginas previas.
-- [ ] Load-more usa cursor (`startAfter`) y agrega sólo la siguiente página.
-- [ ] Cambio de filtro por fecha reinicia cursor y vuelve a primera página.
-- [ ] Si Firebase reporta índice faltante, se crea y se versiona en `backend/firestore.indexes.json`.
+- [x] Dashboard inicial carga `kDashboardPageSize` sin re-descargar páginas previas.
+- [x] Load-more usa cursor (`startAfter`) y agrega sólo la siguiente página.
+- [x] Cambio de filtro por fecha reinicia cursor y vuelve a primera página.
+- [x] Si Firebase reporta índice faltante, se crea y se versiona en `backend/firestore.indexes.json`.
 
 ## Nota para evaluadores
 
