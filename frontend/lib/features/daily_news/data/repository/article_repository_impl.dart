@@ -1,3 +1,4 @@
+import 'package:news_app_clean_architecture/core/errors/app_failure.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/article_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/data_sources/remote/favorite_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/daily_news/data/models/article.dart';
@@ -29,7 +30,9 @@ class ArticleRepositoryImpl implements ArticleRepository {
 
       return DataSuccess(paginated.toEntity());
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos cargar las noticias.', cause: e),
+      );
     }
   }
 
@@ -42,7 +45,9 @@ class ArticleRepositoryImpl implements ArticleRepository {
         favorites.map((article) => article.toEntity()).toList(),
       );
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos cargar tus favoritos.', cause: e),
+      );
     }
   }
 
@@ -56,12 +61,16 @@ class ArticleRepositoryImpl implements ArticleRepository {
       );
 
       if (article == null) {
-        return DataFailed(Exception('Article not found'));
+        return DataFailed(
+          const AppFailure.notFound('No encontramos la nota solicitada.'),
+        );
       }
 
       return DataSuccess(article.toEntity());
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos cargar la nota.', cause: e),
+      );
     }
   }
 
@@ -71,14 +80,18 @@ class ArticleRepositoryImpl implements ArticleRepository {
       final articleId = article.firestoreId?.trim();
       if (articleId == null || articleId.isEmpty) {
         return DataFailed(
-          Exception('Article id is required to remove favorite'),
+          const AppFailure.validation(
+            'El id del artículo es obligatorio para quitar favorito.',
+          ),
         );
       }
 
       await _favoriteFirestoreDataSource.removeFavoriteArticle(articleId);
       return const DataSuccess<void>(null);
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos quitar el favorito.', cause: e),
+      );
     }
   }
 
@@ -90,7 +103,9 @@ class ArticleRepositoryImpl implements ArticleRepository {
       );
       return const DataSuccess<void>(null);
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos guardar el favorito.', cause: e),
+      );
     }
   }
 }

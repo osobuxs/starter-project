@@ -1,3 +1,4 @@
+import 'package:news_app_clean_architecture/core/errors/app_failure.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/user_profile/data/data_sources/user_profile_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/user_profile/data/data_sources/user_profile_storage_data_source.dart';
@@ -16,11 +17,15 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
     try {
       final profile = await _firestoreDataSource.getUserProfile(uid);
       if (profile == null) {
-        return DataFailed(Exception('Profile not found'));
+        return DataFailed(
+          const AppFailure.notFound('No encontramos tu perfil.'),
+        );
       }
       return DataSuccess(profile.toEntity());
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos cargar tu perfil.', cause: e),
+      );
     }
   }
 
@@ -33,7 +38,9 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
       final updated = await _firestoreDataSource.updateUserProfile(model);
       return DataSuccess(updated.toEntity());
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos actualizar tu perfil.', cause: e),
+      );
     }
   }
 
@@ -46,7 +53,9 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
       final url = await _storageDataSource.uploadProfilePhoto(uid, imagePath);
       return DataSuccess(url);
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos subir tu foto de perfil.', cause: e),
+      );
     }
   }
 
@@ -56,7 +65,9 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
       await _storageDataSource.deleteProfilePhoto(uid);
       return const DataSuccess(null);
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos borrar tu foto de perfil.', cause: e),
+      );
     }
   }
 }

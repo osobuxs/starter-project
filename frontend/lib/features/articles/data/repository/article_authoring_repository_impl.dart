@@ -1,3 +1,4 @@
+import 'package:news_app_clean_architecture/core/errors/app_failure.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/articles/data/data_sources/article_authoring_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/articles/data/data_sources/article_authoring_storage_data_source.dart';
@@ -24,7 +25,9 @@ class ArticleAuthoringRepositoryImpl implements ArticleAuthoringRepository {
       );
       return DataSuccess(draft.toEntity());
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos guardar el borrador.', cause: e),
+      );
     }
   }
 
@@ -38,7 +41,9 @@ class ArticleAuthoringRepositoryImpl implements ArticleAuthoringRepository {
       );
       return DataSuccess(publishedArticle.toEntity());
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos publicar la nota.', cause: e),
+      );
     }
   }
 
@@ -54,7 +59,9 @@ class ArticleAuthoringRepositoryImpl implements ArticleAuthoringRepository {
       );
       return DataSuccess(imageUrl);
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos subir la imagen.', cause: e),
+      );
     }
   }
 
@@ -66,7 +73,9 @@ class ArticleAuthoringRepositoryImpl implements ArticleAuthoringRepository {
       final article = await _firestoreDataSource.getArticleById(articleId);
       return DataSuccess(article.toEntity());
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos cargar la nota.', cause: e),
+      );
     }
   }
 
@@ -82,7 +91,9 @@ class ArticleAuthoringRepositoryImpl implements ArticleAuthoringRepository {
         articles.map((article) => article.toEntity()).toList(),
       );
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos cargar tus notas.', cause: e),
+      );
     }
   }
 
@@ -95,7 +106,9 @@ class ArticleAuthoringRepositoryImpl implements ArticleAuthoringRepository {
           .updateArticleActiveState(ArticleAuthoringModel.fromEntity(article));
       return DataSuccess(updatedArticle.toEntity());
     } on Exception catch (e) {
-      return DataFailed(e);
+      return DataFailed(
+        AppFailure.unexpected('No pudimos actualizar la nota.', cause: e),
+      );
     }
   }
 }
