@@ -195,9 +195,18 @@ Si querés generar un APK instalable de evaluación desde comando:
 
 Windows (recomendado):
 
+PowerShell / CMD:
+
 ```bash
 cd frontend
 build_apk.bat
+```
+
+Git Bash:
+
+```bash
+cd frontend
+./build_apk.bat
 ```
 
 Linux/macOS:
@@ -218,7 +227,22 @@ La versión se toma de `frontend/pubspec.yaml`.
 
 ---
 
-## 6. Fast evaluator checklist
+## 6. Troubleshooting rápido
+
+### Firestore queda offline / no carga datos
+
+Si aparecen logs como `Could not reach Cloud Firestore backend` o `UNAVAILABLE`, revisar entorno del dispositivo:
+
+1. Verificar conexión a internet estable (WiFi/datos)
+2. Actualizar **Google Play Services** y **Google Play Store**
+3. Limpiar caché de Google Play Services y Play Store
+4. Reiniciar el dispositivo
+
+Esto suele resolver estados intermitentes de conectividad en Android sin tocar código.
+
+---
+
+## 7. Fast evaluator checklist
 
 - [ ] `flutter pub get`
 - [ ] `flutter run`
@@ -232,7 +256,7 @@ La versión se toma de `frontend/pubspec.yaml`.
 
 ---
 
-## 7. Related docs
+## 8. Related docs
 
 - `DocsV2/05-delivery/EVALUATOR_GUIDE.md` — evaluación funcional por feature
 - `DocsV2/05-delivery/QUALITY_GATE.md` — comandos y criterios de calidad

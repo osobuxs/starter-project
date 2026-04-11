@@ -28,8 +28,16 @@ Desde `frontend/`:
 
 ### Windows (recomendado)
 
+PowerShell / CMD:
+
 ```bash
 build_apk.bat
+```
+
+Git Bash:
+
+```bash
+./build_apk.bat
 ```
 
 ### Linux/macOS
