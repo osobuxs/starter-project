@@ -53,7 +53,7 @@ class AuthCubit extends Cubit<AuthState> {
       } else {
         emit(
           AuthError(
-            _mapFirebaseError(result.error),
+            _mapAuthError(result.error),
             source: source,
             requestId: requestId,
           ),
@@ -77,11 +77,7 @@ class AuthCubit extends Cubit<AuthState> {
       }
 
       emit(
-        AuthError(
-          _mapFirebaseError(error),
-          source: source,
-          requestId: requestId,
-        ),
+        AuthError(_mapAuthError(error), source: source, requestId: requestId),
       );
     }
   }
@@ -114,7 +110,7 @@ class AuthCubit extends Cubit<AuthState> {
       } else {
         emit(
           AuthError(
-            _mapFirebaseError(result.error),
+            _mapAuthError(result.error),
             source: source,
             requestId: requestId,
           ),
@@ -138,11 +134,7 @@ class AuthCubit extends Cubit<AuthState> {
       }
 
       emit(
-        AuthError(
-          _mapFirebaseError(error),
-          source: source,
-          requestId: requestId,
-        ),
+        AuthError(_mapAuthError(error), source: source, requestId: requestId),
       );
     }
   }
@@ -166,7 +158,7 @@ class AuthCubit extends Cubit<AuthState> {
       } else {
         emit(
           AuthError(
-            _mapFirebaseError(result.error),
+            _mapAuthError(result.error),
             source: source,
             requestId: requestId,
           ),
@@ -190,11 +182,7 @@ class AuthCubit extends Cubit<AuthState> {
       }
 
       emit(
-        AuthError(
-          _mapFirebaseError(error),
-          source: source,
-          requestId: requestId,
-        ),
+        AuthError(_mapAuthError(error), source: source, requestId: requestId),
       );
     }
   }
@@ -230,7 +218,7 @@ class AuthCubit extends Cubit<AuthState> {
       if (result is DataSuccess) {
         emit(const AuthUnauthenticated());
       } else {
-        emit(AuthError(_mapFirebaseError(result.error)));
+        emit(AuthError(_mapAuthError(result.error)));
       }
     } on TimeoutException {
       emit(
@@ -250,7 +238,7 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  String _mapFirebaseError(Exception? error) {
+  String _mapAuthError(Exception? error) {
     if (error is AuthFailure) {
       switch (error.code) {
         case AuthFailureCode.userNotFound:
