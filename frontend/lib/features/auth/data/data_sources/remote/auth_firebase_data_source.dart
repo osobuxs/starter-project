@@ -162,28 +162,10 @@ class AuthFirebaseDataSourceImpl implements AuthFirebaseDataSource {
     String email,
     FirebaseAuthException originalError,
   ) async {
-    try {
-      final methods = await _firebaseAuth.fetchSignInMethodsForEmail(email);
-
-      if (methods.contains('google.com')) {
-        return FirebaseAuthException(
-          code: 'email-already-in-use-google',
-          email: email,
-          message: originalError.message,
-        );
-      }
-
-      if (methods.any((method) => method != 'password')) {
-        return FirebaseAuthException(
-          code: 'email-already-in-use-provider',
-          email: email,
-          message: originalError.message,
-        );
-      }
-    } on FirebaseAuthException {
-      return originalError;
-    }
-
-    return originalError;
+    return FirebaseAuthException(
+      code: 'email-already-in-use-friendly',
+      email: email,
+      message: originalError.message,
+    );
   }
 }
