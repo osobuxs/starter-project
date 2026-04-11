@@ -26,6 +26,14 @@ If you are wiring the project to a different Firebase backend, follow the [backe
 
 Desde `frontend/`:
 
+### Windows (recomendado)
+
+```bash
+build_apk.bat
+```
+
+### Linux/macOS
+
 ```bash
 dart run tool/build_apk.dart
 ```
@@ -42,6 +50,8 @@ Artefactos de salida:
 - `frontend/apk/latest-release.apk`
 
 La versión se lee automáticamente desde `pubspec.yaml` (`version:`).
+
+> Si ejecutás `flutter build apk --release` manualmente, Flutter deja el APK en `build/app/outputs/flutter-apk/`. El script `build_apk.bat` / `tool/build_apk.dart` además lo copia a `frontend/apk/`.
 
 ### How can I best understand this project?
 In order to best understand this project and its underlying intricacies, we recommend that you watch this tutorial: [Flutter Clean Architecture Tutorial](https://www.youtube.com/watch?v=7V_P6dovixg).

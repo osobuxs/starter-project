@@ -193,6 +193,15 @@ npm run test:rules
 
 Si querés generar un APK instalable de evaluación desde comando:
 
+Windows (recomendado):
+
+```bash
+cd frontend
+build_apk.bat
+```
+
+Linux/macOS:
+
 ```bash
 cd frontend
 dart run tool/build_apk.dart
@@ -204,6 +213,8 @@ Resultado esperado:
 - `frontend/apk/latest-release.apk`
 
 La versión se toma de `frontend/pubspec.yaml`.
+
+> Si corrés `flutter build apk --release` directamente, el artefacto queda en `frontend/build/app/outputs/flutter-apk/app-release.apk`. El script de build lo copia además a `frontend/apk/` con nombre versionado y `latest-release.apk`.
 
 ---
 
