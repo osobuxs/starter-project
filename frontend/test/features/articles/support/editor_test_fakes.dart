@@ -95,8 +95,12 @@ class FakeUserProfileRepository implements UserProfileRepository {
 
   @override
   Future<DataState<UserProfileEntity>> getUserProfile(String uid) async {
-    return getUserProfileHandler?.call(uid) ??
-        DataFailed(Exception('Profile handler missing'));
+    final handler = getUserProfileHandler;
+    if (handler != null) {
+      return handler(uid);
+    }
+
+    return DataFailed(Exception('Profile handler missing'));
   }
 
   @override
