@@ -4,10 +4,15 @@ This file is the **lowest-friction evaluation entry point** for the current deli
 
 ## What matters now
 
-- **Evaluation branch:** `feat/final-delivery-docs`
+- **Evaluation branch:** `main`
 - **Canonical technical docs:** `DocsV2/`
 - **Challenge report:** `docs/REPORT.md`
 - **Actual delivered code:** `frontend/` and `backend/`
+
+## Quick rule to avoid confusion
+
+- If a statement in historical docs conflicts with `DocsV2/`, trust **`DocsV2/`**.
+- Historical references in this repository are context-only, not active specification.
 
 ## Read these first
 
@@ -39,7 +44,13 @@ That sequence gives the fastest path to understanding:
 ### Historical context retained on purpose
 - `README.md` — original challenge brief and starter framing
 - `docs/` — legacy project docs from the original repository context
-- `starterV2/` — preserved historical artifact
+
+## Recommended reading path (evaluators)
+
+1. `DocsV2/02-scope/IMPLEMENTATION_MATRIX.md` (starter vs challenge vs delivered)
+2. `DocsV2/03-frontend/ARCHITECTURE.md` (frontend design)
+3. `DocsV2/04-backend/FIREBASE_CONTRACT.md` + `DocsV2/04-backend/RULES_AND_INDEXES.md` (backend contract/security)
+4. `DocsV2/05-delivery/EVALUATOR_GUIDE.md` + `docs/REPORT.md` (final evaluation context)
 
 ## What to test first
 
@@ -73,7 +84,7 @@ If you want the fastest meaningful evaluation path, test in this order:
 ## Branches and artifacts to care about
 
 ### Primary branch for this delivery package
-- `feat/final-delivery-docs`
+- `main`
 
 ### Primary artifacts
 - `DocsV2/` — canonical docs
