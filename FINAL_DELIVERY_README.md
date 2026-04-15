@@ -40,6 +40,7 @@ That sequence gives the fastest path to understanding:
 
 ### Delivery-specific context
 - `docs/REPORT.md` — evaluator-facing challenge report
+- `frontend/screenshots/` — screenshots de evidencia funcional (proof media)
 
 ### Historical context retained on purpose
 - `README.md` — original challenge brief and starter framing
