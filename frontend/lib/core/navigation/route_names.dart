@@ -7,4 +7,8 @@ class AppRouteNames {
   static const createArticle = '/CreateArticle';
   static const myNotes = '/MyNotes';
   static const myFavorites = '/MyFavorites';
+  static const laLoba = '/LaLoba';
+  static const laLobaCreate = '/LaLoba/Create';
+  static const laLobaPlay = '/LaLoba/Play';
+  static const laLobaFinished = '/LaLoba/Finished';
 }

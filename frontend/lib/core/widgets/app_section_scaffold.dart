@@ -148,6 +148,14 @@ class _AppSectionDrawer extends StatelessWidget {
               label: 'Mis favoritos',
             ),
           ),
+          _DrawerRouteTile(
+            icon: Icons.games,
+            label: 'La Loba',
+            onTap: () => _navigateToRoute(
+              context,
+              routeName: AppRouteNames.laLoba,
+            ),
+          ),
           const Divider(),
           if (drawerVariant == AppSectionDrawerVariant.full && isAuthenticated)
             _DrawerRouteTile(
