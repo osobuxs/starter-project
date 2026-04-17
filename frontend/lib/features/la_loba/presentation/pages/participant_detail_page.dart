@@ -46,9 +46,9 @@ class _ParticipantDetailPageState extends State<ParticipantDetailPage> {
             final participantGames = [
               ...gameState.finishedGames,
               ...gameState.pausedGames,
-              if (gameState.activeGame != null) gameState.activeGame!,
+              ...gameState.playingGames,
             ].where((g) {
-              return g.participantIds?.contains(widget.participantId) ?? false;
+              return g.participantIds.contains(widget.participantId);
             }).toList();
 
             // Sort by date descending
@@ -117,8 +117,7 @@ class _ParticipantDetailPageState extends State<ParticipantDetailPage> {
                         child: Center(
                           child: Column(
                             children: const [
-                              Icon(Icons.casino,
-                                  size: 48, color: Colors.grey),
+                              Icon(Icons.casino, size: 48, color: Colors.grey),
                               SizedBox(height: 16),
                               Text(
                                 'No hay partidas',

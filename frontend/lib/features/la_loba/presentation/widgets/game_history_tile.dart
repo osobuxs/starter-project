@@ -17,7 +17,8 @@ class GameHistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateStr = game.date != null
-        ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.fromMillisecondsSinceEpoch(game.date))
+        ? DateFormat('dd/MM/yyyy HH:mm')
+            .format(DateTime.fromMillisecondsSinceEpoch(game.date))
         : 'Sin fecha';
 
     final isFinished = game.status == 'finished';
@@ -28,19 +29,21 @@ class GameHistoryTile extends StatelessWidget {
     String statusLabel = 'Desconocido';
 
     if (isFinished) {
-      statusColor = Colors.green;
+      statusColor = Colors.blueGrey;
       statusLabel = 'Finalizada';
     } else if (isPaused) {
       statusColor = Colors.orange;
       statusLabel = 'Pausada';
     } else if (isPlaying) {
-      statusColor = Colors.blue;
+      statusColor = Colors.green;
       statusLabel = 'En juego';
     }
 
     return ListTile(
       leading: Icon(
-        isFinished ? Icons.check_circle : (isPaused ? Icons.pause_circle : Icons.play_circle_filled),
+        isFinished
+            ? Icons.check_circle
+            : (isPaused ? Icons.pause_circle : Icons.play_circle_filled),
         color: statusColor,
       ),
       title: Text(game.name),

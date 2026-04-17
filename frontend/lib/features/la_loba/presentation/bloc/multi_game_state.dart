@@ -14,7 +14,7 @@ enum MultiGameBlocStatus {
 
 class MultiGameState extends Equatable {
   final MultiGameBlocStatus status;
-  final GameEntity? activeGame;
+  final List<GameEntity> playingGames;
   final List<GameEntity> pausedGames;
   final List<GameEntity> finishedGames;
   final GameEntity? selectedGame;
@@ -22,7 +22,7 @@ class MultiGameState extends Equatable {
 
   const MultiGameState({
     this.status = MultiGameBlocStatus.initial,
-    this.activeGame,
+    this.playingGames = const [],
     this.pausedGames = const [],
     this.finishedGames = const [],
     this.selectedGame,
@@ -31,8 +31,7 @@ class MultiGameState extends Equatable {
 
   MultiGameState copyWith({
     MultiGameBlocStatus? status,
-    GameEntity? activeGame,
-    bool clearActiveGame = false,
+    List<GameEntity>? playingGames,
     List<GameEntity>? pausedGames,
     List<GameEntity>? finishedGames,
     GameEntity? selectedGame,
@@ -42,21 +41,22 @@ class MultiGameState extends Equatable {
   }) {
     return MultiGameState(
       status: status ?? this.status,
-      activeGame: clearActiveGame ? null : (activeGame ?? this.activeGame),
+      playingGames: playingGames ?? this.playingGames,
       pausedGames: pausedGames ?? this.pausedGames,
       finishedGames: finishedGames ?? this.finishedGames,
-      selectedGame: clearSelectedGame ? null : (selectedGame ?? this.selectedGame),
+      selectedGame:
+          clearSelectedGame ? null : (selectedGame ?? this.selectedGame),
       error: clearError ? null : (error ?? this.error),
     );
   }
 
   @override
   List<Object?> get props => [
-    status,
-    activeGame,
-    pausedGames,
-    finishedGames,
-    selectedGame,
-    error,
-  ];
+        status,
+        playingGames,
+        pausedGames,
+        finishedGames,
+        selectedGame,
+        error,
+      ];
 }

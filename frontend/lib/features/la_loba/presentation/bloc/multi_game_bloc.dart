@@ -23,11 +23,15 @@ class MultiGameBloc extends Bloc<MultiGameEvent, MultiGameState> {
   ) async {
     emit(state.copyWith(status: MultiGameBlocStatus.loading));
 
-    final result = await _gameRepository.createGame(event.gameName);
+    final result =
+        await _gameRepository.createGame(event.gameName, event.participantIds);
     if (result is DataSuccess<GameEntity>) {
       emit(state.copyWith(
         status: MultiGameBlocStatus.gameCreated,
-        activeGame: result.data,
+        playingGames: [
+          result.data!,
+          ...state.playingGames,
+        ],
       ));
     } else {
       emit(state.copyWith(
@@ -46,16 +50,13 @@ class MultiGameBloc extends Bloc<MultiGameEvent, MultiGameState> {
     final result = await _gameRepository.getGameHistory();
     if (result is DataSuccess<List<GameEntity>>) {
       final games = result.data ?? [];
-      final active =
-          games.where((g) => g.status == 'playing').firstOrNull;
-      final paused =
-          games.where((g) => g.status == 'paused').toList();
-      final finished =
-          games.where((g) => g.status == 'finished').toList();
+      final playing = games.where((g) => g.status == 'playing').toList();
+      final paused = games.where((g) => g.status == 'paused').toList();
+      final finished = games.where((g) => g.status == 'finished').toList();
 
       emit(state.copyWith(
         status: MultiGameBlocStatus.loaded,
-        activeGame: active,
+        playingGames: playing,
         pausedGames: paused,
         finishedGames: finished,
       ));
@@ -71,17 +72,27 @@ class MultiGameBloc extends Bloc<MultiGameEvent, MultiGameState> {
     PauseGameEvent event,
     Emitter<MultiGameState> emit,
   ) async {
-    if (state.activeGame?.id == event.gameId) {
-      final result =
-          await _gameRepository.updateGameStatus(event.gameId, 'paused');
-      if (result is DataSuccess) {
-        final updatedGame = state.activeGame!.copyWith(status: 'paused');
-        emit(state.copyWith(
-          status: MultiGameBlocStatus.gamePaused,
-          activeGame: null,
-          pausedGames: [...state.pausedGames, updatedGame],
-        ));
-      }
+    final target =
+        state.playingGames.where((g) => g.id == event.gameId).firstOrNull;
+    if (target == null) {
+      return;
+    }
+
+    final result =
+        await _gameRepository.updateGameStatus(event.gameId, 'paused');
+    if (result is DataSuccess<void>) {
+      final updatedPlaying =
+          state.playingGames.where((g) => g.id != event.gameId).toList();
+      final updatedPaused = [
+        target.copyWith(status: 'paused'),
+        ...state.pausedGames,
+      ];
+
+      emit(state.copyWith(
+        status: MultiGameBlocStatus.gamePaused,
+        playingGames: updatedPlaying,
+        pausedGames: updatedPaused,
+      ));
     }
   }
 
@@ -95,14 +106,14 @@ class MultiGameBloc extends Bloc<MultiGameEvent, MultiGameState> {
 
     final result =
         await _gameRepository.updateGameStatus(event.gameId, 'playing');
-    if (result is DataSuccess) {
+    if (result is DataSuccess<void>) {
       final updatedGame = game.copyWith(status: 'playing');
       final updatedPaused =
           state.pausedGames.where((g) => g.id != event.gameId).toList();
 
       emit(state.copyWith(
         status: MultiGameBlocStatus.gameResumed,
-        activeGame: updatedGame,
+        playingGames: [updatedGame, ...state.playingGames],
         pausedGames: updatedPaused,
       ));
     }
@@ -114,14 +125,23 @@ class MultiGameBloc extends Bloc<MultiGameEvent, MultiGameState> {
   ) async {
     final result =
         await _gameRepository.updateGameStatus(event.gameId, 'finished');
-    if (result is DataSuccess) {
-      final finishedGame =
-          state.activeGame?.copyWith(status: 'finished', winnerId: event.winnerId);
-      if (finishedGame != null) {
+    if (result is DataSuccess<void>) {
+      final fromPlaying =
+          state.playingGames.where((g) => g.id == event.gameId).firstOrNull;
+      final fromPaused =
+          state.pausedGames.where((g) => g.id == event.gameId).firstOrNull;
+      final source = fromPlaying ?? fromPaused;
+
+      if (source != null) {
+        final finishedGame =
+            source.copyWith(status: 'finished', winnerId: event.winnerId);
         emit(state.copyWith(
           status: MultiGameBlocStatus.gameFinished,
-          activeGame: null,
-          finishedGames: [...state.finishedGames, finishedGame],
+          playingGames:
+              state.playingGames.where((g) => g.id != event.gameId).toList(),
+          pausedGames:
+              state.pausedGames.where((g) => g.id != event.gameId).toList(),
+          finishedGames: [finishedGame, ...state.finishedGames],
         ));
       }
     }
@@ -131,9 +151,11 @@ class MultiGameBloc extends Bloc<MultiGameEvent, MultiGameState> {
     SelectGameEvent event,
     Emitter<MultiGameState> emit,
   ) async {
-    final game = state.pausedGames.firstWhere(
-      (g) => g.id == event.gameId,
-    );
+    final game = [
+      ...state.playingGames,
+      ...state.pausedGames,
+      ...state.finishedGames,
+    ].firstWhere((g) => g.id == event.gameId);
     emit(state.copyWith(selectedGame: game));
   }
 }
