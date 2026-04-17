@@ -10,7 +10,8 @@ class GameRepositoryImpl implements GameRepository {
   GameRepositoryImpl(this._firestoreDataSource);
 
   @override
-  Future<DataState<GameEntity>> createGame(String name, [List<String>? participantIds]) async {
+  Future<DataState<GameEntity>> createGame(String name,
+      [List<String>? participantIds]) async {
     try {
       final game = await _firestoreDataSource.createGame(name, participantIds);
       return DataSuccess(game);
@@ -44,12 +45,14 @@ class GameRepositoryImpl implements GameRepository {
     String gameId,
     int handNumber,
     String dealerId,
+    Map<String, int> scores,
   ) async {
     try {
       final hand = await _firestoreDataSource.createHand(
         gameId,
         handNumber,
         dealerId,
+        scores,
       );
       return DataSuccess(hand);
     } on Exception catch (e) {
@@ -88,9 +91,44 @@ class GameRepositoryImpl implements GameRepository {
   }
 
   @override
-  Future<DataState<void>> updateGameWinner(String gameId, String winnerId) async {
+  Future<DataState<void>> updateGameWinner(
+      String gameId, String winnerId) async {
     try {
       await _firestoreDataSource.updateGameWinner(gameId, winnerId);
+      return const DataSuccess(null);
+    } on Exception catch (e) {
+      return DataFailed(e);
+    }
+  }
+
+  @override
+  Future<DataState<void>> addParticipantToGame(
+    String gameId,
+    String participantId, {
+    int? insertIndex,
+  }) async {
+    try {
+      await _firestoreDataSource.addParticipantToGame(
+        gameId,
+        participantId,
+        insertIndex: insertIndex,
+      );
+      return const DataSuccess(null);
+    } on Exception catch (e) {
+      return DataFailed(e);
+    }
+  }
+
+  @override
+  Future<DataState<void>> updateParticipantStatsOnGameFinished(
+    List<String> participantIds,
+    String winnerId,
+  ) async {
+    try {
+      await _firestoreDataSource.updateParticipantStatsOnGameFinished(
+        participantIds,
+        winnerId,
+      );
       return const DataSuccess(null);
     } on Exception catch (e) {
       return DataFailed(e);

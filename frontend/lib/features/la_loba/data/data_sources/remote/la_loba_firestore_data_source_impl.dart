@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:news_app_clean_architecture/features/la_loba/data/data_sources/remote/la_loba_firestore_data_source.dart';
-import 'package:news_app_clean_architecture/features/la_loba/data/models/game_model.dart';
 import 'package:news_app_clean_architecture/features/la_loba/data/models/hand_model.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart';
@@ -11,7 +10,8 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
   LaLobaFirestoreDataSourceImpl(this._firestore);
 
   @override
-  Future<GameEntity> createGame(String name, [List<String>? participantIds]) async {
+  Future<GameEntity> createGame(String name,
+      [List<String>? participantIds]) async {
     final gameRef = _firestore.collection('games').doc();
     participantIds ??= [];
     final game = GameEntity(
@@ -69,7 +69,8 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
       participantIds: List<String>.from(data['participantIds'] as List),
       currentDealerId: data['currentDealerId'] as String,
       currentHand: data['currentHand'] as int,
-      participantStates: (data['participantStates'] ?? {}) as Map<String, dynamic>,
+      participantStates:
+          (data['participantStates'] ?? {}) as Map<String, dynamic>,
       winnerId: data['winnerId'] as String?,
       hands: hands,
     );
@@ -88,7 +89,12 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
   }
 
   @override
-  Future<HandEntity> createHand(String gameId, int handNumber, String dealerId) async {
+  Future<HandEntity> createHand(
+    String gameId,
+    int handNumber,
+    String dealerId,
+    Map<String, int> scores,
+  ) async {
     final handRef = _firestore
         .collection('games')
         .doc(gameId)
@@ -98,7 +104,7 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
     final hand = HandEntity(
       handNumber: handNumber,
       dealerId: dealerId,
-      scores: {},
+      scores: scores,
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 
@@ -142,15 +148,28 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
   }
 
   @override
-  Future<void> addParticipantToGame(String gameId, String participantId) async {
+  Future<void> addParticipantToGame(
+    String gameId,
+    String participantId, {
+    int? insertIndex,
+  }) async {
     final gameRef = _firestore.collection('games').doc(gameId);
     final game = await getGame(gameId);
 
     if (!game.participantIds.contains(participantId)) {
-      final newParticipantIds = [...game.participantIds, participantId];
+      final batch = _firestore.batch();
+      final newParticipantIds = [...game.participantIds];
+      if (insertIndex == null ||
+          insertIndex < 0 ||
+          insertIndex > newParticipantIds.length) {
+        newParticipantIds.add(participantId);
+      } else {
+        newParticipantIds.insert(insertIndex, participantId);
+      }
       final newParticipantStates = {...game.participantStates};
       final highestScore = game.participantStates.values
           .whereType<Map<String, dynamic>>()
+          .where((state) => state['status'] == 'active')
           .map((p) => (p['score'] as int?) ?? 0)
           .fold<int>(0, (max, val) => val > max ? val : max);
 
@@ -159,11 +178,56 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
         'status': 'active',
       };
 
-      await gameRef.update({
+      batch.update(gameRef, {
         'participantIds': newParticipantIds,
         'participantStates': newParticipantStates,
       });
+
+      if (game.currentHand > 1) {
+        final previousHandRef =
+            gameRef.collection('hands').doc((game.currentHand - 1).toString());
+        final previousHandSnapshot = await previousHandRef.get();
+
+        if (previousHandSnapshot.exists) {
+          final previousHandData = previousHandSnapshot.data();
+          final previousScores = Map<String, dynamic>.from(
+              previousHandData?['scores'] as Map? ?? {});
+          previousScores[participantId] = highestScore;
+
+          batch.update(previousHandRef, {'scores': previousScores});
+        }
+      }
+
+      await batch.commit();
     }
+  }
+
+  @override
+  Future<void> updateParticipantStatsOnGameFinished(
+    List<String> participantIds,
+    String winnerId,
+  ) async {
+    if (participantIds.isEmpty) {
+      return;
+    }
+
+    final batch = _firestore.batch();
+
+    for (final participantId in participantIds) {
+      final participantRef =
+          _firestore.collection('participants').doc(participantId);
+      batch.update(participantRef, {
+        'totalGamesPlayed': FieldValue.increment(1),
+      });
+
+      if (participantId == winnerId) {
+        batch.update(participantRef, {
+          'totalGamesWon': FieldValue.increment(1),
+        });
+      }
+    }
+
+    await batch.commit();
   }
 
   @override
@@ -206,7 +270,8 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
   }
 
   @override
-  Future<List<GameEntity>> queryGamesByDateRange(int startDate, int endDate) async {
+  Future<List<GameEntity>> queryGamesByDateRange(
+      int startDate, int endDate) async {
     final snapshot = await _firestore
         .collection('games')
         .where('date', isGreaterThanOrEqualTo: startDate)

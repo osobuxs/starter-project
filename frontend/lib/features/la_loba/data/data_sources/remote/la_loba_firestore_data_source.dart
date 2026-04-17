@@ -5,7 +5,12 @@ abstract class LaLobaFirestoreDataSource {
   Future<GameEntity> createGame(String name, List<String> participantIds);
   Future<GameEntity> getGame(String gameId);
   Future<List<GameEntity>> getGameHistory();
-  Future<HandEntity> createHand(String gameId, int handNumber, String dealerId);
+  Future<HandEntity> createHand(
+    String gameId,
+    int handNumber,
+    String dealerId,
+    Map<String, int> scores,
+  );
   Future<void> updateGameStatus(String gameId, String status);
   Future<void> updateParticipantScores(
     String gameId,
@@ -14,7 +19,15 @@ abstract class LaLobaFirestoreDataSource {
     Map<String, dynamic> participantStates,
   );
   Future<void> updateGameWinner(String gameId, String winnerId);
-  Future<void> addParticipantToGame(String gameId, String participantId);
+  Future<void> addParticipantToGame(
+    String gameId,
+    String participantId, {
+    int? insertIndex,
+  });
+  Future<void> updateParticipantStatsOnGameFinished(
+    List<String> participantIds,
+    String winnerId,
+  );
   Future<List<GameEntity>> queryGamesByStatus(String status);
   Future<List<GameEntity>> queryGamesByParticipant(String participantId);
   Future<List<GameEntity>> queryGamesByWinner(String winnerId);

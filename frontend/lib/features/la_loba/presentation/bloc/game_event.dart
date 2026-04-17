@@ -9,21 +9,40 @@ abstract class GameEvent extends Equatable {
 
 class CreateGameEvent extends GameEvent {
   final String name;
+  final List<String>? participantIds;
 
-  const CreateGameEvent(this.name);
+  const CreateGameEvent(this.name, {this.participantIds});
 
   @override
-  List<Object?> get props => [name];
+  List<Object?> get props => [name, participantIds];
 }
 
 class AddPlayerEvent extends GameEvent {
   final String gameId;
   final String participantId;
+  final int? insertIndex;
 
-  const AddPlayerEvent({required this.gameId, required this.participantId});
+  const AddPlayerEvent({
+    required this.gameId,
+    required this.participantId,
+    this.insertIndex,
+  });
 
   @override
-  List<Object?> get props => [gameId, participantId];
+  List<Object?> get props => [gameId, participantId, insertIndex];
+}
+
+class ResolveRetryDecisionEvent extends GameEvent {
+  final String participantId;
+  final bool rejoin;
+
+  const ResolveRetryDecisionEvent({
+    required this.participantId,
+    required this.rejoin,
+  });
+
+  @override
+  List<Object?> get props => [participantId, rejoin];
 }
 
 class StartGameEvent extends GameEvent {
