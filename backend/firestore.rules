@@ -186,5 +186,24 @@ service cloud.firestore {
           && isValidFavoriteWrite(articleId);
       }
     }
+
+    // La Loba: Card Game Management
+    match /participants/{participantId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    match /games/{gameId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false;
+
+      match /hands/{handId} {
+        allow read: if isSignedIn();
+        allow create, update: if isSignedIn();
+        allow delete: if false;
+      }
+    }
   }
 }
