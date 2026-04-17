@@ -17,17 +17,17 @@ class CreateGameEvent extends GameEvent {
 }
 
 class AddPlayerEvent extends GameEvent {
-  final int gameId;
-  final String playerName;
+  final String gameId;
+  final String participantId;
 
-  const AddPlayerEvent({required this.gameId, required this.playerName});
+  const AddPlayerEvent({required this.gameId, required this.participantId});
 
   @override
-  List<Object?> get props => [gameId, playerName];
+  List<Object?> get props => [gameId, participantId];
 }
 
 class StartGameEvent extends GameEvent {
-  final int gameId;
+  final String gameId;
 
   const StartGameEvent(this.gameId);
 
@@ -36,17 +36,17 @@ class StartGameEvent extends GameEvent {
 }
 
 class RecordScoreEvent extends GameEvent {
-  final int playerId;
+  final String participantId;
   final int points;
 
-  const RecordScoreEvent({required this.playerId, required this.points});
+  const RecordScoreEvent({required this.participantId, required this.points});
 
   @override
-  List<Object?> get props => [playerId, points];
+  List<Object?> get props => [participantId, points];
 }
 
 class FinishPartidaEvent extends GameEvent {
-  final int gameId;
+  final String gameId;
 
   const FinishPartidaEvent(this.gameId);
 
@@ -54,28 +54,8 @@ class FinishPartidaEvent extends GameEvent {
   List<Object?> get props => [gameId];
 }
 
-class DoRetryEvent extends GameEvent {
-  final int gameId;
-  final int playerId;
-
-  const DoRetryEvent({required this.gameId, required this.playerId});
-
-  @override
-  List<Object?> get props => [gameId, playerId];
-}
-
-class RejectRetryEvent extends GameEvent {
-  final int gameId;
-  final int playerId;
-
-  const RejectRetryEvent({required this.gameId, required this.playerId});
-
-  @override
-  List<Object?> get props => [gameId, playerId];
-}
-
 class LoadGameEvent extends GameEvent {
-  final int gameId;
+  final String gameId;
 
   const LoadGameEvent(this.gameId);
 

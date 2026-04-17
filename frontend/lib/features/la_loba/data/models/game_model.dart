@@ -1,38 +1,45 @@
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/partida.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/player.dart';
 
 class GameModel extends GameEntity {
   const GameModel({
-    super.id,
+    required super.id,
     required super.name,
     super.status,
-    required super.createdAt,
-    super.players,
-    super.partidas,
+    required super.date,
+    super.participantIds,
+    required super.currentDealerId,
+    super.currentHand,
+    super.participantStates,
+    super.winnerId,
+    super.hands,
   });
 
-  factory GameModel.fromMap(
-    Map<String, dynamic> map, {
-    List<PlayerEntity> players = const [],
-    List<PartidaEntity> partidas = const [],
-  }) {
+  factory GameModel.fromFirestore(Map<String, dynamic> map) {
     return GameModel(
-      id: map['id'] as int?,
+      id: map['id'] as String,
       name: map['name'] as String,
-      status: map['status'] as String? ?? 'created',
-      createdAt: map['createdAt'] as int,
-      players: players,
-      partidas: partidas,
+      status: map['status'] as String? ?? 'playing',
+      date: (map['date'] as int?) ?? DateTime.now().millisecondsSinceEpoch,
+      participantIds: List<String>.from(map['participantIds'] as List? ?? []),
+      currentDealerId: map['currentDealerId'] as String? ?? '',
+      currentHand: map['currentHand'] as int? ?? 0,
+      participantStates: Map<String, dynamic>.from(map['participantStates'] as Map? ?? {}),
+      winnerId: map['winnerId'] as String?,
+      hands: [], // Hands loaded separately from subcollection
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
-      if (id != null) 'id': id,
+      'id': id,
       'name': name,
       'status': status,
-      'createdAt': createdAt,
+      'date': date,
+      'participantIds': participantIds,
+      'currentDealerId': currentDealerId,
+      'currentHand': currentHand,
+      'participantStates': participantStates,
+      'winnerId': winnerId,
     };
   }
 }

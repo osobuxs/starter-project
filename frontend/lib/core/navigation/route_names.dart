@@ -11,4 +11,5 @@ class AppRouteNames {
   static const laLobaCreate = '/LaLoba/Create';
   static const laLobaPlay = '/LaLoba/Play';
   static const laLobaFinished = '/LaLoba/Finished';
+  static const laLobaParticipantDetail = '/LaLoba/ParticipantDetail';
 }

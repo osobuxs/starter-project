@@ -1,17 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/player.dart';
 
-class PlayerScoreCard extends StatelessWidget {
-  final PlayerEntity player;
-  final int currentPartidaScore;
+class PlayerScoreCard extends StatefulWidget {
+  final String participantId;
+  final int currentScore;
   final ValueChanged<int> onScoreChanged;
 
   const PlayerScoreCard({
     super.key,
-    required this.player,
-    required this.currentPartidaScore,
+    required this.participantId,
+    required this.currentScore,
     required this.onScoreChanged,
   });
+
+  @override
+  State<PlayerScoreCard> createState() => _PlayerScoreCardState();
+}
+
+class _PlayerScoreCardState extends State<PlayerScoreCard> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.currentScore.toString(),
+    );
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(covariant PlayerScoreCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextText = widget.currentScore.toString();
+    final changedExternally =
+        oldWidget.currentScore != widget.currentScore;
+
+    if (changedExternally &&
+        !_focusNode.hasFocus &&
+        _controller.text != nextText) {
+      _controller.text = nextText;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,45 +60,31 @@ class PlayerScoreCard extends StatelessWidget {
           children: [
             Expanded(
               flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    player.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Total: ${player.totalScore}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: player.totalScore >= 80
-                          ? Colors.red
-                          : Colors.grey[600],
-                    ),
-                  ),
-                ],
+              child: Text(
+                widget.participantId,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.remove_circle_outline),
-              onPressed: () => onScoreChanged(currentPartidaScore - 5),
+              onPressed: () =>
+                  widget.onScoreChanged(widget.currentScore - 1),
             ),
             SizedBox(
               width: 60,
               child: TextField(
-                key: ValueKey('score_${player.id}'),
+                key: ValueKey('score_${widget.participantId}'),
+                focusNode: _focusNode,
                 textAlign: TextAlign.center,
                 keyboardType: TextInputType.number,
-                controller: TextEditingController(
-                  text: currentPartidaScore.toString(),
-                ),
+                controller: _controller,
                 onChanged: (value) {
                   final parsed = int.tryParse(value);
                   if (parsed != null) {
-                    onScoreChanged(parsed);
+                    widget.onScoreChanged(parsed);
                   }
                 },
                 decoration: const InputDecoration(
@@ -75,7 +98,8 @@ class PlayerScoreCard extends StatelessWidget {
             ),
             IconButton(
               icon: const Icon(Icons.add_circle_outline),
-              onPressed: () => onScoreChanged(currentPartidaScore + 5),
+              onPressed: () =>
+                  widget.onScoreChanged(widget.currentScore + 1),
             ),
           ],
         ),

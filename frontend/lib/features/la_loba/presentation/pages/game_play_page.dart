@@ -4,11 +4,9 @@ import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_bloc.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_event.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_state.dart';
-import 'package:news_app_clean_architecture/features/la_loba/presentation/widgets/player_score_card.dart';
-import 'package:news_app_clean_architecture/features/la_loba/presentation/widgets/retry_dialog.dart';
 
 class GamePlayPage extends StatelessWidget {
-  final int gameId;
+  final String gameId;
 
   const GamePlayPage({super.key, required this.gameId});
 
@@ -16,28 +14,7 @@ class GamePlayPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocConsumer<GameBloc, GameState>(
       listener: (context, state) {
-        if (state.status == GameBlocStatus.retryOffered &&
-            state.retryCandidates.isNotEmpty) {
-          final candidate = state.retryCandidates.first;
-          RetryDialog.show(
-            context,
-            player: candidate,
-            onAccept: () {
-              Navigator.of(context).pop();
-              context.read<GameBloc>().add(
-                DoRetryEvent(gameId: gameId, playerId: candidate.id!),
-              );
-            },
-            onReject: () {
-              Navigator.of(context).pop();
-              context.read<GameBloc>().add(
-                RejectRetryEvent(gameId: gameId, playerId: candidate.id!),
-              );
-            },
-          );
-        }
-
-        if (state.status == GameBlocStatus.gameOver) {
+        if (state.status == GameBlocStatus.gameFinished) {
           Navigator.of(context).pushReplacementNamed(
             AppRouteNames.laLobaFinished,
             arguments: gameId,
@@ -52,93 +29,87 @@ class GamePlayPage extends StatelessWidget {
       },
       builder: (context, state) {
         final game = state.game;
-        final activePlayers = game?.activePlayers ?? [];
 
         return Scaffold(
           appBar: AppBar(
             title: Text(
-              '${game?.name ?? "La Loba"} — Partida ${state.currentPartidaNumber}',
+              '${game?.name ?? "La Loba"} — Mano ${game?.currentHand ?? 0}',
               style: const TextStyle(color: Colors.black),
             ),
           ),
           body: state.status == GameBlocStatus.loading
               ? const Center(child: CircularProgressIndicator())
-              : Column(
-                  children: [
-                    // Active vs eliminated indicator
-                    if (game != null)
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Activos: ${activePlayers.length}',
-                              style: const TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Text(
-                              'Eliminados: ${game.players.length - activePlayers.length}',
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+              : game == null
+                  ? const Center(child: Text('No hay juego cargado'))
+                  : Column(
+                      children: [
+                        // Participant count
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(
+                            'Participantes: ${game.participantIds.length}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      ),
 
-                    // Player score cards
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: activePlayers.length,
-                        itemBuilder: (context, index) {
-                          final player = activePlayers[index];
-                          final currentScore =
-                              state.currentPartidaScores[player.id] ?? 0;
+                        // Score input cards for participants
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: game.participantIds.length,
+                            itemBuilder: (context, index) {
+                              final participantId = game.participantIds[index];
+                              final currentScore =
+                                  state.currentHandScores[participantId] ?? 0;
 
-                          return PlayerScoreCard(
-                            player: player,
-                            currentPartidaScore: currentScore,
-                            onScoreChanged: (newScore) {
-                              context.read<GameBloc>().add(
-                                RecordScoreEvent(
-                                  playerId: player.id!,
-                                  points: newScore,
+                              return ListTile(
+                                title: Text('Participante $participantId'),
+                                trailing: SizedBox(
+                                  width: 100,
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      hintText: '$currentScore pts',
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (value) {
+                                      final score = int.tryParse(value) ?? 0;
+                                      context.read<GameBloc>().add(
+                                        RecordScoreEvent(
+                                          participantId: participantId,
+                                          points: score,
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               );
                             },
-                          );
-                        },
-                      ),
-                    ),
-
-                    // Finish partida button
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            context.read<GameBloc>().add(
-                              FinishPartidaEvent(gameId),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text(
-                            'Finalizar partida',
-                            style: TextStyle(fontSize: 16),
                           ),
                         ),
-                      ),
+
+                        // Finish hand button
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                context.read<GameBloc>().add(
+                                  FinishPartidaEvent(gameId),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              child: const Text(
+                                'Finalizar Mano',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
         );
       },
     );

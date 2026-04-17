@@ -1,19 +1,18 @@
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
-import 'package:news_app_clean_architecture/features/la_loba/data/data_sources/local/la_loba_local_data_source.dart';
+import 'package:news_app_clean_architecture/features/la_loba/data/data_sources/remote/la_loba_firestore_data_source_impl.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/partida.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/player.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/repository/game_repository.dart';
 
 class GameRepositoryImpl implements GameRepository {
-  final LaLobaLocalDataSource _localDataSource;
+  final LaLobaFirestoreDataSourceImpl _firestoreDataSource;
 
-  GameRepositoryImpl(this._localDataSource);
+  GameRepositoryImpl(this._firestoreDataSource);
 
   @override
-  Future<DataState<GameEntity>> createGame(String name) async {
+  Future<DataState<GameEntity>> createGame(String name, [List<String>? participantIds]) async {
     try {
-      final game = await _localDataSource.createGame(name);
+      final game = await _firestoreDataSource.createGame(name, participantIds);
       return DataSuccess(game);
     } on Exception catch (e) {
       return DataFailed(e);
@@ -21,19 +20,9 @@ class GameRepositoryImpl implements GameRepository {
   }
 
   @override
-  Future<DataState<PlayerEntity>> addPlayer(int gameId, String name) async {
+  Future<DataState<GameEntity>> getGame(String gameId) async {
     try {
-      final player = await _localDataSource.addPlayer(gameId, name);
-      return DataSuccess(player);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
-  Future<DataState<GameEntity>> getGame(int gameId) async {
-    try {
-      final game = await _localDataSource.getGame(gameId);
+      final game = await _firestoreDataSource.getGame(gameId);
       return DataSuccess(game);
     } on Exception catch (e) {
       return DataFailed(e);
@@ -43,7 +32,7 @@ class GameRepositoryImpl implements GameRepository {
   @override
   Future<DataState<List<GameEntity>>> getGameHistory() async {
     try {
-      final games = await _localDataSource.getGameHistory();
+      final games = await _firestoreDataSource.getGameHistory();
       return DataSuccess(games);
     } on Exception catch (e) {
       return DataFailed(e);
@@ -51,49 +40,47 @@ class GameRepositoryImpl implements GameRepository {
   }
 
   @override
-  Future<DataState<List<PlayerEntity>>> getActivePlayers(int gameId) async {
-    try {
-      final players = await _localDataSource.getActivePlayers(gameId);
-      return DataSuccess(players);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
-  Future<DataState<List<PlayerEntity>>> getAllPlayers(int gameId) async {
-    try {
-      final players = await _localDataSource.getAllPlayers(gameId);
-      return DataSuccess(players);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
-  Future<DataState<PartidaEntity>> createPartida(
-    int gameId,
-    int partidaNumber,
+  Future<DataState<HandEntity>> createHand(
+    String gameId,
+    int handNumber,
+    String dealerId,
   ) async {
     try {
-      final partida = await _localDataSource.createPartida(
+      final hand = await _firestoreDataSource.createHand(
         gameId,
-        partidaNumber,
+        handNumber,
+        dealerId,
       );
-      return DataSuccess(partida);
+      return DataSuccess(hand);
     } on Exception catch (e) {
       return DataFailed(e);
     }
   }
 
   @override
-  Future<DataState<void>> recordScore(
-    int playerId,
-    int partidaId,
-    int points,
+  Future<DataState<void>> updateGameStatus(String gameId, String status) async {
+    try {
+      await _firestoreDataSource.updateGameStatus(gameId, status);
+      return const DataSuccess(null);
+    } on Exception catch (e) {
+      return DataFailed(e);
+    }
+  }
+
+  @override
+  Future<DataState<void>> updateParticipantScores(
+    String gameId,
+    String currentDealerId,
+    int currentHand,
+    Map<String, dynamic> participantStates,
   ) async {
     try {
-      await _localDataSource.recordScore(playerId, partidaId, points);
+      await _firestoreDataSource.updateParticipantScores(
+        gameId,
+        currentDealerId,
+        currentHand,
+        participantStates,
+      );
       return const DataSuccess(null);
     } on Exception catch (e) {
       return DataFailed(e);
@@ -101,53 +88,10 @@ class GameRepositoryImpl implements GameRepository {
   }
 
   @override
-  Future<DataState<void>> updatePlayerScore(
-    int playerId,
-    int newTotalScore,
-  ) async {
+  Future<DataState<void>> updateGameWinner(String gameId, String winnerId) async {
     try {
-      await _localDataSource.updatePlayerScore(playerId, newTotalScore);
+      await _firestoreDataSource.updateGameWinner(gameId, winnerId);
       return const DataSuccess(null);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
-  Future<DataState<void>> updatePlayerRetry(int playerId) async {
-    try {
-      await _localDataSource.updatePlayerRetry(playerId);
-      return const DataSuccess(null);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
-  Future<DataState<void>> eliminatePlayer(int playerId) async {
-    try {
-      await _localDataSource.eliminatePlayer(playerId);
-      return const DataSuccess(null);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
-  Future<DataState<void>> updateGameStatus(int gameId, String status) async {
-    try {
-      await _localDataSource.updateGameStatus(gameId, status);
-      return const DataSuccess(null);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
-  Future<DataState<bool>> playerNameExists(int gameId, String name) async {
-    try {
-      final exists = await _localDataSource.playerNameExists(gameId, name);
-      return DataSuccess(exists);
     } on Exception catch (e) {
       return DataFailed(e);
     }

@@ -15,10 +15,11 @@ import 'package:news_app_clean_architecture/features/auth/presentation/pages/reg
 import 'package:news_app_clean_architecture/features/user_profile/presentation/pages/user_profile_page.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_bloc.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_event.dart';
-import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/la_loba_home_page.dart';
+import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/la_loba_wrapper.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/create_game_page.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/game_play_page.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/game_finished_page.dart';
+import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/participant_detail_page.dart';
 import 'package:news_app_clean_architecture/injection_container.dart';
 
 import '../../features/daily_news/domain/entities/article.dart';
@@ -102,10 +103,7 @@ class AppRoutes {
         return _materialRoute(
           settings,
           policy: policy,
-          child: BlocProvider<GameBloc>(
-            create: (_) => sl<GameBloc>()..add(const LoadHistoryEvent()),
-            child: const LaLobaHomePage(),
-          ),
+          child: const LaLobaWrapper(),
         );
 
       case AppRouteNames.laLobaCreate:
@@ -163,6 +161,25 @@ class AppRoutes {
           ),
         );
 
+      case AppRouteNames.laLobaParticipantDetail:
+        final participantId = settings.arguments as String?;
+        if (participantId == null || participantId.isEmpty) {
+          return _materialRoute(
+            settings,
+            policy: policy,
+            child: const AppCenteredMessageState(
+              icon: Icons.error_outline,
+              title: 'Ruta inválida',
+              message: 'No se encontró un participantId válido.',
+            ),
+          );
+        }
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: ParticipantDetailPage(participantId: participantId),
+        );
+
       default:
         return _materialRoute(
           settings,
@@ -184,9 +201,9 @@ class AppRoutes {
     );
   }
 
-  static int? _extractGameId(Object? rawArg) {
-    if (rawArg is int) return rawArg;
-    if (rawArg is String) return int.tryParse(rawArg);
+  static String? _extractGameId(Object? rawArg) {
+    if (rawArg is String) return rawArg;
+    if (rawArg is int) return rawArg.toString();
     return null;
   }
 }

@@ -5,7 +5,7 @@ import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/g
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_state.dart';
 
 class GameFinishedPage extends StatelessWidget {
-  final int gameId;
+  final String gameId;
 
   const GameFinishedPage({super.key, required this.gameId});
 
@@ -29,9 +29,8 @@ class GameFinishedPage extends StatelessWidget {
             return const Center(child: Text('Error al cargar el juego'));
           }
 
-          // Sort by totalScore ascending (winner = lowest)
-          final sortedPlayers = List.of(game.players)
-            ..sort((a, b) => a.totalScore.compareTo(b.totalScore));
+          final winnerId = game.winnerId;
+          final participantIds = game.participantIds;
 
           return Column(
             children: [
@@ -45,64 +44,51 @@ class GameFinishedPage extends StatelessWidget {
                     const Icon(Icons.emoji_events, size: 48, color: Colors.amber),
                     const SizedBox(height: 8),
                     Text(
-                      'Ganador: ${sortedPlayers.first.name}',
+                      'Ganador: ${winnerId ?? 'Desconocido'}',
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      '${sortedPlayers.first.totalScore} puntos',
+                      'Participantes: ${participantIds.length}',
                       style: const TextStyle(fontSize: 18),
                     ),
                   ],
                 ),
               ),
 
-              // Ranking
+              // Participant list
               const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text(
-                  'Ranking final',
+                  'Participantes',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
               Expanded(
                 child: ListView.builder(
-                  itemCount: sortedPlayers.length,
+                  itemCount: participantIds.length,
                   itemBuilder: (context, index) {
-                    final player = sortedPlayers[index];
+                    final participantId = participantIds[index];
+                    final isWinner = participantId == winnerId;
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: index == 0
+                        backgroundColor: isWinner
                             ? Colors.amber
-                            : (player.isEliminated
-                                ? Colors.red.shade100
-                                : Colors.grey.shade200),
+                            : Colors.grey.shade200,
                         child: Text(
                           '${index + 1}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: index == 0 ? Colors.white : Colors.black,
+                            color: isWinner ? Colors.white : Colors.black,
                           ),
                         ),
                       ),
-                      title: Text(player.name),
-                      subtitle: Text(
-                        player.isEliminated ? 'Eliminado' : 'Activo',
-                        style: TextStyle(
-                          color: player.isEliminated
-                              ? Colors.red
-                              : Colors.green,
-                        ),
-                      ),
-                      trailing: Text(
-                        '${player.totalScore} pts',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      title: Text(participantId),
+                      trailing: isWinner
+                          ? const Icon(Icons.emoji_events, color: Colors.amber)
+                          : null,
                     );
                   },
                 ),
