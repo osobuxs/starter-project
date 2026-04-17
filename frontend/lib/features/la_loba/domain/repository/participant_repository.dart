@@ -9,6 +9,7 @@ abstract class ParticipantRepository {
 
   Future<DataState<ParticipantEntity>> updateParticipant(
     String id, {
+    String? name,
     String? email,
   });
 

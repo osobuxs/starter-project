@@ -10,7 +10,8 @@ class ParticipantBloc extends Bloc<ParticipantEvent, ParticipantState> {
   final ParticipantRepository _repository;
   final FirebaseAuth _auth;
 
-  ParticipantBloc(this._repository, this._auth) : super(const ParticipantState()) {
+  ParticipantBloc(this._repository, this._auth)
+      : super(const ParticipantState()) {
     on<CreateParticipantEvent>(_onCreateParticipant);
     on<UpdateParticipantEvent>(_onUpdateParticipant);
     on<DeleteParticipantEvent>(_onDeleteParticipant);
@@ -24,7 +25,8 @@ class ParticipantBloc extends Bloc<ParticipantEvent, ParticipantState> {
   ) async {
     if (!state.isAdmin) return;
 
-    emit(state.copyWith(status: ParticipantBlocStatus.loading, clearError: true));
+    emit(state.copyWith(
+        status: ParticipantBlocStatus.loading, clearError: true));
 
     final result = await _repository.createParticipant(event.name, event.email);
     if (result is DataSuccess<ParticipantEntity>) {
@@ -47,14 +49,18 @@ class ParticipantBloc extends Bloc<ParticipantEvent, ParticipantState> {
   ) async {
     if (!state.isAdmin) return;
 
-    emit(state.copyWith(status: ParticipantBlocStatus.loading, clearError: true));
+    emit(state.copyWith(
+        status: ParticipantBlocStatus.loading, clearError: true));
 
     final result = await _repository.updateParticipant(
       event.id,
+      name: event.name,
       email: event.email,
     );
     if (result is DataSuccess<ParticipantEntity>) {
-      final updated = state.participants.map((p) => p.id == event.id ? result.data! : p).toList();
+      final updated = state.participants
+          .map((p) => p.id == event.id ? result.data! : p)
+          .toList();
       emit(state.copyWith(
         status: ParticipantBlocStatus.updated,
         participants: updated,
@@ -73,11 +79,13 @@ class ParticipantBloc extends Bloc<ParticipantEvent, ParticipantState> {
   ) async {
     if (!state.isAdmin) return;
 
-    emit(state.copyWith(status: ParticipantBlocStatus.loading, clearError: true));
+    emit(state.copyWith(
+        status: ParticipantBlocStatus.loading, clearError: true));
 
     final result = await _repository.deleteParticipant(event.id);
     if (result is DataSuccess) {
-      final updated = state.participants.where((p) => p.id != event.id).toList();
+      final updated =
+          state.participants.where((p) => p.id != event.id).toList();
       emit(state.copyWith(
         status: ParticipantBlocStatus.deleted,
         participants: updated,
@@ -94,7 +102,8 @@ class ParticipantBloc extends Bloc<ParticipantEvent, ParticipantState> {
     FetchAllParticipantsEvent event,
     Emitter<ParticipantState> emit,
   ) async {
-    emit(state.copyWith(status: ParticipantBlocStatus.loading, clearError: true));
+    emit(state.copyWith(
+        status: ParticipantBlocStatus.loading, clearError: true));
 
     final result = await _repository.fetchAllParticipants();
     if (result is DataSuccess<List<ParticipantEntity>>) {

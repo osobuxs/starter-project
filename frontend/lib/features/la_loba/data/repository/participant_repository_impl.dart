@@ -22,6 +22,7 @@ class ParticipantRepositoryImpl implements ParticipantRepository {
         email: email,
         totalGamesPlayed: 0,
         totalGamesWon: 0,
+        isActive: true,
       );
 
       await docRef.set(model.toJson());
@@ -34,17 +35,20 @@ class ParticipantRepositoryImpl implements ParticipantRepository {
   @override
   Future<DataState<ParticipantEntity>> updateParticipant(
     String id, {
+    String? name,
     String? email,
   }) async {
     try {
       final updates = <String, dynamic>{};
+      if (name != null) updates['name'] = name;
       if (email != null) updates['email'] = email;
 
       if (updates.isNotEmpty) {
         await _firestore.collection('participants').doc(id).update(updates);
       }
 
-      final snapshot = await _firestore.collection('participants').doc(id).get();
+      final snapshot =
+          await _firestore.collection('participants').doc(id).get();
       return DataSuccess(
         ParticipantModel.fromFirestore(snapshot.data() ?? {}, id),
       );
@@ -56,7 +60,10 @@ class ParticipantRepositoryImpl implements ParticipantRepository {
   @override
   Future<DataState<void>> deleteParticipant(String id) async {
     try {
-      await _firestore.collection('participants').doc(id).delete();
+      await _firestore.collection('participants').doc(id).update({
+        'isActive': false,
+        'deletedAt': FieldValue.serverTimestamp(),
+      });
       return const DataSuccess(null);
     } on Exception catch (e) {
       return DataFailed(e);
@@ -66,13 +73,12 @@ class ParticipantRepositoryImpl implements ParticipantRepository {
   @override
   Future<DataState<List<ParticipantEntity>>> fetchAllParticipants() async {
     try {
-      final snapshot = await _firestore
-          .collection('participants')
-          .orderBy('name')
-          .get();
+      final snapshot =
+          await _firestore.collection('participants').orderBy('name').get();
 
       final participants = snapshot.docs
           .map((doc) => ParticipantModel.fromFirestore(doc.data(), doc.id))
+          .where((participant) => participant.isActive)
           .toList();
 
       return DataSuccess(participants);
@@ -84,7 +90,8 @@ class ParticipantRepositoryImpl implements ParticipantRepository {
   @override
   Future<DataState<ParticipantEntity>> fetchParticipantById(String id) async {
     try {
-      final snapshot = await _firestore.collection('participants').doc(id).get();
+      final snapshot =
+          await _firestore.collection('participants').doc(id).get();
 
       if (!snapshot.exists) {
         throw Exception('Participant not found');

@@ -19,12 +19,13 @@ class CreateParticipantEvent extends ParticipantEvent {
 
 class UpdateParticipantEvent extends ParticipantEvent {
   final String id;
+  final String? name;
   final String? email;
 
-  const UpdateParticipantEvent(this.id, {this.email});
+  const UpdateParticipantEvent(this.id, {this.name, this.email});
 
   @override
-  List<Object?> get props => [id, email];
+  List<Object?> get props => [id, name, email];
 }
 
 class DeleteParticipantEvent extends ParticipantEvent {

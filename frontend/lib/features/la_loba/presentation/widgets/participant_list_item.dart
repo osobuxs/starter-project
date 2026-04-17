@@ -5,6 +5,7 @@ class ParticipantListItem extends StatelessWidget {
   final ParticipantEntity participant;
   final VoidCallback onTap;
   final bool isAdmin;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   const ParticipantListItem({
@@ -12,6 +13,7 @@ class ParticipantListItem extends StatelessWidget {
     required this.participant,
     required this.onTap,
     required this.isAdmin,
+    this.onEdit,
     this.onDelete,
   }) : super(key: key);
 
@@ -30,14 +32,22 @@ class ParticipantListItem extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: isAdmin && onDelete != null
+      trailing: isAdmin && (onDelete != null || onEdit != null)
           ? PopupMenuButton(
               onSelected: (value) {
+                if (value == 'edit') {
+                  onEdit?.call();
+                }
                 if (value == 'delete') {
                   onDelete?.call();
                 }
               },
               itemBuilder: (context) => [
+                if (onEdit != null)
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Text('Editar'),
+                  ),
                 const PopupMenuItem(
                   value: 'delete',
                   child: Text('Eliminar'),
