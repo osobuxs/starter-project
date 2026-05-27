@@ -11,6 +11,10 @@ class DardosParticipantEntity extends Equatable {
   final int totalGamesPlayed;
   final int totalGamesWon;
   final Map<String, Map<String, dynamic>> statsByMode;
+  /// Aggregated dart frequencies across all finished games.
+  /// Key format: "{number}_{multiplier}" (e.g. "20_3" = T20 count).
+  /// "0_1" = miss count. "25_1" = single bull. "25_2" = double bull (50).
+  final Map<String, int> numberFreq;
 
   const DardosParticipantEntity({
     required this.id,
@@ -23,6 +27,7 @@ class DardosParticipantEntity extends Equatable {
     required this.totalGamesPlayed,
     required this.totalGamesWon,
     required this.statsByMode,
+    this.numberFreq = const {},
   });
 
   DardosParticipantEntity copyWith({
@@ -36,6 +41,7 @@ class DardosParticipantEntity extends Equatable {
     int? totalGamesPlayed,
     int? totalGamesWon,
     Map<String, Map<String, dynamic>>? statsByMode,
+    Map<String, int>? numberFreq,
   }) {
     return DardosParticipantEntity(
       id: id ?? this.id,
@@ -48,6 +54,7 @@ class DardosParticipantEntity extends Equatable {
       totalGamesPlayed: totalGamesPlayed ?? this.totalGamesPlayed,
       totalGamesWon: totalGamesWon ?? this.totalGamesWon,
       statsByMode: statsByMode ?? this.statsByMode,
+      numberFreq: numberFreq ?? this.numberFreq,
     );
   }
 
@@ -63,5 +70,6 @@ class DardosParticipantEntity extends Equatable {
         totalGamesPlayed,
         totalGamesWon,
         statsByMode,
+        numberFreq,
       ];
 }

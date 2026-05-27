@@ -217,6 +217,7 @@ class DardosGameRepositoryImpl implements DardosGameRepository {
     required String winnerId,
     required String mode,
     required Map<String, dynamic> metricsPerPlayer,
+    Map<String, Map<String, int>> freqByPlayer = const {},
   }) async {
     try {
       await _dataSource.updateParticipantStatsOnGameFinished(
@@ -224,6 +225,7 @@ class DardosGameRepositoryImpl implements DardosGameRepository {
         winnerId: winnerId,
         mode: mode,
         metricsPerPlayer: metricsPerPlayer,
+        freqByPlayer: freqByPlayer,
       );
       return const DataSuccess(null);
     } on Exception catch (e) {

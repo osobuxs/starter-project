@@ -166,8 +166,12 @@ String? gameWinner(List<String?> setWinners) {
   return _majority(setWinners);
 }
 
-/// Returns the element that appears more than half the time in [items],
-/// or null if no majority.
+/// Returns the winner of a sequence of decisions:
+///  • If any item appears more than half the time → that item (clinched
+///    majority, even before all slots are filled).
+///  • If all slots are filled and one item has strictly more wins than
+///    every other (relative majority) → that item.
+///  • Otherwise (mid-game with no clinch, or final tie at top) → null.
 String? _majority(List<String?> items) {
   final counts = <String, int>{};
   for (final item in items) {
@@ -181,5 +185,15 @@ String? _majority(List<String?> items) {
   for (final entry in counts.entries) {
     if (entry.value >= threshold) return entry.key;
   }
+
+  // No strict majority. If all slots are filled, fall back to the
+  // unique top scorer (relative majority). On a tie at the top → null.
+  final allFilled = items.every((i) => i != null);
+  if (!allFilled || counts.isEmpty) return null;
+
+  final maxCount = counts.values.reduce((a, b) => a > b ? a : b);
+  final leaders =
+      counts.entries.where((e) => e.value == maxCount).toList();
+  if (leaders.length == 1) return leaders.first.key;
   return null;
 }

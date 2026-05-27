@@ -137,6 +137,13 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       emit(state.copyWith(status: DardosGameStatus.annotatorLocked));
       return;
     }
+    // Defensive: no more than 3 darts per turn for the same player
+    final dartsInCurrentTurn = state.throws.where((t) =>
+        t.playerId == game.currentTurnPlayerId &&
+        t.setIndex == game.currentSet &&
+        t.legIndex == game.currentLeg &&
+        t.turnIndex == game.currentTurnIndex).length;
+    if (dartsInCurrentTurn >= 3) return;
     // Drop concurrent throws — only one write may be in flight at a time
     if (_writeInFlight) return;
     _writeInFlight = true;
@@ -315,12 +322,17 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
         winnerId: rg.winnerId!,
         computedMetrics: metrics,
       );
+      final freqByPlayer = _computeFreqByPlayer(
+        playerIds: rg.playerIds,
+        throws_: finalThrows,
+      );
       await _repository.updateParticipantStatsOnGameFinished(
         playerIds: rg.playerIds,
         winnerId: rg.winnerId!,
         mode: rg.mode,
         metricsPerPlayer:
             metrics['perPlayer'] as Map<String, dynamic>? ?? {},
+        freqByPlayer: freqByPlayer,
       );
 
       // Now emit the gameFinished state — listener will navigate
@@ -701,6 +713,40 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     }
     if (lastThrow.isBust) return DardosBannerType.bust;
     return DardosBannerType.none;
+  }
+
+  /// Aggregate (number, multiplier) frequency per player.
+  /// Key format: "{number}_{multiplier}" — e.g. "20_3" = T20 hits.
+  /// Bust darts are NOT counted (the turn was voided). Miss darts go
+  /// to "0_1". Skipped/empty turns contribute nothing.
+  Map<String, Map<String, int>> _computeFreqByPlayer({
+    required List<String> playerIds,
+    required List<DardosThrowEntity> throws_,
+  }) {
+    final result = <String, Map<String, int>>{
+      for (final p in playerIds) p: <String, int>{},
+    };
+    // Pre-compute busted turns to skip them entirely
+    final bustedTurns = <String>{};
+    for (final t in throws_) {
+      if (t.isBust) {
+        bustedTurns.add(
+            '${t.playerId}|${t.setIndex}|${t.legIndex}|${t.turnIndex}');
+      }
+    }
+    for (final t in throws_) {
+      final turnKey =
+          '${t.playerId}|${t.setIndex}|${t.legIndex}|${t.turnIndex}';
+      if (bustedTurns.contains(turnKey)) continue;
+      final key = t.isMiss
+          ? '0_1'
+          : '${t.number}_${t.multiplier}';
+      final freq = result[t.playerId];
+      if (freq != null) {
+        freq[key] = (freq[key] ?? 0) + 1;
+      }
+    }
+    return result;
   }
 
   Map<String, dynamic> _computeMetrics({

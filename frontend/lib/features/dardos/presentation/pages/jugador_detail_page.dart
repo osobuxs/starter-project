@@ -133,6 +133,8 @@ class _DardosJugadorDetailPageState extends State<DardosJugadorDetailPage> {
                             ),
                           );
                         }),
+                      const SizedBox(height: 24),
+                      _NumberFreqSection(numberFreq: p.numberFreq),
                     ],
                   ),
                 ),
@@ -200,6 +202,192 @@ class _StatColumn extends StatelessWidget {
           style: const TextStyle(color: Colors.grey, fontSize: 12),
         ),
       ],
+    );
+  }
+}
+
+class _NumberFreqSection extends StatelessWidget {
+  final Map<String, int> numberFreq;
+
+  const _NumberFreqSection({Key? key, required this.numberFreq})
+      : super(key: key);
+
+  static const _rows = <_Row>[
+    _Row(label: '0 (Miss)', number: 0),
+    _Row(label: '1', number: 1),
+    _Row(label: '2', number: 2),
+    _Row(label: '3', number: 3),
+    _Row(label: '4', number: 4),
+    _Row(label: '5', number: 5),
+    _Row(label: '6', number: 6),
+    _Row(label: '7', number: 7),
+    _Row(label: '8', number: 8),
+    _Row(label: '9', number: 9),
+    _Row(label: '10', number: 10),
+    _Row(label: '11', number: 11),
+    _Row(label: '12', number: 12),
+    _Row(label: '13', number: 13),
+    _Row(label: '14', number: 14),
+    _Row(label: '15', number: 15),
+    _Row(label: '16', number: 16),
+    _Row(label: '17', number: 17),
+    _Row(label: '18', number: 18),
+    _Row(label: '19', number: 19),
+    _Row(label: '20', number: 20),
+    _Row(label: '25 (Bull)', number: 25),
+  ];
+
+  int _get(int number, int multiplier) {
+    return numberFreq['${number}_$multiplier'] ?? 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = numberFreq.values.fold<int>(0, (s, v) => s + v);
+    if (total == 0) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Frecuencia de números',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Sin datos. Las frecuencias se agregan al terminar cada partida.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    String pct(int count) {
+      if (total == 0) return '-';
+      return '${(count * 100 / total).toStringAsFixed(1)}%';
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Frecuencia de números',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Total tiros: $total',
+              style: TextStyle(color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 8),
+            Table(
+              border: TableBorder.all(color: Colors.grey.shade300),
+              columnWidths: const {
+                0: FlexColumnWidth(2),
+                1: FlexColumnWidth(2),
+                2: FlexColumnWidth(2),
+                3: FlexColumnWidth(2),
+              },
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: Colors.grey.shade200),
+                  children: const [
+                    _Cell(text: 'Número', isHeader: true),
+                    _Cell(text: 'x1', isHeader: true),
+                    _Cell(text: 'x2', isHeader: true),
+                    _Cell(text: 'x3', isHeader: true),
+                  ],
+                ),
+                for (final row in _rows)
+                  TableRow(
+                    children: [
+                      _Cell(text: row.label, isHeader: true),
+                      _FreqCell(
+                          count: _get(row.number, 1), pct: pct(_get(row.number, 1))),
+                      _FreqCell(
+                          count: _get(row.number, 2), pct: pct(_get(row.number, 2))),
+                      row.number == 0 || row.number == 25
+                          ? const _Cell(text: '—')
+                          : _FreqCell(
+                              count: _get(row.number, 3),
+                              pct: pct(_get(row.number, 3))),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Row {
+  final String label;
+  final int number;
+  const _Row({required this.label, required this.number});
+}
+
+class _Cell extends StatelessWidget {
+  final String text;
+  final bool isHeader;
+  const _Cell({Key? key, required this.text, this.isHeader = false})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
+          fontSize: 12,
+          color: Colors.grey.shade800,
+        ),
+      ),
+    );
+  }
+}
+
+class _FreqCell extends StatelessWidget {
+  final int count;
+  final String pct;
+  const _FreqCell({Key? key, required this.count, required this.pct})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final hasData = count > 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+      child: Column(
+        children: [
+          Text(
+            '$count',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: hasData ? Colors.indigo.shade800 : Colors.grey.shade400,
+            ),
+          ),
+          Text(
+            pct,
+            style: TextStyle(
+              fontSize: 10,
+              color: hasData ? Colors.grey.shade700 : Colors.grey.shade400,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

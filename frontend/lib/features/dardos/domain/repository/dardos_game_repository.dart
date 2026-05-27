@@ -68,5 +68,6 @@ abstract class DardosGameRepository {
     required String winnerId,
     required String mode,
     required Map<String, dynamic> metricsPerPlayer,
+    Map<String, Map<String, int>> freqByPlayer,
   });
 }
