@@ -12,4 +12,11 @@ class AppRouteNames {
   static const laLobaPlay = '/LaLoba/Play';
   static const laLobaFinished = '/LaLoba/Finished';
   static const laLobaParticipantDetail = '/LaLoba/ParticipantDetail';
+
+  // Dardos
+  static const dardos = '/Dardos';
+  static const dardosCreate = '/Dardos/Create';
+  static const dardosPlay = '/Dardos/Play';
+  static const dardosFinished = '/Dardos/Finished';
+  static const dardosJugadorDetail = '/Dardos/JugadorDetail';
 }

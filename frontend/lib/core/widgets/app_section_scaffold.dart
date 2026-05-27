@@ -156,6 +156,14 @@ class _AppSectionDrawer extends StatelessWidget {
               routeName: AppRouteNames.laLoba,
             ),
           ),
+          _DrawerRouteTile(
+            icon: Icons.sports_score,
+            label: 'Dardos',
+            onTap: () => _navigateToRoute(
+              context,
+              routeName: AppRouteNames.dardos,
+            ),
+          ),
           const Divider(),
           if (drawerVariant == AppSectionDrawerVariant.full && isAuthenticated)
             _DrawerRouteTile(

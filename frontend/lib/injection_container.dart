@@ -3,6 +3,7 @@ import 'package:news_app_clean_architecture/di/articles_di.dart';
 import 'package:news_app_clean_architecture/di/auth_di.dart';
 import 'package:news_app_clean_architecture/di/core_di.dart';
 import 'package:news_app_clean_architecture/di/daily_news_di.dart';
+import 'package:news_app_clean_architecture/di/dardos_di.dart';
 import 'package:news_app_clean_architecture/di/la_loba_di.dart';
 import 'package:news_app_clean_architecture/di/user_profile_di.dart';
 
@@ -15,4 +16,5 @@ Future<void> initializeDependencies() async {
   registerDailyNewsDependencies(sl);
   registerArticlesDependencies(sl);
   await registerLaLobaDependencies(sl);
+  await registerDardosDependencies(sl);
 }
