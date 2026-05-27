@@ -136,64 +136,56 @@ String? _cricketLegWinner({
   return null;
 }
 
-/// Returns true when a set is over (some player has won a majority of legs).
-///
-/// A player wins the set when they have won more than [legsPerSet] / 2 legs
-/// (i.e., ceil([legsPerSet] / 2)).
+/// Returns true when a set is over (some player has reached the
+/// legs-won threshold). Threshold = ceil([legsPerSet] / 2).
 bool isSetOver({
   required int legsPerSet,
   required List<String?> legWinnersInSet,
 }) {
-  return setWinner(legWinnersInSet) != null;
+  return setWinner(legWinnersInSet, legsPerSet: legsPerSet) != null;
 }
 
-/// Returns the winner of a set (player with majority legs), or null if
-/// no majority yet.
-String? setWinner(List<String?> legWinnersInSet) {
-  return _majority(legWinnersInSet);
+/// Returns the winner of a set, or null if no one has reached the
+/// legs-won threshold yet.
+///
+/// When [legsPerSet] is provided the threshold is fixed at
+/// ceil([legsPerSet] / 2) — this is what enables OVERTIME: the set
+/// keeps going past the configured leg count until someone hits the
+/// threshold. When omitted, the threshold defaults to strict majority
+/// of the supplied list length (used by old callers and tests).
+String? setWinner(List<String?> legWinnersInSet, {int? legsPerSet}) {
+  return _firstToThreshold(
+    legWinnersInSet,
+    threshold: ((legsPerSet ?? legWinnersInSet.length) ~/ 2) + 1,
+  );
 }
 
-/// Returns true when a game is over (some player has won a majority of sets).
+/// Returns true when a game is over (some player reached the sets-won
+/// threshold). Threshold = ceil([setsPerGame] / 2).
 bool isGameOver({
   required int setsPerGame,
   required List<String?> setWinners,
 }) {
-  return gameWinner(setWinners) != null;
+  return gameWinner(setWinners, setsPerGame: setsPerGame) != null;
 }
 
-/// Returns the winner of the game (player with majority sets), or null.
-String? gameWinner(List<String?> setWinners) {
-  return _majority(setWinners);
+/// Returns the winner of the game, or null.
+String? gameWinner(List<String?> setWinners, {int? setsPerGame}) {
+  return _firstToThreshold(
+    setWinners,
+    threshold: ((setsPerGame ?? setWinners.length) ~/ 2) + 1,
+  );
 }
 
-/// Returns the winner of a sequence of decisions:
-///  • If any item appears more than half the time → that item (clinched
-///    majority, even before all slots are filled).
-///  • If all slots are filled and one item has strictly more wins than
-///    every other (relative majority) → that item.
-///  • Otherwise (mid-game with no clinch, or final tie at top) → null.
-String? _majority(List<String?> items) {
+/// Returns the first player to reach [threshold] wins, scanning the
+/// provided items. Returns null if no one has hit the threshold yet.
+String? _firstToThreshold(List<String?> items, {required int threshold}) {
   final counts = <String, int>{};
   for (final item in items) {
     if (item == null) continue;
     counts[item] = (counts[item] ?? 0) + 1;
+    if (counts[item]! >= threshold) return item;
   }
-
-  final total = items.length;
-  final threshold = total ~/ 2 + 1; // strict majority (> half)
-
-  for (final entry in counts.entries) {
-    if (entry.value >= threshold) return entry.key;
-  }
-
-  // No strict majority. If all slots are filled, fall back to the
-  // unique top scorer (relative majority). On a tie at the top → null.
-  final allFilled = items.every((i) => i != null);
-  if (!allFilled || counts.isEmpty) return null;
-
-  final maxCount = counts.values.reduce((a, b) => a > b ? a : b);
-  final leaders =
-      counts.entries.where((e) => e.value == maxCount).toList();
-  if (leaders.length == 1) return leaders.first.key;
   return null;
 }
+

@@ -68,10 +68,14 @@ class LegSetIndicator extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Set ${currentSet + 1}/$totalSets  ·  Leg ${currentLeg + 1}/$totalLegs',
+                currentLeg >= totalLegs
+                    ? 'Set ${currentSet + 1}/$totalSets  ·  Leg ${currentLeg + 1} (extra)'
+                    : 'Set ${currentSet + 1}/$totalSets  ·  Leg ${currentLeg + 1}/$totalLegs',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: Colors.indigo.shade900,
+                  color: currentLeg >= totalLegs
+                      ? Colors.deepOrange.shade800
+                      : Colors.indigo.shade900,
                   fontSize: 14,
                 ),
               ),

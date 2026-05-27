@@ -471,10 +471,21 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       }
     }
 
+    // legWinners[s] is GROWABLE — each set keeps its leg results in a
+    // list that starts at length `baseGame.legs` (one slot per
+    // configured leg) but may be extended past that for overtime legs.
     final legWinners = List<List<String?>>.generate(
       baseGame.sets,
-      (_) => List<String?>.filled(baseGame.legs, null),
+      (_) => List<String?>.filled(baseGame.legs, null, growable: true),
     );
+
+    // Helper: ensure legWinners[s] is at least `len` long, padding with
+    // null so we can write at index = len-1.
+    void ensureLegSlot(int s, int len) {
+      while (legWinners[s].length < len) {
+        legWinners[s].add(null);
+      }
+    }
 
     var liveScores = <String, int>{
       for (final p in baseGame.playerIds) p: legStartScore,
@@ -497,9 +508,16 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
         cricket = CricketMarksState.empty(baseGame.playerIds);
       }
 
+      // Make sure legWinners[s] has a slot for this leg index (overtime
+      // legs grow the list beyond baseGame.legs).
+      if (t.setIndex < legWinners.length) {
+        ensureLegSlot(t.setIndex, t.legIndex + 1);
+      }
+
       // If this leg already has a winner, skip subsequent darts in same leg
       // (defensive — shouldn't normally happen).
-      if (legWinners[t.setIndex][t.legIndex] != null) {
+      if (t.setIndex < legWinners.length &&
+          legWinners[t.setIndex][t.legIndex] != null) {
         lastApplied = t;
         continue;
       }
@@ -572,12 +590,16 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       lastApplied = t;
     }
 
-    // Compute set winners
+    // Compute set winners. Threshold is fixed at ceil(legs/2) — does
+    // NOT inflate as overtime legs are appended.
     final setWinners = List<String?>.filled(baseGame.sets, null);
     for (var s = 0; s < baseGame.sets; s++) {
-      setWinners[s] = setWinner(legWinners[s]);
+      setWinners[s] = setWinner(
+        legWinners[s],
+        legsPerSet: baseGame.legs,
+      );
     }
-    final gWinner = gameWinner(setWinners);
+    final gWinner = gameWinner(setWinners, setsPerGame: baseGame.sets);
 
     // Determine current cursor
     int curSet, curLeg, curTurnIdx, curDartIdx;
@@ -594,7 +616,10 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
               !last.isMiss;
 
       if (legWonByLast) {
-        // Advance to next leg / set
+        // Advance to next leg / set. If the set has a winner (someone
+        // reached the legs threshold), advance to next set. Otherwise
+        // play the next leg in the same set — even if past the
+        // configured leg count (OVERTIME).
         if (isSetOver(
           legsPerSet: baseGame.legs,
           legWinnersInSet: legWinners[last.setIndex],
