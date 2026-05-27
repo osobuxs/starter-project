@@ -10,9 +10,7 @@ import 'package:news_app_clean_architecture/core/resources/data_state.dart'
     as _i2;
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart'
     as _i5;
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/partida.dart'
-    as _i7;
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/player.dart'
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart'
     as _i6;
 import 'package:news_app_clean_architecture/features/la_loba/domain/repository/game_repository.dart'
     as _i3;
@@ -46,18 +44,27 @@ class _FakeDataState_0<T> extends _i1.SmartFake implements _i2.DataState<T> {
 /// See the documentation for Mockito's code generation for more information.
 class MockGameRepository extends _i1.Mock implements _i3.GameRepository {
   @override
-  _i4.Future<_i2.DataState<_i5.GameEntity>> createGame(String? name) =>
+  _i4.Future<_i2.DataState<_i5.GameEntity>> createGame(
+    String? name, [
+    List<String>? participantIds,
+  ]) =>
       (super.noSuchMethod(
         Invocation.method(
           #createGame,
-          [name],
+          [
+            name,
+            participantIds,
+          ],
         ),
         returnValue: _i4.Future<_i2.DataState<_i5.GameEntity>>.value(
             _FakeDataState_0<_i5.GameEntity>(
           this,
           Invocation.method(
             #createGame,
-            [name],
+            [
+              name,
+              participantIds,
+            ],
           ),
         )),
         returnValueForMissingStub:
@@ -66,51 +73,16 @@ class MockGameRepository extends _i1.Mock implements _i3.GameRepository {
           this,
           Invocation.method(
             #createGame,
-            [name],
+            [
+              name,
+              participantIds,
+            ],
           ),
         )),
       ) as _i4.Future<_i2.DataState<_i5.GameEntity>>);
 
   @override
-  _i4.Future<_i2.DataState<_i6.PlayerEntity>> addPlayer(
-    int? gameId,
-    String? name,
-  ) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #addPlayer,
-          [
-            gameId,
-            name,
-          ],
-        ),
-        returnValue: _i4.Future<_i2.DataState<_i6.PlayerEntity>>.value(
-            _FakeDataState_0<_i6.PlayerEntity>(
-          this,
-          Invocation.method(
-            #addPlayer,
-            [
-              gameId,
-              name,
-            ],
-          ),
-        )),
-        returnValueForMissingStub:
-            _i4.Future<_i2.DataState<_i6.PlayerEntity>>.value(
-                _FakeDataState_0<_i6.PlayerEntity>(
-          this,
-          Invocation.method(
-            #addPlayer,
-            [
-              gameId,
-              name,
-            ],
-          ),
-        )),
-      ) as _i4.Future<_i2.DataState<_i6.PlayerEntity>>);
-
-  @override
-  _i4.Future<_i2.DataState<_i5.GameEntity>> getGame(int? gameId) =>
+  _i4.Future<_i2.DataState<_i5.GameEntity>> getGame(String? gameId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getGame,
@@ -162,228 +134,54 @@ class MockGameRepository extends _i1.Mock implements _i3.GameRepository {
       ) as _i4.Future<_i2.DataState<List<_i5.GameEntity>>>);
 
   @override
-  _i4.Future<_i2.DataState<List<_i6.PlayerEntity>>> getActivePlayers(
-          int? gameId) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #getActivePlayers,
-          [gameId],
-        ),
-        returnValue: _i4.Future<_i2.DataState<List<_i6.PlayerEntity>>>.value(
-            _FakeDataState_0<List<_i6.PlayerEntity>>(
-          this,
-          Invocation.method(
-            #getActivePlayers,
-            [gameId],
-          ),
-        )),
-        returnValueForMissingStub:
-            _i4.Future<_i2.DataState<List<_i6.PlayerEntity>>>.value(
-                _FakeDataState_0<List<_i6.PlayerEntity>>(
-          this,
-          Invocation.method(
-            #getActivePlayers,
-            [gameId],
-          ),
-        )),
-      ) as _i4.Future<_i2.DataState<List<_i6.PlayerEntity>>>);
-
-  @override
-  _i4.Future<_i2.DataState<List<_i6.PlayerEntity>>> getAllPlayers(
-          int? gameId) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #getAllPlayers,
-          [gameId],
-        ),
-        returnValue: _i4.Future<_i2.DataState<List<_i6.PlayerEntity>>>.value(
-            _FakeDataState_0<List<_i6.PlayerEntity>>(
-          this,
-          Invocation.method(
-            #getAllPlayers,
-            [gameId],
-          ),
-        )),
-        returnValueForMissingStub:
-            _i4.Future<_i2.DataState<List<_i6.PlayerEntity>>>.value(
-                _FakeDataState_0<List<_i6.PlayerEntity>>(
-          this,
-          Invocation.method(
-            #getAllPlayers,
-            [gameId],
-          ),
-        )),
-      ) as _i4.Future<_i2.DataState<List<_i6.PlayerEntity>>>);
-
-  @override
-  _i4.Future<_i2.DataState<_i7.PartidaEntity>> createPartida(
-    int? gameId,
-    int? partidaNumber,
+  _i4.Future<_i2.DataState<_i6.HandEntity>> createHand(
+    String? gameId,
+    int? handNumber,
+    String? dealerId,
+    Map<String, int>? scores,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
-          #createPartida,
+          #createHand,
           [
             gameId,
-            partidaNumber,
+            handNumber,
+            dealerId,
+            scores,
           ],
         ),
-        returnValue: _i4.Future<_i2.DataState<_i7.PartidaEntity>>.value(
-            _FakeDataState_0<_i7.PartidaEntity>(
+        returnValue: _i4.Future<_i2.DataState<_i6.HandEntity>>.value(
+            _FakeDataState_0<_i6.HandEntity>(
           this,
           Invocation.method(
-            #createPartida,
+            #createHand,
             [
               gameId,
-              partidaNumber,
+              handNumber,
+              dealerId,
+              scores,
             ],
           ),
         )),
         returnValueForMissingStub:
-            _i4.Future<_i2.DataState<_i7.PartidaEntity>>.value(
-                _FakeDataState_0<_i7.PartidaEntity>(
+            _i4.Future<_i2.DataState<_i6.HandEntity>>.value(
+                _FakeDataState_0<_i6.HandEntity>(
           this,
           Invocation.method(
-            #createPartida,
+            #createHand,
             [
               gameId,
-              partidaNumber,
+              handNumber,
+              dealerId,
+              scores,
             ],
           ),
         )),
-      ) as _i4.Future<_i2.DataState<_i7.PartidaEntity>>);
-
-  @override
-  _i4.Future<_i2.DataState<void>> recordScore(
-    int? playerId,
-    int? partidaId,
-    int? points,
-  ) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #recordScore,
-          [
-            playerId,
-            partidaId,
-            points,
-          ],
-        ),
-        returnValue:
-            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
-          this,
-          Invocation.method(
-            #recordScore,
-            [
-              playerId,
-              partidaId,
-              points,
-            ],
-          ),
-        )),
-        returnValueForMissingStub:
-            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
-          this,
-          Invocation.method(
-            #recordScore,
-            [
-              playerId,
-              partidaId,
-              points,
-            ],
-          ),
-        )),
-      ) as _i4.Future<_i2.DataState<void>>);
-
-  @override
-  _i4.Future<_i2.DataState<void>> updatePlayerScore(
-    int? playerId,
-    int? newTotalScore,
-  ) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #updatePlayerScore,
-          [
-            playerId,
-            newTotalScore,
-          ],
-        ),
-        returnValue:
-            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
-          this,
-          Invocation.method(
-            #updatePlayerScore,
-            [
-              playerId,
-              newTotalScore,
-            ],
-          ),
-        )),
-        returnValueForMissingStub:
-            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
-          this,
-          Invocation.method(
-            #updatePlayerScore,
-            [
-              playerId,
-              newTotalScore,
-            ],
-          ),
-        )),
-      ) as _i4.Future<_i2.DataState<void>>);
-
-  @override
-  _i4.Future<_i2.DataState<void>> updatePlayerRetry(int? playerId) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #updatePlayerRetry,
-          [playerId],
-        ),
-        returnValue:
-            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
-          this,
-          Invocation.method(
-            #updatePlayerRetry,
-            [playerId],
-          ),
-        )),
-        returnValueForMissingStub:
-            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
-          this,
-          Invocation.method(
-            #updatePlayerRetry,
-            [playerId],
-          ),
-        )),
-      ) as _i4.Future<_i2.DataState<void>>);
-
-  @override
-  _i4.Future<_i2.DataState<void>> eliminatePlayer(int? playerId) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #eliminatePlayer,
-          [playerId],
-        ),
-        returnValue:
-            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
-          this,
-          Invocation.method(
-            #eliminatePlayer,
-            [playerId],
-          ),
-        )),
-        returnValueForMissingStub:
-            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
-          this,
-          Invocation.method(
-            #eliminatePlayer,
-            [playerId],
-          ),
-        )),
-      ) as _i4.Future<_i2.DataState<void>>);
+      ) as _i4.Future<_i2.DataState<_i6.HandEntity>>);
 
   @override
   _i4.Future<_i2.DataState<void>> updateGameStatus(
-    int? gameId,
+    String? gameId,
     String? status,
   ) =>
       (super.noSuchMethod(
@@ -419,39 +217,162 @@ class MockGameRepository extends _i1.Mock implements _i3.GameRepository {
       ) as _i4.Future<_i2.DataState<void>>);
 
   @override
-  _i4.Future<_i2.DataState<bool>> playerNameExists(
-    int? gameId,
-    String? name,
+  _i4.Future<_i2.DataState<void>> updateParticipantScores(
+    String? gameId,
+    String? currentDealerId,
+    int? currentHand,
+    Map<String, dynamic>? participantStates,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
-          #playerNameExists,
+          #updateParticipantScores,
           [
             gameId,
-            name,
+            currentDealerId,
+            currentHand,
+            participantStates,
           ],
         ),
         returnValue:
-            _i4.Future<_i2.DataState<bool>>.value(_FakeDataState_0<bool>(
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
           this,
           Invocation.method(
-            #playerNameExists,
+            #updateParticipantScores,
             [
               gameId,
-              name,
+              currentDealerId,
+              currentHand,
+              participantStates,
             ],
           ),
         )),
         returnValueForMissingStub:
-            _i4.Future<_i2.DataState<bool>>.value(_FakeDataState_0<bool>(
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
           this,
           Invocation.method(
-            #playerNameExists,
+            #updateParticipantScores,
             [
               gameId,
-              name,
+              currentDealerId,
+              currentHand,
+              participantStates,
             ],
           ),
         )),
-      ) as _i4.Future<_i2.DataState<bool>>);
+      ) as _i4.Future<_i2.DataState<void>>);
+
+  @override
+  _i4.Future<_i2.DataState<void>> updateGameWinner(
+    String? gameId,
+    String? winnerId,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateGameWinner,
+          [
+            gameId,
+            winnerId,
+          ],
+        ),
+        returnValue:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #updateGameWinner,
+            [
+              gameId,
+              winnerId,
+            ],
+          ),
+        )),
+        returnValueForMissingStub:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #updateGameWinner,
+            [
+              gameId,
+              winnerId,
+            ],
+          ),
+        )),
+      ) as _i4.Future<_i2.DataState<void>>);
+
+  @override
+  _i4.Future<_i2.DataState<void>> addParticipantToGame(
+    String? gameId,
+    String? participantId, {
+    int? insertIndex,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #addParticipantToGame,
+          [
+            gameId,
+            participantId,
+          ],
+          {#insertIndex: insertIndex},
+        ),
+        returnValue:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #addParticipantToGame,
+            [
+              gameId,
+              participantId,
+            ],
+            {#insertIndex: insertIndex},
+          ),
+        )),
+        returnValueForMissingStub:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #addParticipantToGame,
+            [
+              gameId,
+              participantId,
+            ],
+            {#insertIndex: insertIndex},
+          ),
+        )),
+      ) as _i4.Future<_i2.DataState<void>>);
+
+  @override
+  _i4.Future<_i2.DataState<void>> updateParticipantStatsOnGameFinished(
+    List<String>? participantIds,
+    String? winnerId,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateParticipantStatsOnGameFinished,
+          [
+            participantIds,
+            winnerId,
+          ],
+        ),
+        returnValue:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #updateParticipantStatsOnGameFinished,
+            [
+              participantIds,
+              winnerId,
+            ],
+          ),
+        )),
+        returnValueForMissingStub:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #updateParticipantStatsOnGameFinished,
+            [
+              participantIds,
+              winnerId,
+            ],
+          ),
+        )),
+      ) as _i4.Future<_i2.DataState<void>>);
 }

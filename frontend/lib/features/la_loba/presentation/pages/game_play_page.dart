@@ -52,9 +52,8 @@ class _GamePlayPageState extends State<GamePlayPage> {
         participantId,
         () => TextEditingController(),
       );
-      final desired = (scores[participantId] ?? 0) == 0
-          ? ''
-          : (scores[participantId] ?? 0).toString();
+      final score = scores[participantId];
+      final desired = score == null ? '' : score.toString();
       if (controller.text != desired) {
         controller.text = desired;
       }
@@ -666,7 +665,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
 
     final current = _parseScoreInput(controller.text);
     final next = _clampScore(current + delta);
-    final nextText = next == 0 ? '' : next.toString();
+    final nextText = next.toString();
 
     if (controller.text != nextText) {
       controller.text = nextText;

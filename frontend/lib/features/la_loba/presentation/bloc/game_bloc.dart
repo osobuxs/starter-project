@@ -10,7 +10,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   final GameRepository _repository;
 
   String? _pendingGameId;
-  String? _pendingNextDealerId;
+
   int? _pendingNextHandNumber;
   int? _pendingHandNumberToPersist;
   Map<String, dynamic>? _pendingParticipantStates;
@@ -184,14 +184,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         );
       }
 
-      final nextDealerId = _nextDealerId(
-        participantIds: game.participantIds,
-        currentDealerId: game.currentDealerId,
-        participantStates: scoreUpdate.updatedStates,
-      );
-
       _pendingGameId = game.id;
-      _pendingNextDealerId = nextDealerId;
       _pendingNextHandNumber = nextHandNumber;
       _pendingHandNumberToPersist = handNumberToPersist;
       _pendingParticipantStates = scoreUpdate.updatedStates;
@@ -283,17 +276,23 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   Future<void> _completeRound(Emitter<GameState> emit) async {
     final game = state.game;
     final gameId = _pendingGameId;
-    final nextDealerId = _pendingNextDealerId;
     final nextHandNumber = _pendingNextHandNumber;
     final participantStates = _pendingParticipantStates;
 
     if (game == null ||
         gameId == null ||
-        nextDealerId == null ||
         nextHandNumber == null ||
         participantStates == null) {
       return;
     }
+
+    // Calculate next dealer HERE, after all retry/elimination decisions
+    // are resolved, so eliminated players are correctly skipped.
+    final nextDealerId = _nextDealerId(
+      participantIds: game.participantIds,
+      currentDealerId: game.currentDealerId,
+      participantStates: participantStates,
+    );
 
     final winnerId = determineAutomaticWinner(participantStates);
 
@@ -361,18 +360,46 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     required String currentDealerId,
     required Map<String, dynamic> participantStates,
   }) {
+    final n = participantIds.length;
     final activeIds = participantIds
-        .where((participantId) => _isActive(participantStates[participantId]))
-        .toList();
+        .where((id) => _isActive(participantStates[id]))
+        .toSet();
 
-    if (activeIds.isEmpty) {
-      return currentDealerId;
+    if (activeIds.isEmpty) return currentDealerId;
+    if (activeIds.length == 1) return activeIds.first;
+
+    final currentDealerIndex = participantIds.indexOf(currentDealerId);
+    if (currentDealerIndex < 0) return activeIds.first;
+
+    // The "mano" (first to play) sits right after the dealer.
+    // Mano advances one SEAT per round regardless of eliminations.
+    final currentManoSeat = (currentDealerIndex + 1) % n;
+
+    // Next mano: first active player starting from the seat AFTER
+    // current mano. This ensures every active player gets their
+    // turn as mano without skipping anyone.
+    int nextManoIndex = -1;
+    for (var i = 1; i <= n; i++) {
+      final idx = (currentManoSeat + i) % n;
+      if (activeIds.contains(participantIds[idx])) {
+        nextManoIndex = idx;
+        break;
+      }
     }
 
-    final currentIndex = activeIds.indexOf(currentDealerId);
-    final baseIndex = currentIndex >= 0 ? currentIndex : 0;
-    final nextIndex = (baseIndex + 1) % activeIds.length;
-    return activeIds[nextIndex];
+    if (nextManoIndex < 0) return currentDealerId;
+
+    // Dealer: first active player BEFORE the next mano (walking
+    // backward). If the natural dealer was eliminated, the previous
+    // active player deals again — so no one loses their mano turn.
+    for (var i = 1; i < n; i++) {
+      final idx = (nextManoIndex - i + n) % n;
+      if (activeIds.contains(participantIds[idx])) {
+        return participantIds[idx];
+      }
+    }
+
+    return currentDealerId;
   }
 
   bool _isActive(dynamic state) {
@@ -401,7 +428,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   void _clearPendingRound() {
     _pendingGameId = null;
-    _pendingNextDealerId = null;
     _pendingNextHandNumber = null;
     _pendingHandNumberToPersist = null;
     _pendingParticipantStates = null;
