@@ -471,17 +471,25 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       }
     }
 
-    // legWinners[s] is GROWABLE — each set keeps its leg results in a
-    // list that starts at length `baseGame.legs` (one slot per
-    // configured leg) but may be extended past that for overtime legs.
-    final legWinners = List<List<String?>>.generate(
-      baseGame.sets,
-      (_) => List<String?>.filled(baseGame.legs, null, growable: true),
-    );
+    // Both legWinners (outer) and each legWinners[s] (inner) are
+    // GROWABLE — supports OVERTIME for both legs (extra legs within a
+    // set when no one reaches the leg threshold) and sets (extra sets
+    // when no one reaches the set threshold).
+    final legWinners = <List<String?>>[
+      for (var s = 0; s < baseGame.sets; s++)
+        List<String?>.filled(baseGame.legs, null, growable: true),
+    ];
 
-    // Helper: ensure legWinners[s] is at least `len` long, padding with
-    // null so we can write at index = len-1.
+    void ensureSetSlot(int s) {
+      while (legWinners.length <= s) {
+        legWinners.add(
+          List<String?>.filled(baseGame.legs, null, growable: true),
+        );
+      }
+    }
+
     void ensureLegSlot(int s, int len) {
+      ensureSetSlot(s);
       while (legWinners[s].length < len) {
         legWinners[s].add(null);
       }
@@ -508,16 +516,13 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
         cricket = CricketMarksState.empty(baseGame.playerIds);
       }
 
-      // Make sure legWinners[s] has a slot for this leg index (overtime
-      // legs grow the list beyond baseGame.legs).
-      if (t.setIndex < legWinners.length) {
-        ensureLegSlot(t.setIndex, t.legIndex + 1);
-      }
+      // Make sure legWinners has a slot for this set and leg index
+      // (overtime grows both dimensions beyond baseGame.sets/legs).
+      ensureLegSlot(t.setIndex, t.legIndex + 1);
 
-      // If this leg already has a winner, skip subsequent darts in same leg
-      // (defensive — shouldn't normally happen).
-      if (t.setIndex < legWinners.length &&
-          legWinners[t.setIndex][t.legIndex] != null) {
+      // If this leg already has a winner, skip subsequent darts in
+      // the same leg (defensive — shouldn't normally happen).
+      if (legWinners[t.setIndex][t.legIndex] != null) {
         lastApplied = t;
         continue;
       }
@@ -590,15 +595,14 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       lastApplied = t;
     }
 
-    // Compute set winners. Threshold is fixed at ceil(legs/2) — does
-    // NOT inflate as overtime legs are appended.
-    final setWinners = List<String?>.filled(baseGame.sets, null);
-    for (var s = 0; s < baseGame.sets; s++) {
-      setWinners[s] = setWinner(
-        legWinners[s],
-        legsPerSet: baseGame.legs,
-      );
-    }
+    // Compute set winners. Threshold is fixed at ceil(legs/2) and
+    // ceil(sets/2) — NEITHER inflates as overtime legs/sets are
+    // appended. setWinners may grow past baseGame.sets for set
+    // overtime.
+    final setWinners = <String?>[
+      for (var s = 0; s < legWinners.length; s++)
+        setWinner(legWinners[s], legsPerSet: baseGame.legs),
+    ];
     final gWinner = gameWinner(setWinners, setsPerGame: baseGame.sets);
 
     // Determine current cursor
@@ -632,8 +636,8 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
         }
         curTurnIdx = 0;
         curDartIdx = 0;
-        // Reset live scores for new leg (if within bounds)
-        if (curSet < baseGame.sets) {
+        // Reset live scores for new leg unless the game is over.
+        if (gWinner == null) {
           liveScores = {
             for (final p in baseGame.playerIds) p: legStartScore,
           };
@@ -653,11 +657,12 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       }
     }
 
-    // Determine current player based on starterOrder + turn rotation
+    // Determine current player based on starterOrder + turn rotation.
+    // gWinner != null means the game is over → no current player.
     String currentPlayerId = '';
-    if (baseGame.playerIds.isNotEmpty &&
-        baseGame.starterOrder.isNotEmpty &&
-        curSet < baseGame.sets) {
+    if (gWinner == null &&
+        baseGame.playerIds.isNotEmpty &&
+        baseGame.starterOrder.isNotEmpty) {
       final globalLeg = curSet * baseGame.legs + curLeg;
       final starter = nextStarter(
         starterOrder: baseGame.starterOrder,

@@ -28,6 +28,16 @@ class LegSetIndicator extends StatelessWidget {
     this.setWinners,
   }) : super(key: key);
 
+  String _buildLabel() {
+    final setLabel = currentSet >= totalSets
+        ? 'Set ${currentSet + 1} (extra)'
+        : 'Set ${currentSet + 1}/$totalSets';
+    final legLabel = currentLeg >= totalLegs
+        ? 'Leg ${currentLeg + 1} (extra)'
+        : 'Leg ${currentLeg + 1}/$totalLegs';
+    return '$setLabel  ·  $legLabel';
+  }
+
   Map<String, int> _legsWonInCurrentSet() {
     final counts = <String, int>{
       for (final p in playerIds ?? const <String>[]) p: 0,
@@ -68,12 +78,10 @@ class LegSetIndicator extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                currentLeg >= totalLegs
-                    ? 'Set ${currentSet + 1}/$totalSets  ·  Leg ${currentLeg + 1} (extra)'
-                    : 'Set ${currentSet + 1}/$totalSets  ·  Leg ${currentLeg + 1}/$totalLegs',
+                _buildLabel(),
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: currentLeg >= totalLegs
+                  color: (currentSet >= totalSets || currentLeg >= totalLegs)
                       ? Colors.deepOrange.shade800
                       : Colors.indigo.shade900,
                   fontSize: 14,
