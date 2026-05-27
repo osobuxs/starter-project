@@ -122,44 +122,45 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                   const SizedBox(height: 8),
 
                   // Sets stepper
+                  // Sets stepper (odd only — to avoid ties)
                   Row(
                     children: [
-                      const Text('Sets:',
+                      const Text('Sets (impar):',
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 16),
                       IconButton(
                         onPressed: _sets > 1
-                            ? () => setState(() => _sets--)
+                            ? () => setState(() => _sets -= 2)
                             : null,
                         icon: const Icon(Icons.remove),
                       ),
                       Text('$_sets',
                           style: const TextStyle(fontSize: 18)),
                       IconButton(
-                        onPressed: () => setState(() => _sets++),
+                        onPressed: () => setState(() => _sets += 2),
                         icon: const Icon(Icons.add),
                       ),
                     ],
                   ),
 
-                  // Legs stepper
+                  // Legs stepper (odd only — to avoid ties)
                   Row(
                     children: [
-                      const Text('Legs:',
+                      const Text('Legs (impar):',
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 16),
                       IconButton(
                         onPressed: _legs > 1
-                            ? () => setState(() => _legs--)
+                            ? () => setState(() => _legs -= 2)
                             : null,
                         icon: const Icon(Icons.remove),
                       ),
                       Text('$_legs',
                           style: const TextStyle(fontSize: 18)),
                       IconButton(
-                        onPressed: () => setState(() => _legs++),
+                        onPressed: () => setState(() => _legs += 2),
                         icon: const Icon(Icons.add),
                       ),
                     ],

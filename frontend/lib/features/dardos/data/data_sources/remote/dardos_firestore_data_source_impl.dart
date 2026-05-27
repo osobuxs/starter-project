@@ -188,6 +188,8 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
       'setWinners': setWinners,
       'rosterLocked': rosterLocked,
       'status': 'in_progress',
+      // Heartbeat — keeps the annotator lock alive while playing
+      'activeAnnotatorAt': DateTime.now().millisecondsSinceEpoch,
     });
   }
 
@@ -221,6 +223,11 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
   // -----------------------------------------------------------------------
   // Soft-lock
   // -----------------------------------------------------------------------
+  // Annotator lock TTL — after this many ms of no heartbeat,
+  // any device may take over. Heartbeats are bumped on every
+  // updateGameProgress (i.e. after every dart).
+  static const _annotatorTtlMs = 60 * 1000;
+
   @override
   Future<bool> acquireAnnotator({
     required String gameId,
@@ -230,11 +237,16 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
       final ref = _games.doc(gameId);
       final snap = await tx.get(ref);
       final current = snap.data()?['activeAnnotator'] as String?;
+      final lastAt = snap.data()?['activeAnnotatorAt'] as int?;
+      final now = DateTime.now().millisecondsSinceEpoch;
 
-      if (current == null || current == deviceId) {
+      final isStale =
+          lastAt != null && (now - lastAt) > _annotatorTtlMs;
+
+      if (current == null || current == deviceId || isStale) {
         tx.update(ref, {
           'activeAnnotator': deviceId,
-          'activeAnnotatorAt': DateTime.now().millisecondsSinceEpoch,
+          'activeAnnotatorAt': now,
         });
         return true;
       }
@@ -310,6 +322,7 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
     required String winnerId,
     required String mode,
     required Map<String, dynamic> metricsPerPlayer,
+    Map<String, Map<String, int>> freqByPlayer = const {},
   }) async {
     if (playerIds.isEmpty) return;
 
@@ -317,14 +330,25 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
 
     for (final pid in playerIds) {
       final ref = _participants.doc(pid);
-      batch.update(ref, {
+      final updates = <String, dynamic>{
         'totalGamesPlayed': FieldValue.increment(1),
-      });
+      };
       if (pid == winnerId) {
-        batch.update(ref, {
-          'totalGamesWon': FieldValue.increment(1),
-        });
+        updates['totalGamesWon'] = FieldValue.increment(1);
       }
+      // Per-mode aggregate counters
+      final modeKey = mode;
+      updates['statsByMode.$modeKey.played'] = FieldValue.increment(1);
+      if (pid == winnerId) {
+        updates['statsByMode.$modeKey.won'] = FieldValue.increment(1);
+      }
+      // Dart frequency increments — uses dotted-path for nested map update
+      final freq = freqByPlayer[pid] ?? const <String, int>{};
+      for (final entry in freq.entries) {
+        if (entry.value <= 0) continue;
+        updates['numberFreq.${entry.key}'] = FieldValue.increment(entry.value);
+      }
+      batch.update(ref, updates);
     }
 
     await batch.commit();

@@ -12,6 +12,7 @@ class DardosParticipantModel extends DardosParticipantEntity {
     required int totalGamesPlayed,
     required int totalGamesWon,
     required Map<String, Map<String, dynamic>> statsByMode,
+    Map<String, int> numberFreq = const {},
   }) : super(
           id: id,
           name: name,
@@ -23,6 +24,7 @@ class DardosParticipantModel extends DardosParticipantEntity {
           totalGamesPlayed: totalGamesPlayed,
           totalGamesWon: totalGamesWon,
           statsByMode: statsByMode,
+          numberFreq: numberFreq,
         );
 
   factory DardosParticipantModel.fromFirestore(
@@ -37,6 +39,13 @@ class DardosParticipantModel extends DardosParticipantEntity {
       }
     });
 
+    final rawFreq = (data['numberFreq'] as Map<String, dynamic>?) ?? {};
+    final numberFreq = <String, int>{};
+    rawFreq.forEach((key, value) {
+      if (value is int) numberFreq[key] = value;
+      if (value is num) numberFreq[key] = value.toInt();
+    });
+
     return DardosParticipantModel(
       id: id,
       name: data['name'] as String? ?? '',
@@ -48,6 +57,7 @@ class DardosParticipantModel extends DardosParticipantEntity {
       totalGamesPlayed: data['totalGamesPlayed'] as int? ?? 0,
       totalGamesWon: data['totalGamesWon'] as int? ?? 0,
       statsByMode: statsByMode,
+      numberFreq: numberFreq,
     );
   }
 
@@ -63,6 +73,7 @@ class DardosParticipantModel extends DardosParticipantEntity {
       totalGamesPlayed: entity.totalGamesPlayed,
       totalGamesWon: entity.totalGamesWon,
       statsByMode: entity.statsByMode,
+      numberFreq: entity.numberFreq,
     );
   }
 
@@ -78,6 +89,7 @@ class DardosParticipantModel extends DardosParticipantEntity {
       totalGamesPlayed: totalGamesPlayed,
       totalGamesWon: totalGamesWon,
       statsByMode: statsByMode,
+      numberFreq: numberFreq,
     );
   }
 
@@ -92,6 +104,7 @@ class DardosParticipantModel extends DardosParticipantEntity {
       'totalGamesPlayed': totalGamesPlayed,
       'totalGamesWon': totalGamesWon,
       'statsByMode': statsByMode,
+      'numberFreq': numberFreq,
     };
   }
 }

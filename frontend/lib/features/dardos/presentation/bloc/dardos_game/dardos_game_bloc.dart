@@ -137,6 +137,13 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       emit(state.copyWith(status: DardosGameStatus.annotatorLocked));
       return;
     }
+    // Defensive: no more than 3 darts per turn for the same player
+    final dartsInCurrentTurn = state.throws.where((t) =>
+        t.playerId == game.currentTurnPlayerId &&
+        t.setIndex == game.currentSet &&
+        t.legIndex == game.currentLeg &&
+        t.turnIndex == game.currentTurnIndex).length;
+    if (dartsInCurrentTurn >= 3) return;
     // Drop concurrent throws — only one write may be in flight at a time
     if (_writeInFlight) return;
     _writeInFlight = true;
@@ -207,7 +214,7 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       createdBy: playerId,
     );
 
-    // 1. Optimistic local update — recompute and emit FIRST
+    // 1. Compute optimistic state
     final optimisticThrows = _sortThrows([...state.throws, tempThrow]);
     final optimistic = _recomputeGameState(
       baseGame: game,
@@ -220,20 +227,25 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       lastThrow: tempThrow,
     );
 
-    emit(optimistic.copyWith(
-      annotatorOwned: state.annotatorOwned,
-      bannerType: bannerType,
-      bannerPayload: optimistic.game?.winnerId,
-      status: bannerType == DardosBannerType.gameWon
-          ? DardosGameStatus.gameFinished
-          : (bannerType == DardosBannerType.bust
-              ? DardosGameStatus.bustDetected
-              : (bannerType == DardosBannerType.legWon
-                  ? DardosGameStatus.legWon
-                  : DardosGameStatus.throwRecorded)),
-    ));
+    final isWinningThrow = optimistic.game?.winnerId != null;
 
-    // 2. Persist throw in background
+    // For non-winning throws, emit optimistically for snappy UI.
+    // For the winning throw we await persistence FIRST, then emit — so the
+    // finished page (which reads from Firestore on mount) sees the data.
+    if (!isWinningThrow) {
+      emit(optimistic.copyWith(
+        annotatorOwned: state.annotatorOwned,
+        bannerType: bannerType,
+        bannerPayload: optimistic.game?.winnerId,
+        status: bannerType == DardosBannerType.bust
+            ? DardosGameStatus.bustDetected
+            : (bannerType == DardosBannerType.legWon
+                ? DardosGameStatus.legWon
+                : DardosGameStatus.throwRecorded),
+      ));
+    }
+
+    // 2. Persist throw
     final appendResult = await _repository.appendThrow(
       gameId: game.id,
       throw_: tempThrow,
@@ -261,27 +273,45 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       return t.id == tempThrow.id ? persisted : t;
     }).toList();
 
-    // 4. Update game progress (cursor + winners) in background
+    // 4. Update game progress (cursor + winners)
     final rg = optimistic.game;
     if (rg != null) {
-      // Don't await — fire and let it sync. UI is already current.
-      _repository
-          .updateGameProgress(
-            gameId: rg.id,
-            currentSet: rg.currentSet,
-            currentLeg: rg.currentLeg,
-            currentTurnPlayerId: rg.currentTurnPlayerId,
-            currentTurnIndex: rg.currentTurnIndex,
-            currentDartIndex: rg.currentDartIndex,
-            legWinners: rg.legWinners,
-            setWinners: rg.setWinners,
-            rosterLocked: true,
-          )
-          .catchError((_) => const DataSuccess(null));
+      if (isWinningThrow) {
+        // Winning throw — await so game doc has winnerId before navigation
+        await _repository
+            .updateGameProgress(
+              gameId: rg.id,
+              currentSet: rg.currentSet,
+              currentLeg: rg.currentLeg,
+              currentTurnPlayerId: rg.currentTurnPlayerId,
+              currentTurnIndex: rg.currentTurnIndex,
+              currentDartIndex: rg.currentDartIndex,
+              legWinners: rg.legWinners,
+              setWinners: rg.setWinners,
+              rosterLocked: true,
+            )
+            .catchError((_) => const DataSuccess(null));
+      } else {
+        // Normal throw — fire and forget
+        _repository
+            .updateGameProgress(
+              gameId: rg.id,
+              currentSet: rg.currentSet,
+              currentLeg: rg.currentLeg,
+              currentTurnPlayerId: rg.currentTurnPlayerId,
+              currentTurnIndex: rg.currentTurnIndex,
+              currentDartIndex: rg.currentDartIndex,
+              legWinners: rg.legWinners,
+              setWinners: rg.setWinners,
+              rosterLocked: true,
+            )
+            .catchError((_) => const DataSuccess(null));
+      }
     }
 
-    // 5. If game finished, persist final state + stats
-    if (optimistic.game?.winnerId != null && rg != null) {
+    // 5. If game finished, persist final state + stats BEFORE emitting
+    //    the gameFinished status (so finished page mounts to ready data).
+    if (isWinningThrow && rg != null) {
       final metrics = _computeMetrics(
         mode: rg.mode,
         playerIds: rg.playerIds,
@@ -292,13 +322,28 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
         winnerId: rg.winnerId!,
         computedMetrics: metrics,
       );
+      final freqByPlayer = _computeFreqByPlayer(
+        playerIds: rg.playerIds,
+        throws_: finalThrows,
+      );
       await _repository.updateParticipantStatsOnGameFinished(
         playerIds: rg.playerIds,
         winnerId: rg.winnerId!,
         mode: rg.mode,
         metricsPerPlayer:
             metrics['perPlayer'] as Map<String, dynamic>? ?? {},
+        freqByPlayer: freqByPlayer,
       );
+
+      // Now emit the gameFinished state — listener will navigate
+      emit(optimistic.copyWith(
+        annotatorOwned: state.annotatorOwned,
+        bannerType: bannerType,
+        bannerPayload: optimistic.game?.winnerId,
+        status: DardosGameStatus.gameFinished,
+        throws: finalThrows,
+      ));
+      return;
     }
 
     // 6. Sync persisted id silently (no UI re-emit needed unless rollback)
@@ -668,6 +713,40 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     }
     if (lastThrow.isBust) return DardosBannerType.bust;
     return DardosBannerType.none;
+  }
+
+  /// Aggregate (number, multiplier) frequency per player.
+  /// Key format: "{number}_{multiplier}" — e.g. "20_3" = T20 hits.
+  /// Bust darts are NOT counted (the turn was voided). Miss darts go
+  /// to "0_1". Skipped/empty turns contribute nothing.
+  Map<String, Map<String, int>> _computeFreqByPlayer({
+    required List<String> playerIds,
+    required List<DardosThrowEntity> throws_,
+  }) {
+    final result = <String, Map<String, int>>{
+      for (final p in playerIds) p: <String, int>{},
+    };
+    // Pre-compute busted turns to skip them entirely
+    final bustedTurns = <String>{};
+    for (final t in throws_) {
+      if (t.isBust) {
+        bustedTurns.add(
+            '${t.playerId}|${t.setIndex}|${t.legIndex}|${t.turnIndex}');
+      }
+    }
+    for (final t in throws_) {
+      final turnKey =
+          '${t.playerId}|${t.setIndex}|${t.legIndex}|${t.turnIndex}';
+      if (bustedTurns.contains(turnKey)) continue;
+      final key = t.isMiss
+          ? '0_1'
+          : '${t.number}_${t.multiplier}';
+      final freq = result[t.playerId];
+      if (freq != null) {
+        freq[key] = (freq[key] ?? 0) + 1;
+      }
+    }
+    return result;
   }
 
   Map<String, dynamic> _computeMetrics({
