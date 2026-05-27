@@ -369,15 +369,15 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
       // perPlayerCricket is keyed by playerId but we only have playerMetrics here
       return null; // no easy way to get playerId here; show nothing
     }
-    final avg3Dart = playerMetrics['avg3Dart'];
-    final highest = playerMetrics['highestTurn'];
+    final avg3Dart = playerMetrics['avg3Dart'] as num?;
+    final bestTurn = playerMetrics['bestTurn'] as num?;
     final count180 = playerMetrics['count180'];
-    final checkoutPct = playerMetrics['checkoutPct'];
+    final count140 = playerMetrics['count140plus'];
     return Text(
-      'Avg 3 dardos: ${avg3Dart ?? '-'} · '
-      'Mejor turno: ${highest ?? '-'} · '
+      'Avg 3 dardos: ${avg3Dart?.toStringAsFixed(1) ?? '-'} · '
+      'Mejor turno: ${bestTurn != null && bestTurn > 0 ? bestTurn.toInt() : '-'} · '
       '180s: ${count180 ?? 0} · '
-      'Checkout: ${checkoutPct != null ? '${(checkoutPct * 100).toStringAsFixed(1)}%' : '-'}',
+      '140+: ${count140 ?? 0}',
     );
   }
 }

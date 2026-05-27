@@ -60,19 +60,37 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
     super.dispose();
   }
 
-  List<DardosThrowEntity> _currentTurnDarts(
+  List<DardosThrowEntity> _displayDartsForPlayer(
     DardosGameState state,
     String playerId,
   ) {
     final game = state.game;
-    if (game == null) return [];
-    return state.throws
+    if (game == null) return const [];
+    final isCurrentTurn = playerId == game.currentTurnPlayerId;
+
+    // If this is the player's active turn → show darts thrown so far
+    if (isCurrentTurn) {
+      return state.throws
+          .where((t) =>
+              t.playerId == playerId &&
+              t.setIndex == game.currentSet &&
+              t.legIndex == game.currentLeg &&
+              t.turnIndex == game.currentTurnIndex)
+          .toList();
+    }
+
+    // Otherwise → show their LAST completed turn in this leg, so the user
+    // keeps seeing what they threw while it's the opponent's turn.
+    final myThrowsInLeg = state.throws
         .where((t) =>
             t.playerId == playerId &&
             t.setIndex == game.currentSet &&
-            t.legIndex == game.currentLeg &&
-            t.turnIndex == game.currentTurnIndex)
+            t.legIndex == game.currentLeg)
         .toList();
+    if (myThrowsInLeg.isEmpty) return const [];
+    final lastTurnIdx =
+        myThrowsInLeg.map((t) => t.turnIndex).reduce((a, b) => a > b ? a : b);
+    return myThrowsInLeg.where((t) => t.turnIndex == lastTurnIdx).toList();
   }
 
   @override
@@ -283,9 +301,8 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
                                   children: game.playerIds.map((playerId) {
                                     final isCurrentTurn = playerId ==
                                         game.currentTurnPlayerId;
-                                    final turnDarts = isCurrentTurn
-                                        ? _currentTurnDarts(state, playerId)
-                                        : <DardosThrowEntity>[];
+                                    final turnDarts =
+                                        _displayDartsForPlayer(state, playerId);
                                     return Padding(
                                       padding: const EdgeInsets.only(
                                           bottom: 4),
