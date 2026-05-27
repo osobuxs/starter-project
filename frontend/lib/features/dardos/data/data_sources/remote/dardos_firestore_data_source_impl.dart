@@ -342,6 +342,34 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
       if (pid == winnerId) {
         updates['statsByMode.$modeKey.won'] = FieldValue.increment(1);
       }
+      // Per-mode score/turn aggregates from this game's metrics
+      final pm = metricsPerPlayer[pid] as Map<String, dynamic>?;
+      if (pm != null && modeKey != 'cricket') {
+        // We stored avg3Dart + bestTurn per game, but for lifetime
+        // aggregation we need sums. The bloc passes raw aggregates
+        // under separate keys when available; otherwise derive from
+        // avg3Dart × validTurns. We use the bloc-provided sums.
+        final totalPts = pm['totalPoints'];
+        final validTurns = pm['validTurns'];
+        final count180 = pm['count180'];
+        final count140 = pm['count140plus'];
+        if (totalPts is num && totalPts > 0) {
+          updates['statsByMode.$modeKey.totalPoints'] =
+              FieldValue.increment(totalPts.toInt());
+        }
+        if (validTurns is num && validTurns > 0) {
+          updates['statsByMode.$modeKey.validTurns'] =
+              FieldValue.increment(validTurns.toInt());
+        }
+        if (count180 is num && count180 > 0) {
+          updates['statsByMode.$modeKey.count180'] =
+              FieldValue.increment(count180.toInt());
+        }
+        if (count140 is num && count140 > 0) {
+          updates['statsByMode.$modeKey.count140plus'] =
+              FieldValue.increment(count140.toInt());
+        }
+      }
       // Dart frequency increments — uses dotted-path for nested map update
       final freq = freqByPlayer[pid] ?? const <String, int>{};
       for (final entry in freq.entries) {

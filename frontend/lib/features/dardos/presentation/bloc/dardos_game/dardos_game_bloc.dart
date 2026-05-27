@@ -229,21 +229,25 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
 
     final isWinningThrow = optimistic.game?.winnerId != null;
 
-    // For non-winning throws, emit optimistically for snappy UI.
-    // For the winning throw we await persistence FIRST, then emit — so the
-    // finished page (which reads from Firestore on mount) sees the data.
-    if (!isWinningThrow) {
-      emit(optimistic.copyWith(
-        annotatorOwned: state.annotatorOwned,
-        bannerType: bannerType,
-        bannerPayload: optimistic.game?.winnerId,
-        status: bannerType == DardosBannerType.bust
-            ? DardosGameStatus.bustDetected
-            : (bannerType == DardosBannerType.legWon
-                ? DardosGameStatus.legWon
-                : DardosGameStatus.throwRecorded),
-      ));
-    }
+    // Always emit optimistically for snappy UI. For a winning throw
+    // we emit gameFinished status + gameWon banner immediately; the
+    // play page UI shows the celebration banner while persistence
+    // happens in parallel below. Navigation to the finished page is
+    // delayed until the banner is dismissed (~2s) — by then the
+    // Firestore writes have completed and the finished page can read
+    // a consistent game doc.
+    emit(optimistic.copyWith(
+      annotatorOwned: state.annotatorOwned,
+      bannerType: bannerType,
+      bannerPayload: optimistic.game?.winnerId,
+      status: isWinningThrow
+          ? DardosGameStatus.gameFinished
+          : (bannerType == DardosBannerType.bust
+              ? DardosGameStatus.bustDetected
+              : (bannerType == DardosBannerType.legWon
+                  ? DardosGameStatus.legWon
+                  : DardosGameStatus.throwRecorded)),
+    ));
 
     // 2. Persist throw
     final appendResult = await _repository.appendThrow(
@@ -273,76 +277,60 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       return t.id == tempThrow.id ? persisted : t;
     }).toList();
 
-    // 4. Update game progress (cursor + winners)
+    // 4. Update game progress (cursor + winners) — fire and forget;
+    //    the banner timeout gives time for the write to land before
+    //    the finished page reads from Firestore.
     final rg = optimistic.game;
     if (rg != null) {
-      if (isWinningThrow) {
-        // Winning throw — await so game doc has winnerId before navigation
-        await _repository
-            .updateGameProgress(
-              gameId: rg.id,
-              currentSet: rg.currentSet,
-              currentLeg: rg.currentLeg,
-              currentTurnPlayerId: rg.currentTurnPlayerId,
-              currentTurnIndex: rg.currentTurnIndex,
-              currentDartIndex: rg.currentDartIndex,
-              legWinners: rg.legWinners,
-              setWinners: rg.setWinners,
-              rosterLocked: true,
-            )
-            .catchError((_) => const DataSuccess(null));
-      } else {
-        // Normal throw — fire and forget
-        _repository
-            .updateGameProgress(
-              gameId: rg.id,
-              currentSet: rg.currentSet,
-              currentLeg: rg.currentLeg,
-              currentTurnPlayerId: rg.currentTurnPlayerId,
-              currentTurnIndex: rg.currentTurnIndex,
-              currentDartIndex: rg.currentDartIndex,
-              legWinners: rg.legWinners,
-              setWinners: rg.setWinners,
-              rosterLocked: true,
-            )
-            .catchError((_) => const DataSuccess(null));
-      }
+      _repository
+          .updateGameProgress(
+            gameId: rg.id,
+            currentSet: rg.currentSet,
+            currentLeg: rg.currentLeg,
+            currentTurnPlayerId: rg.currentTurnPlayerId,
+            currentTurnIndex: rg.currentTurnIndex,
+            currentDartIndex: rg.currentDartIndex,
+            legWinners: rg.legWinners,
+            setWinners: rg.setWinners,
+            rosterLocked: true,
+          )
+          .catchError((_) => const DataSuccess(null));
     }
 
-    // 5. If game finished, persist final state + stats BEFORE emitting
-    //    the gameFinished status (so finished page mounts to ready data).
+    // 5. If game finished, persist final state + stats in parallel.
+    //    All these writes happen while the banner is celebrating.
     if (isWinningThrow && rg != null) {
       final metrics = _computeMetrics(
         mode: rg.mode,
         playerIds: rg.playerIds,
         throws_: finalThrows,
       );
-      await _repository.finishGame(
-        gameId: rg.id,
-        winnerId: rg.winnerId!,
-        computedMetrics: metrics,
-      );
       final freqByPlayer = _computeFreqByPlayer(
         playerIds: rg.playerIds,
         throws_: finalThrows,
       );
-      await _repository.updateParticipantStatsOnGameFinished(
-        playerIds: rg.playerIds,
-        winnerId: rg.winnerId!,
-        mode: rg.mode,
-        metricsPerPlayer:
-            metrics['perPlayer'] as Map<String, dynamic>? ?? {},
-        freqByPlayer: freqByPlayer,
-      );
-
-      // Now emit the gameFinished state — listener will navigate
-      emit(optimistic.copyWith(
-        annotatorOwned: state.annotatorOwned,
-        bannerType: bannerType,
-        bannerPayload: optimistic.game?.winnerId,
-        status: DardosGameStatus.gameFinished,
-        throws: finalThrows,
-      ));
+      // Fire writes in parallel; don't block the bloc on them.
+      // The banner will dismiss after ~2s by which time these have
+      // typically completed.
+      Future.wait([
+        _repository.finishGame(
+          gameId: rg.id,
+          winnerId: rg.winnerId!,
+          computedMetrics: metrics,
+        ),
+        _repository.updateParticipantStatsOnGameFinished(
+          playerIds: rg.playerIds,
+          winnerId: rg.winnerId!,
+          mode: rg.mode,
+          metricsPerPlayer:
+              metrics['perPlayer'] as Map<String, dynamic>? ?? {},
+          freqByPlayer: freqByPlayer,
+        ),
+      ]).catchError((_) => <DataState<void>>[]);
+      // Emit final throws (replace tmp with persisted) but keep
+      // gameFinished status + banner — the listener will navigate
+      // when the banner dismisses.
+      emit(state.copyWith(throws: finalThrows));
       return;
     }
 
@@ -832,9 +820,10 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
           'bestTurn': bestTurn,
           'count180': count180,
           'count140plus': count140plus,
-          'checkouts': 0,
-          'checkoutAttempts': 0,
-          'checkoutPct': 0.0,
+          // Raw sums consumed by the data source to accumulate
+          // lifetime stats per mode on the participant doc.
+          'totalPoints': totalPts,
+          'validTurns': validTurns,
         };
       }
     }
