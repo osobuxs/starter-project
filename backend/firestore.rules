@@ -205,5 +205,27 @@ service cloud.firestore {
         allow delete: if false;
       }
     }
+
+    // Dardos: Dart Game Management
+    match /dardos_participants/{participantId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    match /dardos_games/{gameId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if false;
+
+      match /throws/{throwId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow update: if isSignedIn();
+        allow delete: if isSignedIn();  // Required for undo functionality
+      }
+    }
   }
 }
