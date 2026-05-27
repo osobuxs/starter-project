@@ -160,22 +160,21 @@ class _DardosJugadorDetailPageState extends State<DardosJugadorDetailPage> {
             label: 'Cierres', value: '${stats['closes'] ?? '-'}'),
       ];
     }
+    final totalPoints = (stats['totalPoints'] as num?)?.toDouble() ?? 0;
+    final validTurns = (stats['validTurns'] as num?)?.toDouble() ?? 0;
+    final avg = validTurns > 0
+        ? (totalPoints / validTurns).toStringAsFixed(1)
+        : '-';
     return [
       _StatsRow(
           label: 'Jugadas', value: '${stats['played'] ?? 0}'),
       _StatsRow(
           label: 'Ganadas', value: '${stats['won'] ?? 0}'),
+      _StatsRow(label: 'Avg 3 dardos', value: avg),
       _StatsRow(
-          label: 'Avg 3 dardos',
-          value:
-              '${(stats['avg3Dart'] as num?)?.toStringAsFixed(1) ?? '-'}'),
+          label: '180s', value: '${stats['count180'] ?? 0}'),
       _StatsRow(
-          label: '180s', value: '${stats['best180s'] ?? 0}'),
-      _StatsRow(
-          label: 'Checkout %',
-          value: stats['checkoutPct'] != null
-              ? '${((stats['checkoutPct'] as num) * 100).toStringAsFixed(1)}%'
-              : '-'),
+          label: '140+', value: '${stats['count140plus'] ?? 0}'),
     ];
   }
 }

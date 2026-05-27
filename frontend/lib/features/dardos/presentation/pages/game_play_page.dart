@@ -106,20 +106,42 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
         return true;
       },
       child: BlocConsumer<DardosGameBloc, DardosGameState>(
+        listenWhen: (prev, curr) {
+          // 1) If state arrives ALREADY with a winner (came back to a
+          //    finished game, no banner shown) → navigate.
+          final hadWinnerBefore = prev.game?.winnerId != null;
+          final hasWinnerNow = curr.game?.winnerId != null;
+          if (!hadWinnerBefore && hasWinnerNow &&
+              curr.bannerType != DardosBannerType.gameWon) {
+            return true;
+          }
+          // 2) Banner just dismissed AFTER gameWon → navigate.
+          if (prev.bannerType == DardosBannerType.gameWon &&
+              curr.bannerType != DardosBannerType.gameWon &&
+              hasWinnerNow) {
+            return true;
+          }
+          return curr.status == DardosGameStatus.error;
+        },
         listener: (context, state) {
-          final gameFinished = state.status ==
-                  DardosGameStatus.gameFinished ||
-              (state.game?.winnerId != null && state.game?.winnerId != '');
-          if (gameFinished) {
+          if (state.game?.winnerId != null) {
             if (!mounted) return;
-            context.read<DardosMultiGameBloc>().add(LoadGamesEvent());
-            context
-                .read<DardosParticipantBloc>()
-                .add(FetchAllParticipantsEvent());
-            Navigator.of(context).pushReplacementNamed(
-              AppRouteNames.dardosFinished,
-              arguments: widget.gameId,
-            );
+            final multi = context.read<DardosMultiGameBloc>();
+            final participantBloc = context.read<DardosParticipantBloc>();
+            final nav = Navigator.of(context);
+            // Defer navigation to next frame to avoid Hero animation
+            // looking up an ancestor of a widget that's already
+            // deactivating from the current state change.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              multi.add(LoadGamesEvent());
+              participantBloc.add(FetchAllParticipantsEvent());
+              nav.pushReplacementNamed(
+                AppRouteNames.dardosFinished,
+                arguments: widget.gameId,
+              );
+            });
+            return;
           }
           if (state.status == DardosGameStatus.error &&
               state.error != null) {
@@ -184,6 +206,8 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
                                 playerNames: participantNames,
                                 legWinners: game.legWinners,
                                 setWinners: game.setWinners,
+                                mode: game.mode,
+                                doubleOut: game.doubleOut,
                               ),
                               AnnotatorLockBanner(
                                 annotatorOwned: state.annotatorOwned,

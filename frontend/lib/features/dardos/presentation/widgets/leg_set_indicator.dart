@@ -15,6 +15,8 @@ class LegSetIndicator extends StatelessWidget {
   final List<List<String?>>? legWinners;
   // setWinners[set] = winnerId or null
   final List<String?>? setWinners;
+  final String? mode; // '501' | '301' | 'cricket'
+  final bool? doubleOut;
 
   const LegSetIndicator({
     Key? key,
@@ -26,6 +28,8 @@ class LegSetIndicator extends StatelessWidget {
     this.playerNames,
     this.legWinners,
     this.setWinners,
+    this.mode,
+    this.doubleOut,
   }) : super(key: key);
 
   String _buildLabel() {
@@ -89,6 +93,32 @@ class LegSetIndicator extends StatelessWidget {
               ),
             ],
           ),
+          if (mode != null) ...[
+            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${mode!.toUpperCase()}'
+                    '${mode != 'cricket' && doubleOut == true ? ' · Double-out' : ''}'
+                    '${mode != 'cricket' && doubleOut == false ? ' · Sin double-out' : ''}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.indigo.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (ids.isNotEmpty) ...[
             const SizedBox(height: 4),
             Row(
