@@ -13,6 +13,27 @@ import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth
 import 'package:news_app_clean_architecture/features/auth/presentation/pages/login/login_page.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/pages/register/register_page.dart';
 import 'package:news_app_clean_architecture/features/user_profile/presentation/pages/user_profile_page.dart';
+import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_bloc.dart';
+import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_event.dart';
+import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/la_loba_wrapper.dart';
+import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/create_game_page.dart';
+import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/game_play_page.dart';
+import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/game_finished_page.dart';
+import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/participant_detail_page.dart';
+// Dardos imports
+import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_bottom_nav/dardos_bottom_nav_bloc.dart';
+import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_game/dardos_game_bloc.dart';
+import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_game/dardos_game_event.dart';
+import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_multi_game/dardos_multi_game_bloc.dart';
+import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_participant/dardos_participant_bloc.dart';
+import 'package:news_app_clean_architecture/features/dardos/presentation/pages/dardos_wrapper.dart';
+import 'package:news_app_clean_architecture/features/dardos/presentation/pages/create_game_page.dart'
+    as dardos_create;
+import 'package:news_app_clean_architecture/features/dardos/presentation/pages/game_play_page.dart'
+    as dardos_play;
+import 'package:news_app_clean_architecture/features/dardos/presentation/pages/game_finished_page.dart'
+    as dardos_finished;
+import 'package:news_app_clean_architecture/features/dardos/presentation/pages/jugador_detail_page.dart';
 import 'package:news_app_clean_architecture/injection_container.dart';
 
 import '../../features/daily_news/domain/entities/article.dart';
@@ -92,6 +113,215 @@ class AppRoutes {
           child: const SavedArticles(),
         );
 
+      case AppRouteNames.laLoba:
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: const LaLobaWrapper(),
+        );
+
+      case AppRouteNames.laLobaCreate:
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: BlocProvider<GameBloc>(
+            create: (_) => sl<GameBloc>(),
+            child: const CreateGamePage(),
+          ),
+        );
+
+      case AppRouteNames.laLobaPlay:
+        final gameId = _extractGameId(settings.arguments);
+        if (gameId == null) {
+          return _materialRoute(
+            settings,
+            policy: policy,
+            child: const AppCenteredMessageState(
+              icon: Icons.error_outline,
+              title: 'Ruta inválida',
+              message:
+                  'No se encontró un gameId válido para iniciar la partida.',
+            ),
+          );
+        }
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: BlocProvider<GameBloc>(
+            create: (_) => sl<GameBloc>()..add(LoadGameEvent(gameId)),
+            child: GamePlayPage(gameId: gameId),
+          ),
+        );
+
+      case AppRouteNames.laLobaFinished:
+        final gameId = _extractGameId(settings.arguments);
+        if (gameId == null) {
+          return _materialRoute(
+            settings,
+            policy: policy,
+            child: const AppCenteredMessageState(
+              icon: Icons.error_outline,
+              title: 'Ruta inválida',
+              message: 'No se encontró un gameId válido para ver el resultado.',
+            ),
+          );
+        }
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: BlocProvider<GameBloc>(
+            create: (_) => sl<GameBloc>()..add(LoadGameEvent(gameId)),
+            child: GameFinishedPage(gameId: gameId),
+          ),
+        );
+
+      case AppRouteNames.laLobaParticipantDetail:
+        final participantId = settings.arguments as String?;
+        if (participantId == null || participantId.isEmpty) {
+          return _materialRoute(
+            settings,
+            policy: policy,
+            child: const AppCenteredMessageState(
+              icon: Icons.error_outline,
+              title: 'Ruta inválida',
+              message: 'No se encontró un participantId válido.',
+            ),
+          );
+        }
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: ParticipantDetailPage(participantId: participantId),
+        );
+
+      // ---- Dardos ----
+      case AppRouteNames.dardos:
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<DardosBottomNavBloc>(
+                create: (_) => sl<DardosBottomNavBloc>(),
+              ),
+              BlocProvider<DardosMultiGameBloc>(
+                create: (_) => sl<DardosMultiGameBloc>(),
+              ),
+              BlocProvider<DardosParticipantBloc>(
+                create: (_) => sl<DardosParticipantBloc>(),
+              ),
+            ],
+            child: const DardosWrapper(),
+          ),
+        );
+
+      case AppRouteNames.dardosCreate:
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<DardosGameBloc>(
+                create: (_) => sl<DardosGameBloc>(),
+              ),
+              BlocProvider<DardosParticipantBloc>(
+                create: (_) => sl<DardosParticipantBloc>(),
+              ),
+              BlocProvider<DardosMultiGameBloc>(
+                create: (_) => sl<DardosMultiGameBloc>(),
+              ),
+            ],
+            child: const dardos_create.DardosCreateGamePage(),
+          ),
+        );
+
+      case AppRouteNames.dardosPlay:
+        final dardosGameId = _extractGameId(settings.arguments);
+        if (dardosGameId == null) {
+          return _materialRoute(
+            settings,
+            policy: policy,
+            child: const AppCenteredMessageState(
+              icon: Icons.error_outline,
+              title: 'Ruta inválida',
+              message:
+                  'No se encontró un gameId válido para iniciar la partida.',
+            ),
+          );
+        }
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<DardosGameBloc>(
+                // LoadDardosGameEvent is fired in DardosGamePlayPage.initState
+                create: (_) => sl<DardosGameBloc>(),
+              ),
+              BlocProvider<DardosParticipantBloc>(
+                create: (_) => sl<DardosParticipantBloc>(),
+              ),
+              BlocProvider<DardosMultiGameBloc>(
+                create: (_) => sl<DardosMultiGameBloc>(),
+              ),
+            ],
+            child: dardos_play.DardosGamePlayPage(gameId: dardosGameId),
+          ),
+        );
+
+      case AppRouteNames.dardosFinished:
+        final dardosFinishedId = _extractGameId(settings.arguments);
+        if (dardosFinishedId == null) {
+          return _materialRoute(
+            settings,
+            policy: policy,
+            child: const AppCenteredMessageState(
+              icon: Icons.error_outline,
+              title: 'Ruta inválida',
+              message: 'No se encontró un gameId válido para el resultado.',
+            ),
+          );
+        }
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<DardosGameBloc>(
+                create: (_) => sl<DardosGameBloc>(),
+              ),
+              BlocProvider<DardosParticipantBloc>(
+                create: (_) => sl<DardosParticipantBloc>(),
+              ),
+            ],
+            child: dardos_finished.DardosGameFinishedPage(
+                gameId: dardosFinishedId),
+          ),
+        );
+
+      case AppRouteNames.dardosJugadorDetail:
+        final dardosParticipantId = settings.arguments as String?;
+        if (dardosParticipantId == null || dardosParticipantId.isEmpty) {
+          return _materialRoute(
+            settings,
+            policy: policy,
+            child: const AppCenteredMessageState(
+              icon: Icons.error_outline,
+              title: 'Ruta inválida',
+              message: 'No se encontró un participantId válido.',
+            ),
+          );
+        }
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: BlocProvider<DardosParticipantBloc>(
+            create: (_) => sl<DardosParticipantBloc>(),
+            child: DardosJugadorDetailPage(
+                participantId: dardosParticipantId),
+          ),
+        );
+
       default:
         return _materialRoute(
           settings,
@@ -111,6 +341,12 @@ class AppRoutes {
       builder: (_) =>
           _RouteAccessGate(settings: settings, policy: policy, child: child),
     );
+  }
+
+  static String? _extractGameId(Object? rawArg) {
+    if (rawArg is String) return rawArg;
+    if (rawArg is int) return rawArg.toString();
+    return null;
   }
 }
 

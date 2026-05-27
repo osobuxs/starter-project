@@ -22,6 +22,18 @@
         }
       ]
     }
+    ,
+    {
+      "collectionGroup": "throws",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "setIndex", "order": "ASCENDING" },
+        { "fieldPath": "legIndex", "order": "ASCENDING" },
+        { "fieldPath": "turnIndex", "order": "ASCENDING" },
+        { "fieldPath": "dartIndex", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    }
   ],
   "fieldOverrides": []
 }
