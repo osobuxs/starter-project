@@ -46,12 +46,32 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       ));
       return;
     }
-    if (event.teamMode && event.playerIds.length != 4) {
-      emit(state.copyWith(
-        status: DardosGameStatus.error,
-        error: 'Para jugar 2 vs 2 se necesitan exactamente 4 jugadores',
-      ));
-      return;
+    if (event.teamMode) {
+      if (event.teams.isEmpty) {
+        emit(state.copyWith(
+          status: DardosGameStatus.error,
+          error: 'La configuración de equipos no es válida.',
+        ));
+        return;
+      }
+      final firstTeamSize = (event.teams.first['playerIds'] as List?)?.length ?? 0;
+      if (firstTeamSize < 2) {
+        emit(state.copyWith(
+          status: DardosGameStatus.error,
+          error: 'Cada equipo debe tener al menos 2 jugadores.',
+        ));
+        return;
+      }
+      for (final team in event.teams) {
+        final size = (team['playerIds'] as List?)?.length ?? 0;
+        if (size != firstTeamSize) {
+          emit(state.copyWith(
+            status: DardosGameStatus.error,
+            error: 'Todos los equipos deben tener la misma cantidad de jugadores.',
+          ));
+          return;
+        }
+      }
     }
 
     emit(state.copyWith(status: DardosGameStatus.loading));

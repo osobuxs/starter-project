@@ -9,6 +9,7 @@ import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/da
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_participant/dardos_participant_bloc.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_participant/dardos_participant_event.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_participant/dardos_participant_state.dart';
+import 'package:news_app_clean_architecture/features/dardos/domain/usecases/dardos_team_config_validator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class DardosCreateGamePage extends StatefulWidget {
@@ -20,8 +21,6 @@ class DardosCreateGamePage extends StatefulWidget {
 
 class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
   final _gameNameController = TextEditingController();
-  final _team1NameController = TextEditingController(text: 'Equipo 1');
-  final _team2NameController = TextEditingController(text: 'Equipo 2');
   final List<String> _selectedPlayerIds = [];
 
   String _mode = '501';
@@ -30,28 +29,44 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
   int _sets = 1;
   int _legs = 3;
 
+  // New states for dynamic team configuration
+  int _numberOfTeams = 2;
+  int _playersPerTeam = 2;
+  final Map<int, TextEditingController> _teamNameControllers = {};
+  final Map<int, List<String?>> _teamPlayers = {};
+
   @override
   void initState() {
     super.initState();
     context.read<DardosParticipantBloc>().add(FetchAllParticipantsEvent());
+    _initializeTeamData();
+  }
+
+  void _initializeTeamData() {
+    for (int i = 0; i < _numberOfTeams; i++) {
+      _teamNameControllers.putIfAbsent(
+        i,
+        () => TextEditingController(text: 'Equipo ${i + 1}'),
+      );
+      if (!_teamPlayers.containsKey(i) || _teamPlayers[i]!.length != _playersPerTeam) {
+        final currentList = _teamPlayers[i] ?? [];
+        if (currentList.length < _playersPerTeam) {
+          currentList.addAll(List.filled(_playersPerTeam - currentList.length, null));
+        } else if (currentList.length > _playersPerTeam) {
+          currentList.removeRange(_playersPerTeam, currentList.length);
+        }
+        _teamPlayers[i] = currentList;
+      }
+    }
   }
 
   @override
   void dispose() {
     _gameNameController.dispose();
-    _team1NameController.dispose();
-    _team2NameController.dispose();
+    for (final controller in _teamNameControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
-  }
-
-  String _teamSlotLabel(int index) {
-    const labels = [
-      'Equipo 1 · Jugador 1',
-      'Equipo 2 · Jugador 1',
-      'Equipo 1 · Jugador 2',
-      'Equipo 2 · Jugador 2',
-    ];
-    return index >= 0 && index < labels.length ? labels[index] : 'Jugador';
   }
 
   @override
@@ -76,6 +91,10 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
         },
         child: BlocBuilder<DardosParticipantBloc, DardosParticipantState>(
           builder: (context, participantState) {
+            final activeParticipants = participantState.participants
+                .where((p) => p.isActive)
+                .toList();
+
             return Padding(
               padding: const EdgeInsets.all(16),
               child: ListView(
@@ -86,59 +105,156 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-
-                  SwitchListTile(
-                    title: const Text('Jugar por equipos 2 vs 2'),
-                    subtitle: const Text(
-                      'Cada equipo comparte score; las estadísticas se guardan por jugador.',
-                    ),
-                    value: _teamMode,
-                    onChanged: (value) {
-                      setState(() {
-                        _teamMode = value;
-                        if (_teamMode && _selectedPlayerIds.length > 4) {
-                          _selectedPlayerIds.removeRange(
-                            4,
-                            _selectedPlayerIds.length,
-                          );
-                        }
-                      });
-                    },
-                  ),
-
-                  if (_teamMode) ...[
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _team1NameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre Equipo 1',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _team2NameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre Equipo 2',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Seleccioná 4 jugadores y ordenalos así: Equipo 1 J1, Equipo 2 J1, Equipo 1 J2, Equipo 2 J2.',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                  const SizedBox(height: 8),
                   TextField(
                     controller: _gameNameController,
                     decoration: const InputDecoration(
                       hintText: 'Ej: Viernes de Dardos',
                       border: OutlineInputBorder(),
                     ),
-                    textInputAction: TextInputAction.done,
+                    textInputAction: TextInputAction.next,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+
+                  SwitchListTile(
+                    title: const Text('Jugar por equipos'),
+                    subtitle: const Text(
+                      'Cada equipo comparte score; las estadísticas se guardan por jugador de forma individual.',
+                    ),
+                    value: _teamMode,
+                    onChanged: (value) {
+                      setState(() {
+                        _teamMode = value;
+                        if (_teamMode) {
+                          _initializeTeamData();
+                        }
+                      });
+                    },
+                  ),
+
+                  if (_teamMode) ...[
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 2,
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Configuración de Equipos',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<int>(
+                                    value: _numberOfTeams,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Cantidad de Equipos',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: [2, 3, 4, 5, 6].map((n) {
+                                      return DropdownMenuItem<int>(
+                                        value: n,
+                                        child: Text('$n Equipos'),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() {
+                                          _numberOfTeams = val;
+                                          _initializeTeamData();
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: DropdownButtonFormField<int>(
+                                    value: _playersPerTeam,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Jugadores por Equipo',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: [2, 3, 4].map((m) {
+                                      return DropdownMenuItem<int>(
+                                        value: m,
+                                        child: Text('$m Jugadores'),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() {
+                                          _playersPerTeam = val;
+                                          _initializeTeamData();
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Detalle de Equipos',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    ...List.generate(_numberOfTeams, (tIndex) {
+                      final teamNameController = _teamNameControllers[tIndex]!;
+                      return Card(
+                        elevation: 1,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextField(
+                                controller: teamNameController,
+                                decoration: InputDecoration(
+                                  labelText: 'Nombre del Equipo ${tIndex + 1}',
+                                  border: const OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ...List.generate(_playersPerTeam, (pIndex) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: DropdownButtonFormField<String>(
+                                    value: _teamPlayers[tIndex]?[pIndex],
+                                    decoration: InputDecoration(
+                                      labelText: 'Jugador ${pIndex + 1}',
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    items: activeParticipants.map((p) {
+                                      return DropdownMenuItem<String>(
+                                        value: p.id,
+                                        child: Text(p.name),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _teamPlayers[tIndex]![pIndex] = val;
+                                      });
+                                    },
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                  const SizedBox(height: 16),
 
                   // Mode selector
                   const Text(
@@ -177,7 +293,6 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                     ),
                   const SizedBox(height: 8),
 
-                  // Sets stepper
                   // Sets stepper (odd only — to avoid ties)
                   Row(
                     children: [
@@ -219,107 +334,93 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Participants
-                  const Text(
-                    'Seleccionar Jugadores',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  if (participantState.status ==
-                      DardosParticipantStatus.loading)
-                    const Center(child: CircularProgressIndicator())
-                  else if (participantState.participants
-                      .where((p) => p.isActive)
-                      .isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text(
-                        'No hay jugadores. Creá algunos en la pestaña Jugadores.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    )
-                  else
-                    ...participantState.participants
-                        .where((p) => p.isActive)
-                        .map((participant) {
-                      final selectedIndex =
-                          _selectedPlayerIds.indexOf(participant.id);
-                      final isSelected = selectedIndex != -1;
+                  // Simple mode participant selector
+                  if (!_teamMode) ...[
+                    const Text(
+                      'Seleccionar Jugadores',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    if (participantState.status ==
+                        DardosParticipantStatus.loading)
+                      const Center(child: CircularProgressIndicator())
+                    else if (activeParticipants.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          'No hay jugadores. Creá algunos en la pestaña Jugadores.',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    else
+                      ...activeParticipants.map((participant) {
+                        final selectedIndex =
+                            _selectedPlayerIds.indexOf(participant.id);
+                        final isSelected = selectedIndex != -1;
 
-                      return CheckboxListTile(
-                        title: Text(participant.name),
-                        subtitle: participant.email != null
-                            ? Text(participant.email!)
-                            : null,
-                        secondary: isSelected
-                            ? CircleAvatar(
-                                radius: 12,
-                                child: Text(
-                                  '${selectedIndex + 1}',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              )
-                            : null,
-                        value: isSelected,
-                        onChanged: (_) {
-                          setState(() {
-                            if (isSelected) {
-                              _selectedPlayerIds.remove(participant.id);
-                            } else {
-                              if (_teamMode && _selectedPlayerIds.length >= 4) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'En 2 vs 2 seleccioná exactamente 4 jugadores',
-                                    ),
+                        return CheckboxListTile(
+                          title: Text(participant.name),
+                          subtitle: participant.email != null
+                              ? Text(participant.email!)
+                              : null,
+                          secondary: isSelected
+                              ? CircleAvatar(
+                                  radius: 12,
+                                  child: Text(
+                                    '${selectedIndex + 1}',
+                                    style: const TextStyle(fontSize: 12),
                                   ),
-                                );
-                                return;
+                                )
+                              : null,
+                          value: isSelected,
+                          onChanged: (_) {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedPlayerIds.remove(participant.id);
+                              } else {
+                                _selectedPlayerIds.add(participant.id);
                               }
-                              _selectedPlayerIds.add(participant.id);
-                            }
+                            });
+                          },
+                        );
+                      }),
+
+                    if (_selectedPlayerIds.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Orden de tiro',
+                        style:
+                            TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      ReorderableListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _selectedPlayerIds.length,
+                        onReorder: (oldIndex, newIndex) {
+                          setState(() {
+                            if (newIndex > oldIndex) newIndex -= 1;
+                            final item = _selectedPlayerIds.removeAt(oldIndex);
+                            _selectedPlayerIds.insert(newIndex, item);
                           });
                         },
-                      );
-                    }),
-
-                  if (_selectedPlayerIds.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Orden de tiro',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _selectedPlayerIds.length,
-                      onReorder: (oldIndex, newIndex) {
-                        setState(() {
-                          if (newIndex > oldIndex) newIndex -= 1;
-                          final item = _selectedPlayerIds.removeAt(oldIndex);
-                          _selectedPlayerIds.insert(newIndex, item);
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        final playerId = _selectedPlayerIds[index];
-                        final name = participantState.participants
-                            .firstWhere(
-                              (p) => p.id == playerId,
-                              orElse: () => participantState.participants.first,
-                            )
-                            .name;
-                        return ListTile(
-                          key: ValueKey(playerId),
-                          leading: CircleAvatar(child: Text('${index + 1}')),
-                          title: Text(name),
-                          subtitle:
-                              _teamMode ? Text(_teamSlotLabel(index)) : null,
-                          trailing: const Icon(Icons.drag_handle),
-                        );
-                      },
-                    ),
+                        itemBuilder: (context, index) {
+                          final playerId = _selectedPlayerIds[index];
+                          final name = activeParticipants
+                              .firstWhere(
+                                (p) => p.id == playerId,
+                                orElse: () => activeParticipants.first,
+                              )
+                              .name;
+                          return ListTile(
+                            key: ValueKey(playerId),
+                            leading: CircleAvatar(child: Text('${index + 1}')),
+                            title: Text(name),
+                            trailing: const Icon(Icons.drag_handle),
+                          );
+                        },
+                      ),
+                    ],
                   ],
                   const SizedBox(height: 32),
 
@@ -355,48 +456,72 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
       );
       return;
     }
-    if (_selectedPlayerIds.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Seleccioná al menos 2 jugadores')),
-      );
+
+    if (!_teamMode) {
+      if (_selectedPlayerIds.length < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Seleccioná al menos 2 jugadores')),
+        );
+        return;
+      }
+
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+
+      context.read<DardosGameBloc>().add(
+            CreateDardosGameEvent(
+              name: _gameNameController.text.trim(),
+              mode: _mode,
+              doubleOut: _mode == 'cricket' ? false : _doubleOut,
+              sets: _sets,
+              legs: _legs,
+              playerIds: List.from(_selectedPlayerIds),
+              teamMode: false,
+              createdBy: uid,
+            ),
+          );
       return;
     }
-    if (_teamMode && _selectedPlayerIds.length != 4) {
+
+    // Team mode configuration compilation and validation
+    final Map<int, List<String>> playersInTeams = {};
+    for (int i = 0; i < _numberOfTeams; i++) {
+      playersInTeams[i] = (_teamPlayers[i] ?? [])
+          .where((id) => id != null)
+          .cast<String>()
+          .toList();
+    }
+
+    final Map<int, String> teamNames = {};
+    for (int i = 0; i < _numberOfTeams; i++) {
+      final name = _teamNameControllers[i]?.text.trim() ?? '';
+      teamNames[i] = name.isEmpty ? 'Equipo ${i + 1}' : name;
+    }
+
+    final validator = DardosTeamConfigValidator();
+    final validationResult = validator.validate(
+      numberOfTeams: _numberOfTeams,
+      playersPerTeam: _playersPerTeam,
+      teamNames: teamNames,
+      playersInTeams: playersInTeams,
+    );
+
+    if (!validationResult.isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Para equipos 2 vs 2 seleccioná exactamente 4 jugadores'),
-        ),
+        SnackBar(content: Text(validationResult.errorMessage ?? 'Error de configuración de equipos.')),
       );
       return;
     }
 
-    final teams = _teamMode
-        ? [
-            {
-              'id': 'team_1',
-              'name': _team1NameController.text.trim().isEmpty
-                  ? 'Equipo 1'
-                  : _team1NameController.text.trim(),
-              'playerIds': [_selectedPlayerIds[0], _selectedPlayerIds[2]],
-            },
-            {
-              'id': 'team_2',
-              'name': _team2NameController.text.trim().isEmpty
-                  ? 'Equipo 2'
-                  : _team2NameController.text.trim(),
-              'playerIds': [_selectedPlayerIds[1], _selectedPlayerIds[3]],
-            },
-          ]
-        : const <Map<String, dynamic>>[];
-    final playerTeamIds = _teamMode
-        ? <String, String>{
-            _selectedPlayerIds[0]: 'team_1',
-            _selectedPlayerIds[2]: 'team_1',
-            _selectedPlayerIds[1]: 'team_2',
-            _selectedPlayerIds[3]: 'team_2',
-          }
-        : const <String, String>{};
+    final teams = validationResult.teams!;
+    final playerTeamIds = validationResult.playerTeamIds!;
+
+    // Turn ordering interleaving: Round-robin across teams
+    final List<String> orderedPlayerIds = [];
+    for (int pIndex = 0; pIndex < _playersPerTeam; pIndex++) {
+      for (int tIndex = 0; tIndex < _numberOfTeams; tIndex++) {
+        orderedPlayerIds.add(playersInTeams[tIndex]![pIndex]);
+      }
+    }
 
     final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
 
@@ -407,8 +532,8 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
             doubleOut: _mode == 'cricket' ? false : _doubleOut,
             sets: _sets,
             legs: _legs,
-            playerIds: List.from(_selectedPlayerIds),
-            teamMode: _teamMode,
+            playerIds: orderedPlayerIds,
+            teamMode: true,
             teams: teams,
             playerTeamIds: playerTeamIds,
             createdBy: uid,
