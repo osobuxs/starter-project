@@ -37,7 +37,7 @@ if (flutterVersionName == null) {
 android {
     namespace "com.osobuxs.newsapp.symmetry"
 
-    compileSdkVersion flutter.compileSdkVersion
+    compileSdkVersion 36
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -54,7 +54,7 @@ android {
 
     defaultConfig {
         applicationId "com.osobuxs.newsapp.symmetry"
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
@@ -87,7 +87,7 @@ flutter {
 }
 
 ext {
-    kotlin_version="1.6.10"
+    kotlin_version="1.9.10"
 }
 
 dependencies {
