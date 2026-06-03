@@ -58,7 +58,7 @@ class AppRoutes {
         return _materialRoute(
           settings,
           policy: policy,
-          child: const DashboardPage(),
+          child: const DailyNews(),
         );
 
       case AppRouteNames.articleDetails:

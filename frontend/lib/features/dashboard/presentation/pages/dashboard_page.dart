@@ -78,8 +78,10 @@ class DashboardPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 28),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
                           _DashboardChip(
                             icon: Icons.article_outlined,
@@ -87,7 +89,12 @@ class DashboardPage extends StatelessWidget {
                             onTap: () => Navigator.of(context)
                                 .pushReplacementNamed(AppRouteNames.news),
                           ),
-                          const SizedBox(width: 12),
+                          _DashboardChip(
+                            icon: Icons.games,
+                            label: 'La Loba',
+                            onTap: () => Navigator.of(context)
+                                .pushReplacementNamed(AppRouteNames.laLoba),
+                          ),
                           _DashboardChip(
                             icon: Icons.sports_score,
                             label: 'Dardos',
