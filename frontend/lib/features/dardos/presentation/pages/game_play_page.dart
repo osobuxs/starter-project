@@ -214,6 +214,45 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
     return players.map((id) => participantNames[id] ?? id).join(' / ');
   }
 
+  String? _liveAverageText(
+    DardosGameState state,
+    String ownerId,
+  ) {
+    final game = state.game;
+    if (game == null) return null;
+    final playerIds = game.teamMode
+        ? (game.teams.firstWhere(
+              (t) => t['id'] == ownerId,
+              orElse: () => const <String, dynamic>{},
+            )['playerIds'] as List?)
+                ?.whereType<String>()
+                .toList() ??
+            const <String>[]
+        : [ownerId];
+    final throwsInLeg = state.throws.where((t) {
+      return playerIds.contains(t.playerId) &&
+          t.setIndex == game.currentSet &&
+          t.legIndex == game.currentLeg &&
+          !t.isBust;
+    }).toList();
+    if (throwsInLeg.isEmpty) return null;
+
+    final turns = <String, List<DardosThrowEntity>>{};
+    for (final t in throwsInLeg) {
+      turns.putIfAbsent('${t.playerId}_${t.turnIndex}', () => []).add(t);
+    }
+
+    var totalPoints = 0;
+    var validTurns = 0;
+    for (final turnThrows in turns.values) {
+      if (turnThrows.any((t) => t.isBust)) continue;
+      totalPoints += turnThrows.fold<int>(0, (sum, t) => sum + t.points);
+      validTurns++;
+    }
+    if (validTurns == 0) return null;
+    return 'Avg ${(totalPoints / validTurns).toStringAsFixed(1)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -259,13 +298,15 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
         listener: (context, state) {
           _handleAudioFeedback(state);
           if (state.game?.winnerId != null) {
+            // If the victory banner is still visible, wait for it to
+            // dismiss so the final writes have time to land.
+            if (state.bannerType == DardosBannerType.gameWon) {
+              return;
+            }
             if (!mounted) return;
             final multi = context.read<DardosMultiGameBloc>();
             final participantBloc = context.read<DardosParticipantBloc>();
             final nav = Navigator.of(context);
-            // Defer navigation to next frame to avoid Hero animation
-            // looking up an ancestor of a widget that's already
-            // deactivating from the current state change.
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
               multi.add(LoadGamesEvent());
@@ -500,6 +541,8 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
                                                 state.liveScores[ownerId],
                                             cricketPoints: state.cricketState
                                                 ?.pointsByPlayer[ownerId],
+                                            liveMetricText: _liveAverageText(
+                                                state, ownerId),
                                             turnIndex: displayTurnIndex,
                                             currentTurnDarts: turnDarts,
                                           ),

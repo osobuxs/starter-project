@@ -323,10 +323,8 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
         playerIds: rg.playerIds,
         throws_: finalThrows,
       );
-      // Fire writes in parallel; don't block the bloc on them.
-      // The banner will dismiss after ~2s by which time these have
-      // typically completed.
-      Future.wait([
+      // Wait for final writes to land before navigating to the finished page.
+      await Future.wait([
         _repository.finishGame(
           gameId: rg.id,
           winnerId: rg.winnerId!,

@@ -11,6 +11,7 @@ class PlayerDartCard extends StatelessWidget {
   final int? remainingScore;
   final int? cricketPoints;
   final int? turnIndex;
+  final String? liveMetricText;
   final List<DardosThrowEntity> currentTurnDarts;
 
   const PlayerDartCard({
@@ -21,6 +22,7 @@ class PlayerDartCard extends StatelessWidget {
     this.remainingScore,
     this.cricketPoints,
     this.turnIndex,
+    this.liveMetricText,
     this.currentTurnDarts = const [],
   });
 
@@ -48,11 +50,20 @@ class PlayerDartCard extends StatelessWidget {
         color: bgColor,
         border: Border.all(
           color: isCurrentTurn ? Colors.deepOrange : Colors.grey.shade300,
-          width: isCurrentTurn ? 2 : 1,
+          width: isCurrentTurn ? 3 : 1,
         ),
         borderRadius: BorderRadius.circular(8),
+        boxShadow: isCurrentTurn
+            ? [
+                BoxShadow(
+                  color: Colors.deepOrange.withValues(alpha: 0.18),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : const [],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
           // Name + Big score (left)
@@ -65,12 +76,47 @@ class PlayerDartCard extends StatelessWidget {
                 Text(
                   name,
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
                     color: accentColor,
+                    letterSpacing: 0.2,
                   ),
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
+                if (liveMetricText != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    liveMetricText!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: accentColor,
+                    ),
+                  ),
+                ],
+                if (isCurrentTurn && currentTurnDarts.isEmpty) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.play_arrow_rounded,
+                        size: 14,
+                        color: accentColor,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        'Primer dardo',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: accentColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
@@ -151,7 +197,7 @@ class _DartChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
         ),
         child: const Center(
-          child: Text('—', style: TextStyle(color: Colors.grey, fontSize: 14)),
+          child: Text('—', style: TextStyle(color: Colors.grey, fontSize: 16)),
         ),
       );
     }
@@ -185,13 +231,13 @@ class _DartChip extends StatelessWidget {
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Text(
               label,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: 16,
               ),
             ),
           ),

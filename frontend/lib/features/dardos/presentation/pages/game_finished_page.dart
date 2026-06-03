@@ -72,6 +72,7 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
                   : (winnerId != null
                       ? (participantNames[winnerId] ?? winnerId)
                       : 'Sin ganador');
+              final metrics = game.computedMetrics;
 
               return Column(
                 children: [
@@ -97,6 +98,20 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
                           '${game.mode.toUpperCase()} · ${game.sets} set(s) · ${game.legs} leg(s)',
                           style: const TextStyle(fontSize: 16),
                         ),
+                        if (metrics != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            _buildMatchAverageSummary(
+                              game,
+                              metrics,
+                              participantNames,
+                            ),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                         if (game.mode != 'cricket')
                           Text(
                             game.doubleOut ? 'Double out' : 'Sin double out',
@@ -379,14 +394,51 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
       return null; // no easy way to get playerId here; show nothing
     }
     final avg3Dart = playerMetrics['avg3Dart'] as num?;
+    final totalPoints = playerMetrics['totalPoints'] as num?;
+    final validTurns = playerMetrics['validTurns'] as num?;
+    final fallbackAvg =
+        (totalPoints != null && validTurns != null && validTurns > 0)
+            ? (totalPoints / validTurns)
+            : null;
     final bestTurn = playerMetrics['bestTurn'] as num?;
     final count180 = playerMetrics['count180'];
     final count140 = playerMetrics['count140plus'];
+    final avgText = (avg3Dart ?? fallbackAvg) != null
+        ? (avg3Dart ?? fallbackAvg)!.toStringAsFixed(1)
+        : '-';
     return Text(
-      'Avg 3 dardos: ${avg3Dart?.toStringAsFixed(1) ?? '-'} · '
+      'Avg 3 dardos: $avgText · '
       'Mejor turno: ${bestTurn != null && bestTurn > 0 ? bestTurn.toInt() : '-'} · '
       '180s: ${count180 ?? 0} · '
       '140+: ${count140 ?? 0}',
     );
+  }
+
+  String _buildMatchAverageSummary(
+    dynamic game,
+    Map<String, dynamic> metrics,
+    Map<String, String> participantNames,
+  ) {
+    final perPlayer = metrics['perPlayer'] as Map<String, dynamic>? ?? {};
+    final parts = <String>[];
+    for (final playerId in game.playerIds as List<String>) {
+      final playerMetrics = perPlayer[playerId] as Map<String, dynamic>?;
+      if (playerMetrics == null) continue;
+      final avg3Dart = playerMetrics['avg3Dart'] as num?;
+      final totalPoints = playerMetrics['totalPoints'] as num?;
+      final validTurns = playerMetrics['validTurns'] as num?;
+      final fallbackAvg =
+          (totalPoints != null && validTurns != null && validTurns > 0)
+              ? totalPoints / validTurns
+              : null;
+      final avg = avg3Dart ?? fallbackAvg;
+      if (avg != null) {
+        parts.add(
+            '${participantNames[playerId] ?? playerId}: ${avg.toStringAsFixed(1)}');
+      }
+    }
+    return parts.isEmpty
+        ? 'Promedio por jugador no disponible'
+        : 'Promedio: ${parts.join(' · ')}';
   }
 }

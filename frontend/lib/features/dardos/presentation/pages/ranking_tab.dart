@@ -7,7 +7,7 @@ import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/da
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_participant/dardos_participant_state.dart';
 
 class RankingTab extends StatefulWidget {
-  const RankingTab({Key? key}) : super(key: key);
+  const RankingTab({super.key});
 
   @override
   State<RankingTab> createState() => _RankingTabState();
@@ -53,9 +53,8 @@ class _RankingTabState extends State<RankingTab>
                     ),
                     TabBar(
                       controller: _tabController,
-                      tabs: _modeLabels
-                          .map((label) => Tab(text: label))
-                          .toList(),
+                      tabs:
+                          _modeLabels.map((label) => Tab(text: label)).toList(),
                     ),
                     Expanded(
                       child: TabBarView(
@@ -92,11 +91,10 @@ class _RankingModeTab extends StatelessWidget {
   final Map<String, String> participantNames;
 
   const _RankingModeTab({
-    Key? key,
     required this.mode,
     required this.games,
     required this.participantNames,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -129,8 +127,14 @@ class _RankingModeTab extends StatelessWidget {
         byId[playerId]!.gamesPlayed++;
       }
       final winnerId = game.winnerId;
-      if (winnerId != null && byId.containsKey(winnerId)) {
-        byId[winnerId]!.gamesWon++;
+      if (winnerId != null) {
+        final winnerPlayerIds =
+            game.teamMode ? game.playersForWinner(winnerId) : [winnerId];
+        for (final playerId in winnerPlayerIds) {
+          if (byId.containsKey(playerId)) {
+            byId[playerId]!.gamesWon++;
+          }
+        }
       }
     }
 
@@ -177,11 +181,9 @@ class _RankingStat {
   int gamesPlayed;
   int gamesWon;
 
-  _RankingStat({
-    required this.name,
-    this.gamesPlayed = 0,
-    this.gamesWon = 0,
-  });
+  _RankingStat({required this.name})
+      : gamesPlayed = 0,
+        gamesWon = 0;
 
   double get winRate => gamesPlayed > 0 ? gamesWon / gamesPlayed : 0;
   String get winRateLabel => '${(winRate * 100).toStringAsFixed(1)}%';
