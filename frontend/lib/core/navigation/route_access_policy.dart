@@ -29,6 +29,7 @@ AppRoutePolicy resolveAppRoutePolicy(String? routeName) {
     case AppRouteNames.myFavorites:
       return const AppRoutePolicy.protected();
     case AppRouteNames.dashboard:
+    case AppRouteNames.news:
     case AppRouteNames.articleDetails:
     default:
       return const AppRoutePolicy.public();

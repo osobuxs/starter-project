@@ -1,5 +1,6 @@
 class AppRouteNames {
   static const dashboard = '/';
+  static const news = '/Noticias';
   static const articleDetails = '/ArticleDetails';
   static const login = '/Login';
   static const register = '/Register';

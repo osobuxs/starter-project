@@ -101,7 +101,7 @@ class _AppSectionDrawer extends StatelessWidget {
             child: const Align(
               alignment: Alignment.bottomLeft,
               child: Text(
-                'Noticias',
+                'MultiApp',
                 style: TextStyle(color: Colors.white, fontSize: 24),
               ),
             ),
@@ -111,6 +111,12 @@ class _AppSectionDrawer extends StatelessWidget {
             label: 'Inicio',
             onTap: () =>
                 _navigateToRoute(context, routeName: AppRouteNames.dashboard),
+          ),
+          _DrawerRouteTile(
+            icon: Icons.article_outlined,
+            label: 'Noticias',
+            onTap: () =>
+                _navigateToRoute(context, routeName: AppRouteNames.news),
           ),
           _DrawerRouteTile(
             icon: Icons.person,
@@ -308,8 +314,7 @@ class _AppSectionDrawer extends StatelessWidget {
     Object? arguments,
     bool skipIfSameDestination = false,
   }) async {
-    final isSameDestination =
-        skipIfSameDestination &&
+    final isSameDestination = skipIfSameDestination &&
         routeName != null &&
         currentRouteName == routeName &&
         arguments == redirectRouteName;

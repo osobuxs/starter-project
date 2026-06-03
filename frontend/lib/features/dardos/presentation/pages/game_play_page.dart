@@ -11,6 +11,7 @@ import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/da
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_participant/dardos_participant_bloc.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_participant/dardos_participant_event.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_participant/dardos_participant_state.dart';
+import 'package:news_app_clean_architecture/features/dardos/presentation/services/dardos_audio_controller.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/widgets/annotator_lock_banner.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/widgets/auto_advance_banner.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/widgets/cricket_board.dart';
@@ -29,11 +30,15 @@ class DardosGamePlayPage extends StatefulWidget {
 
 class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
   late final String _deviceId;
+  late final DardosAudioController _audioController;
+  String? _lastAnnouncedThrowKey;
+  String? _lastBannerKey;
 
   @override
   void initState() {
     super.initState();
     _deviceId = '${DateTime.now().millisecondsSinceEpoch}';
+    _audioController = DardosAudioController();
 
     final bloc = context.read<DardosGameBloc>();
     bloc.add(LoadDardosGameEvent(gameId: widget.gameId));
@@ -51,6 +56,7 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
 
   @override
   void dispose() {
+    _audioController.dispose();
     context.read<DardosGameBloc>().add(
           ReleaseAnnotatorEvent(
             gameId: widget.gameId,
@@ -58,6 +64,56 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
           ),
         );
     super.dispose();
+  }
+
+  String? _throwPlaybackKey(DardosThrowEntity? throw_) {
+    if (throw_ == null) return null;
+    return [
+      throw_.playerId,
+      throw_.setIndex,
+      throw_.legIndex,
+      throw_.turnIndex,
+      throw_.dartIndex,
+      throw_.timestamp,
+      throw_.number,
+      throw_.multiplier,
+      throw_.isMiss,
+      throw_.isBust,
+    ].join('|');
+  }
+
+  void _handleAudioFeedback(DardosGameState state) {
+    final lastThrow = state.throws.isEmpty ? null : state.throws.last;
+    final throwKey = _throwPlaybackKey(lastThrow);
+    if (throwKey != null && throwKey != _lastAnnouncedThrowKey) {
+      _lastAnnouncedThrowKey = throwKey;
+      final spokenScore = lastThrow!.isMiss ? 0 : lastThrow.points;
+      _audioController.speakScore(spokenScore);
+    }
+
+    final bannerKey = '${state.bannerType}|${state.bannerPayload ?? ''}';
+    if (state.bannerType != DardosBannerType.none &&
+        bannerKey != _lastBannerKey) {
+      _lastBannerKey = bannerKey;
+      switch (state.bannerType) {
+        case DardosBannerType.bust:
+          _audioController.playBust();
+          break;
+        case DardosBannerType.legWon:
+          _audioController.playLegWon();
+          break;
+        case DardosBannerType.gameWon:
+          _audioController.playGameWon();
+          break;
+        case DardosBannerType.setWon:
+        case DardosBannerType.none:
+          break;
+      }
+    }
+
+    if (state.bannerType == DardosBannerType.none) {
+      _lastBannerKey = null;
+    }
   }
 
   List<DardosThrowEntity> _displayDartsForPlayer(
@@ -107,11 +163,23 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
       },
       child: BlocConsumer<DardosGameBloc, DardosGameState>(
         listenWhen: (prev, curr) {
+          final prevThrowKey =
+              prev.throws.isEmpty ? null : _throwPlaybackKey(prev.throws.last);
+          final currThrowKey =
+              curr.throws.isEmpty ? null : _throwPlaybackKey(curr.throws.last);
+          if (prevThrowKey != currThrowKey) {
+            return true;
+          }
+          if (prev.bannerType != curr.bannerType ||
+              prev.bannerPayload != curr.bannerPayload) {
+            return true;
+          }
           // 1) If state arrives ALREADY with a winner (came back to a
           //    finished game, no banner shown) → navigate.
           final hadWinnerBefore = prev.game?.winnerId != null;
           final hasWinnerNow = curr.game?.winnerId != null;
-          if (!hadWinnerBefore && hasWinnerNow &&
+          if (!hadWinnerBefore &&
+              hasWinnerNow &&
               curr.bannerType != DardosBannerType.gameWon) {
             return true;
           }
@@ -124,6 +192,7 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
           return curr.status == DardosGameStatus.error;
         },
         listener: (context, state) {
+          _handleAudioFeedback(state);
           if (state.game?.winnerId != null) {
             if (!mounted) return;
             final multi = context.read<DardosMultiGameBloc>();
@@ -143,8 +212,7 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
             });
             return;
           }
-          if (state.status == DardosGameStatus.error &&
-              state.error != null) {
+          if (state.status == DardosGameStatus.error && state.error != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error!)),
             );
@@ -157,8 +225,7 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
             appBar: AppBar(
               title: Text(game?.name ?? 'Dardos'),
             ),
-            body: (state.status == DardosGameStatus.loading ||
-                    game == null)
+            body: (state.status == DardosGameStatus.loading || game == null)
                 ? const Center(child: CircularProgressIndicator())
                 : (game.winnerId != null)
                     ? const Center(
@@ -186,184 +253,187 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
                           ),
                         ),
                       )
-                    : BlocBuilder<DardosParticipantBloc, DardosParticipantState>(
-                    builder: (context, participantState) {
-                      final participantNames = <String, String>{
-                        for (final p in participantState.participants)
-                          p.id: p.name,
-                      };
+                    : BlocBuilder<DardosParticipantBloc,
+                        DardosParticipantState>(
+                        builder: (context, participantState) {
+                          final participantNames = <String, String>{
+                            for (final p in participantState.participants)
+                              p.id: p.name,
+                          };
 
-                      return Stack(
-                        children: [
-                          Column(
+                          return Stack(
                             children: [
-                              LegSetIndicator(
-                                currentSet: game.currentSet,
-                                totalSets: game.sets,
-                                currentLeg: game.currentLeg,
-                                totalLegs: game.legs,
-                                playerIds: game.playerIds,
-                                playerNames: participantNames,
-                                legWinners: game.legWinners,
-                                setWinners: game.setWinners,
-                                mode: game.mode,
-                                doubleOut: game.doubleOut,
-                              ),
-                              AnnotatorLockBanner(
-                                annotatorOwned: state.annotatorOwned,
-                                onTakeControl: () {
-                                  context.read<DardosGameBloc>().add(
-                                        AcquireAnnotatorEvent(
-                                          gameId: widget.gameId,
-                                          deviceId: _deviceId,
-                                        ),
-                                      );
-                                },
-                              ),
-                              if (participantState.isAdmin &&
-                                  !state.annotatorOwned)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 4),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton(
-                                      onPressed: () {
-                                        context
-                                            .read<DardosGameBloc>()
-                                            .add(ReleaseAnnotatorEvent(
+                              Column(
+                                children: [
+                                  LegSetIndicator(
+                                    currentSet: game.currentSet,
+                                    totalSets: game.sets,
+                                    currentLeg: game.currentLeg,
+                                    totalLegs: game.legs,
+                                    playerIds: game.playerIds,
+                                    playerNames: participantNames,
+                                    legWinners: game.legWinners,
+                                    setWinners: game.setWinners,
+                                    mode: game.mode,
+                                    doubleOut: game.doubleOut,
+                                  ),
+                                  AnnotatorLockBanner(
+                                    annotatorOwned: state.annotatorOwned,
+                                    onTakeControl: () {
+                                      context.read<DardosGameBloc>().add(
+                                            AcquireAnnotatorEvent(
                                               gameId: widget.gameId,
                                               deviceId: _deviceId,
-                                            ));
-                                      },
-                                      child: const Text(
-                                          'Forzar liberación de anotador'),
-                                    ),
+                                            ),
+                                          );
+                                    },
                                   ),
-                                ),
-                              // Grid takes the upper half of the screen
-                              Expanded(
-                                flex: 6,
-                                child: game.mode == 'cricket'
-                                    ? SingleChildScrollView(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8),
-                                          child: CricketBoard(
-                                            playerIds: game.playerIds,
-                                            playerNames: participantNames,
-                                            cricketState:
-                                                state.cricketState ??
-                                                    CricketMarksState.empty(
-                                                        game.playerIds),
-                                            currentPlayerId:
-                                                game.currentTurnPlayerId,
+                                  if (participantState.isAdmin &&
+                                      !state.annotatorOwned)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 4),
+                                      child: SizedBox(
+                                        width: double.infinity,
+                                        child: OutlinedButton(
+                                          onPressed: () {
+                                            context
+                                                .read<DardosGameBloc>()
+                                                .add(ReleaseAnnotatorEvent(
+                                                  gameId: widget.gameId,
+                                                  deviceId: _deviceId,
+                                                ));
+                                          },
+                                          child: const Text(
+                                              'Forzar liberación de anotador'),
+                                        ),
+                                      ),
+                                    ),
+                                  // Grid takes the upper half of the screen
+                                  Expanded(
+                                    flex: 6,
+                                    child: game.mode == 'cricket'
+                                        ? SingleChildScrollView(
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(8),
+                                              child: CricketBoard(
+                                                playerIds: game.playerIds,
+                                                playerNames: participantNames,
+                                                cricketState:
+                                                    state.cricketState ??
+                                                        CricketMarksState.empty(
+                                                            game.playerIds),
+                                                currentPlayerId:
+                                                    game.currentTurnPlayerId,
+                                                enabled: state.annotatorOwned,
+                                                onThrow: (target, mult) {
+                                                  final number =
+                                                      target == 'bull'
+                                                          ? 25
+                                                          : target == '0'
+                                                              ? 0
+                                                              : (int.tryParse(
+                                                                      target) ??
+                                                                  0);
+                                                  context
+                                                      .read<DardosGameBloc>()
+                                                      .add(RecordThrowEvent(
+                                                        number: number,
+                                                        multiplier: mult,
+                                                        isMiss: target == '0',
+                                                      ));
+                                                },
+                                              ),
+                                            ),
+                                          )
+                                        : ThrowInputGrid(
                                             enabled: state.annotatorOwned,
-                                            onThrow: (target, mult) {
-                                              final number = target == 'bull'
-                                                  ? 25
-                                                  : target == '0'
-                                                      ? 0
-                                                      : (int.tryParse(
-                                                              target) ??
-                                                          0);
+                                            onThrow: (number, mult) {
                                               context
                                                   .read<DardosGameBloc>()
                                                   .add(RecordThrowEvent(
                                                     number: number,
                                                     multiplier: mult,
-                                                    isMiss: target == '0',
+                                                    isMiss: number == 0,
                                                   ));
                                             },
                                           ),
-                                        ),
-                                      )
-                                    : ThrowInputGrid(
-                                        enabled: state.annotatorOwned,
-                                        onThrow: (number, mult) {
-                                          context
-                                              .read<DardosGameBloc>()
-                                              .add(RecordThrowEvent(
-                                                number: number,
-                                                multiplier: mult,
-                                                isMiss: number == 0,
-                                              ));
-                                        },
-                                      ),
-                              ),
-                              // Undo button — between grid and scoreboards
-                              if (state.annotatorOwned &&
-                                  state.throws.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    height: 40,
-                                    child: OutlinedButton.icon(
-                                      icon: const Icon(Icons.undo, size: 20),
-                                      label: const Text(
-                                        'Deshacer último dardo',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
+                                  ),
+                                  // Undo button — between grid and scoreboards
+                                  if (state.annotatorOwned &&
+                                      state.throws.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      child: SizedBox(
+                                        width: double.infinity,
+                                        height: 40,
+                                        child: OutlinedButton.icon(
+                                          icon:
+                                              const Icon(Icons.undo, size: 20),
+                                          label: const Text(
+                                            'Deshacer último dardo',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            context
+                                                .read<DardosGameBloc>()
+                                                .add(UndoLastThrowEvent());
+                                          },
                                         ),
                                       ),
-                                      onPressed: () {
-                                        context
-                                            .read<DardosGameBloc>()
-                                            .add(UndoLastThrowEvent());
-                                      },
+                                    ),
+                                  // Player scoreboards — bottom portion
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: game.playerIds.map((playerId) {
+                                        final isCurrentTurn = playerId ==
+                                            game.currentTurnPlayerId;
+                                        final turnDarts =
+                                            _displayDartsForPlayer(
+                                                state, playerId);
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 4),
+                                          child: PlayerDartCard(
+                                            name: participantNames[playerId] ??
+                                                playerId,
+                                            isCurrentTurn: isCurrentTurn,
+                                            mode: game.mode,
+                                            remainingScore:
+                                                state.liveScores[playerId],
+                                            cricketPoints: state.cricketState
+                                                ?.pointsByPlayer[playerId],
+                                            currentTurnDarts: turnDarts,
+                                          ),
+                                        );
+                                      }).toList(),
                                     ),
                                   ),
-                                ),
-                              // Player scoreboards — bottom portion
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: game.playerIds.map((playerId) {
-                                    final isCurrentTurn = playerId ==
-                                        game.currentTurnPlayerId;
-                                    final turnDarts =
-                                        _displayDartsForPlayer(state, playerId);
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                          bottom: 4),
-                                      child: PlayerDartCard(
-                                        name: participantNames[playerId] ??
-                                            playerId,
-                                        isCurrentTurn: isCurrentTurn,
-                                        mode: game.mode,
-                                        remainingScore:
-                                            state.liveScores[playerId],
-                                        cricketPoints: state
-                                            .cricketState
-                                            ?.pointsByPlayer[playerId],
-                                        currentTurnDarts: turnDarts,
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
+                                ],
                               ),
+                              if (state.bannerType != DardosBannerType.none)
+                                Positioned.fill(
+                                  child: AutoAdvanceBanner(
+                                    bannerType: state.bannerType,
+                                    bannerPayload: state.bannerPayload,
+                                    onDismiss: () {
+                                      context
+                                          .read<DardosGameBloc>()
+                                          .add(AcknowledgeBannerEvent());
+                                    },
+                                  ),
+                                ),
                             ],
-                          ),
-                          if (state.bannerType != DardosBannerType.none)
-                            Positioned.fill(
-                              child: AutoAdvanceBanner(
-                                bannerType: state.bannerType,
-                                bannerPayload: state.bannerPayload,
-                                onDismiss: () {
-                                  context
-                                      .read<DardosGameBloc>()
-                                      .add(AcknowledgeBannerEvent());
-                                },
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
           );
         },
       ),

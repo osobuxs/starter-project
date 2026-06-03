@@ -12,6 +12,7 @@ import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/pages/login/login_page.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/pages/register/register_page.dart';
+import 'package:news_app_clean_architecture/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:news_app_clean_architecture/features/user_profile/presentation/pages/user_profile_page.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_bloc.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_event.dart';
@@ -23,7 +24,6 @@ import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/
 // Dardos imports
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_bottom_nav/dardos_bottom_nav_bloc.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_game/dardos_game_bloc.dart';
-import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_game/dardos_game_event.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_multi_game/dardos_multi_game_bloc.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/dardos_participant/dardos_participant_bloc.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/pages/dardos_wrapper.dart';
@@ -51,7 +51,14 @@ class AppRoutes {
         return _materialRoute(
           settings,
           policy: policy,
-          child: const DailyNews(),
+          child: const DashboardPage(),
+        );
+
+      case AppRouteNames.news:
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: const DashboardPage(),
         );
 
       case AppRouteNames.articleDetails:
@@ -317,8 +324,7 @@ class AppRoutes {
           policy: policy,
           child: BlocProvider<DardosParticipantBloc>(
             create: (_) => sl<DardosParticipantBloc>(),
-            child: DardosJugadorDetailPage(
-                participantId: dardosParticipantId),
+            child: DardosJugadorDetailPage(participantId: dardosParticipantId),
           ),
         );
 

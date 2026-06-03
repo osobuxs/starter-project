@@ -16,8 +16,22 @@ import 'package:news_app_clean_architecture/features/daily_news/presentation/blo
 import '../../../domain/entities/article.dart';
 import '../../widgets/article_tile.dart';
 
-class DailyNews extends StatelessWidget {
-  const DailyNews({Key? key}) : super(key: key);
+class DailyNews extends StatefulWidget {
+  const DailyNews({super.key});
+
+  @override
+  State<DailyNews> createState() => _DailyNewsState();
+}
+
+class _DailyNewsState extends State<DailyNews> {
+  @override
+  void initState() {
+    super.initState();
+    final bloc = context.read<RemoteArticlesBloc>();
+    if (bloc.state.articles.isEmpty && !bloc.state.isLoading) {
+      bloc.add(const GetArticles());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,16 +43,16 @@ class DailyNews extends StatelessWidget {
       builder: (context, state) {
         if (state.isLoading) {
           return AppSectionScaffold(
-            title: 'Inicio',
-            currentRouteName: AppRouteNames.dashboard,
+            title: 'Noticias',
+            currentRouteName: AppRouteNames.news,
             body: const AppLoadingState(label: 'Cargando noticias...'),
           );
         }
 
         if (state.error != null && state.articles.isEmpty) {
           return AppSectionScaffold(
-            title: 'Inicio',
-            currentRouteName: AppRouteNames.dashboard,
+            title: 'Noticias',
+            currentRouteName: AppRouteNames.news,
             body: _buildErrorState(context, state),
           );
         }
@@ -50,8 +64,8 @@ class DailyNews extends StatelessWidget {
 
   Widget _buildArticlesPage(BuildContext context, RemoteArticlesState state) {
     return AppSectionScaffold(
-      title: 'Inicio',
-      currentRouteName: AppRouteNames.dashboard,
+      title: 'Noticias',
+      currentRouteName: AppRouteNames.news,
       actions: [
         IconButton(
           onPressed: () => _onShowSavedArticlesViewTapped(context),
@@ -94,8 +108,8 @@ class DailyNews extends StatelessWidget {
             TextButton(
               onPressed: () {
                 context.read<RemoteArticlesBloc>().add(
-                  const GetArticles(clearDateFilter: true),
-                );
+                      const GetArticles(clearDateFilter: true),
+                    );
               },
               child: const Text('Limpiar'),
             ),
@@ -128,8 +142,8 @@ class DailyNews extends StatelessWidget {
                     !state.isLoadingMore &&
                     !state.hasReachedMax) {
                   context.read<RemoteArticlesBloc>().add(
-                    const GetArticles(loadMore: true),
-                  );
+                        const GetArticles(loadMore: true),
+                      );
                 }
 
                 return false;
@@ -172,8 +186,8 @@ class DailyNews extends StatelessWidget {
   ) {
     final completer = Completer<void>();
     context.read<RemoteArticlesBloc>().add(
-      GetArticles(selectedDate: state.selectedDate, completer: completer),
-    );
+          GetArticles(selectedDate: state.selectedDate, completer: completer),
+        );
     return completer.future;
   }
 
@@ -189,8 +203,8 @@ class DailyNews extends StatelessWidget {
       emphasized: true,
       onPressed: () {
         context.read<RemoteArticlesBloc>().add(
-          GetArticles(selectedDate: state.selectedDate),
-        );
+              GetArticles(selectedDate: state.selectedDate),
+            );
       },
     );
   }
@@ -207,7 +221,7 @@ class DailyNews extends StatelessWidget {
     navigateRequiringAuthentication(
       context,
       navigationContext: context,
-      currentRouteName: AppRouteNames.dashboard,
+      currentRouteName: AppRouteNames.news,
       destination: const AuthRedirectDestination(
         routeName: AppRouteNames.myFavorites,
       ),
@@ -219,7 +233,7 @@ class DailyNews extends StatelessWidget {
     return navigateToProtectedRoute(
       context,
       navigationContext: context,
-      currentRouteName: AppRouteNames.dashboard,
+      currentRouteName: AppRouteNames.news,
       routeName: AppRouteNames.createArticle,
       label: 'Crear noticia',
     );
@@ -274,8 +288,8 @@ class DailyNews extends StatelessWidget {
     }
 
     context.read<RemoteArticlesBloc>().add(
-      GetArticles(selectedDate: pickedDate),
-    );
+          GetArticles(selectedDate: pickedDate),
+        );
   }
 }
 
