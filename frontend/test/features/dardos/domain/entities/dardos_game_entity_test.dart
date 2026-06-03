@@ -155,6 +155,51 @@ void main() {
       });
     });
 
+    group('team mode helpers', () {
+      final teamGame = game.copyWith(
+        playerIds: const ['p1', 'p2', 'p3', 'p4'],
+        starterOrder: const ['p1', 'p2', 'p3', 'p4'],
+        teamMode: true,
+        teams: const [
+          {
+            'id': 'team_1',
+            'name': 'Equipo 1',
+            'playerIds': ['p1', 'p3'],
+          },
+          {
+            'id': 'team_2',
+            'name': 'Equipo 2',
+            'playerIds': ['p2', 'p4'],
+          },
+        ],
+        playerTeamIds: const {
+          'p1': 'team_1',
+          'p3': 'team_1',
+          'p2': 'team_2',
+          'p4': 'team_2',
+        },
+      );
+
+      test('scoreOwnerIds returns team ids instead of player ids', () {
+        expect(teamGame.scoreOwnerIds, ['team_1', 'team_2']);
+      });
+
+      test('scoreOwnerForPlayer maps player to team', () {
+        expect(teamGame.scoreOwnerForPlayer('p1'), 'team_1');
+        expect(teamGame.scoreOwnerForPlayer('p4'), 'team_2');
+      });
+
+      test('playersForWinner returns both team players', () {
+        expect(teamGame.playersForWinner('team_1'), ['p1', 'p3']);
+      });
+
+      test('non-team mode keeps player as score owner and winner', () {
+        expect(game.scoreOwnerIds, ['p1', 'p2']);
+        expect(game.scoreOwnerForPlayer('p1'), 'p1');
+        expect(game.playersForWinner('p2'), ['p2']);
+      });
+    });
+
     group('nullable fields', () {
       test('winnerId can be null', () {
         expect(game.winnerId, isNull);

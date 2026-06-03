@@ -10,17 +10,19 @@ class PlayerDartCard extends StatelessWidget {
   final String mode;
   final int? remainingScore;
   final int? cricketPoints;
+  final int? turnIndex;
   final List<DardosThrowEntity> currentTurnDarts;
 
   const PlayerDartCard({
-    Key? key,
+    super.key,
     required this.name,
     required this.isCurrentTurn,
     required this.mode,
     this.remainingScore,
     this.cricketPoints,
+    this.turnIndex,
     this.currentTurnDarts = const [],
-  }) : super(key: key);
+  });
 
   int get _turnTotal {
     var t = 0;
@@ -34,12 +36,10 @@ class PlayerDartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCricket = mode == 'cricket';
-    final bigScore = isCricket
-        ? '${cricketPoints ?? 0}'
-        : '${remainingScore ?? 0}';
-    final bgColor = isCurrentTurn
-        ? Colors.amber.shade100
-        : Colors.grey.shade100;
+    final bigScore =
+        isCricket ? '${cricketPoints ?? 0}' : '${remainingScore ?? 0}';
+    final bgColor =
+        isCurrentTurn ? Colors.amber.shade100 : Colors.grey.shade100;
     final accentColor =
         isCurrentTurn ? Colors.deepOrange : Colors.blueGrey.shade700;
 
@@ -115,6 +115,17 @@ class PlayerDartCard extends StatelessWidget {
                     );
                   }),
                 ),
+                if (turnIndex != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Turno ${turnIndex! + 1}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: accentColor,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -126,7 +137,7 @@ class PlayerDartCard extends StatelessWidget {
 
 class _DartChip extends StatelessWidget {
   final DardosThrowEntity? dart;
-  const _DartChip({Key? key, this.dart}) : super(key: key);
+  const _DartChip({this.dart});
 
   @override
   Widget build(BuildContext context) {
@@ -140,8 +151,7 @@ class _DartChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
         ),
         child: const Center(
-          child: Text('—',
-              style: TextStyle(color: Colors.grey, fontSize: 14)),
+          child: Text('—', style: TextStyle(color: Colors.grey, fontSize: 14)),
         ),
       );
     }

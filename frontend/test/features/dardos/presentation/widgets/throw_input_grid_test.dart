@@ -3,13 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:news_app_clean_architecture/features/dardos/presentation/widgets/throw_input_grid.dart';
 
 void main() {
-  Widget _buildTestWidget({
+  Widget buildTestWidget({
     required void Function(int number, int multiplier) onThrow,
     bool enabled = true,
   }) {
     return MaterialApp(
       home: Scaffold(
-        body: SingleChildScrollView(
+        body: SizedBox(
+          height: 600,
           child: ThrowInputGrid(
             onThrow: onThrow,
             enabled: enabled,
@@ -20,43 +21,42 @@ void main() {
   }
 
   group('ThrowInputGrid', () {
-    testWidgets('renders at least 21 buttons (20 numbers + bull + miss)',
+    testWidgets(
+        'renders number tiles for 20 numbers, bull, double bull and miss',
         (tester) async {
-      await tester.pumpWidget(_buildTestWidget(onThrow: (_, __) {}));
+      await tester.pumpWidget(buildTestWidget(onThrow: (_, __) {}));
 
-      // 20 numbers + Bull + Miss = 22 ElevatedButtons
-      expect(find.byType(ElevatedButton), findsAtLeastNWidgets(21));
+      // 20 numbers + 25 + 50 + 0.
+      expect(find.byType(InkWell), findsNWidgets(23));
     });
 
-    testWidgets('renders Miss button', (tester) async {
-      await tester.pumpWidget(_buildTestWidget(onThrow: (_, __) {}));
-      expect(find.textContaining('Miss'), findsOneWidget);
+    testWidgets('renders miss tile', (tester) async {
+      await tester.pumpWidget(buildTestWidget(onThrow: (_, __) {}));
+      expect(find.text('0'), findsOneWidget);
     });
 
-    testWidgets('renders Bull button', (tester) async {
-      await tester.pumpWidget(_buildTestWidget(onThrow: (_, __) {}));
-      expect(find.textContaining('Bull'), findsOneWidget);
+    testWidgets('renders bull tiles', (tester) async {
+      await tester.pumpWidget(buildTestWidget(onThrow: (_, __) {}));
+      expect(find.text('25'), findsOneWidget);
+      expect(find.text('50'), findsOneWidget);
     });
 
-    testWidgets('tap Miss fires callback with number=0 multiplier=1',
+    testWidgets('tap miss fires callback with number=0 multiplier=1',
         (tester) async {
       int? tappedNumber;
       int? tappedMultiplier;
 
-      await tester.pumpWidget(_buildTestWidget(
+      await tester.pumpWidget(buildTestWidget(
         onThrow: (number, multiplier) {
           tappedNumber = number;
           tappedMultiplier = multiplier;
         },
       ));
 
-      // Find the Miss button by its predicate (text contains 'Miss')
-      final missButton = find.byWidgetPredicate((widget) {
-        if (widget is! ElevatedButton) return false;
-        final child = widget.child;
-        if (child is! Text) return false;
-        return child.data?.contains('Miss') ?? false;
-      });
+      final missButton = find.ancestor(
+        of: find.text('0'),
+        matching: find.byType(InkWell),
+      );
 
       expect(missButton, findsOneWidget);
       await tester.ensureVisible(missButton);
@@ -68,18 +68,15 @@ void main() {
     });
 
     testWidgets('buttons are disabled when enabled=false', (tester) async {
-      await tester.pumpWidget(_buildTestWidget(
+      await tester.pumpWidget(buildTestWidget(
         enabled: false,
         onThrow: (_, __) {},
       ));
 
-      // All ElevatedButtons should be disabled (onPressed == null)
-      final buttons =
-          tester.widgetList<ElevatedButton>(find.byType(ElevatedButton));
+      // All tiles should be disabled (onTap == null).
+      final buttons = tester.widgetList<InkWell>(find.byType(InkWell));
       for (final button in buttons) {
-        expect(button.onPressed, isNull,
-            reason:
-                'Button "${(button.child as Text?)?.data}" should be disabled');
+        expect(button.onTap, isNull, reason: 'Tile should be disabled');
       }
     });
   });

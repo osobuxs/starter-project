@@ -22,7 +22,7 @@ import 'package:news_app_clean_architecture/features/dardos/presentation/widgets
 class DardosGamePlayPage extends StatefulWidget {
   final String gameId;
 
-  const DardosGamePlayPage({Key? key, required this.gameId}) : super(key: key);
+  const DardosGamePlayPage({super.key, required this.gameId});
 
   @override
   State<DardosGamePlayPage> createState() => _DardosGamePlayPageState();
@@ -116,50 +116,115 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
     }
   }
 
-  List<DardosThrowEntity> _displayDartsForPlayer(
+  List<DardosThrowEntity> _displayDartsForOwner(
     DardosGameState state,
-    String playerId,
+    String ownerId,
   ) {
     final game = state.game;
     if (game == null) return const [];
-    final isCurrentTurn = playerId == game.currentTurnPlayerId;
-
-    // If this is the player's active turn → show darts thrown so far
-    if (isCurrentTurn) {
-      return state.throws
-          .where((t) =>
-              t.playerId == playerId &&
-              t.setIndex == game.currentSet &&
-              t.legIndex == game.currentLeg &&
-              t.turnIndex == game.currentTurnIndex)
-          .toList();
-    }
-
-    // Otherwise → show their LAST completed turn in this leg, so the user
-    // keeps seeing what they threw while it's the opponent's turn.
-    final myThrowsInLeg = state.throws
+    final isCurrentTurn =
+        ownerId == game.scoreOwnerForPlayer(game.currentTurnPlayerId);
+    final playerIds = game.teamMode
+        ? (game.teams.firstWhere(
+              (t) => t['id'] == ownerId,
+              orElse: () => const <String, dynamic>{},
+            )['playerIds'] as List?)
+                ?.whereType<String>()
+                .toList() ??
+            const <String>[]
+        : [ownerId];
+    final matchingThrows = state.throws
         .where((t) =>
-            t.playerId == playerId &&
+            playerIds.contains(t.playerId) &&
             t.setIndex == game.currentSet &&
             t.legIndex == game.currentLeg)
         .toList();
-    if (myThrowsInLeg.isEmpty) return const [];
-    final lastTurnIdx =
-        myThrowsInLeg.map((t) => t.turnIndex).reduce((a, b) => a > b ? a : b);
-    return myThrowsInLeg.where((t) => t.turnIndex == lastTurnIdx).toList();
+
+    if (matchingThrows.isEmpty) return const [];
+
+    // If the owner is currently on turn, show the active player's darts.
+    // Otherwise show the most recent completed turn for that owner/team.
+    if (isCurrentTurn) {
+      final currentPlayerThrows = matchingThrows
+          .where((t) =>
+              t.playerId == game.currentTurnPlayerId &&
+              t.turnIndex == game.currentTurnIndex)
+          .toList();
+      if (currentPlayerThrows.isNotEmpty) return currentPlayerThrows;
+    }
+
+    final turnIndexes = matchingThrows.map((t) => t.turnIndex).toSet().toList()
+      ..sort();
+    final lastTurnIdx = isCurrentTurn && turnIndexes.length > 1
+        ? turnIndexes[turnIndexes.length - 2]
+        : turnIndexes.last;
+    return matchingThrows.where((t) => t.turnIndex == lastTurnIdx).toList();
+  }
+
+  int? _displayTurnIndexForOwner(
+    DardosGameState state,
+    String ownerId,
+  ) {
+    final game = state.game;
+    if (game == null) return null;
+    final playerIds = game.teamMode
+        ? (game.teams.firstWhere(
+              (t) => t['id'] == ownerId,
+              orElse: () => const <String, dynamic>{},
+            )['playerIds'] as List?)
+                ?.whereType<String>()
+                .toList() ??
+            const <String>[]
+        : [ownerId];
+    final matchingThrows = state.throws
+        .where((t) =>
+            playerIds.contains(t.playerId) &&
+            t.setIndex == game.currentSet &&
+            t.legIndex == game.currentLeg)
+        .toList();
+    if (matchingThrows.isEmpty) return null;
+    final turnIndexes = matchingThrows.map((t) => t.turnIndex).toSet().toList()
+      ..sort();
+    final isCurrentTurn =
+        ownerId == game.scoreOwnerForPlayer(game.currentTurnPlayerId);
+    return isCurrentTurn && turnIndexes.length > 1
+        ? turnIndexes[turnIndexes.length - 2]
+        : turnIndexes.last;
+  }
+
+  String _teamName(Map<String, dynamic> team) =>
+      team['name'] as String? ?? team['id'] as String? ?? 'Equipo';
+
+  Map<String, String> _scoreOwnerNames(
+    DardosGameState state,
+    Map<String, String> participantNames,
+  ) {
+    final game = state.game;
+    if (game == null || !game.teamMode) return participantNames;
+    return {
+      for (final team in game.teams) team['id'] as String: _teamName(team),
+    };
+  }
+
+  String _teamCardSubtitle(
+    Map<String, dynamic> team,
+    Map<String, String> participantNames,
+  ) {
+    final players = List<String>.from((team['playerIds'] as List?) ?? []);
+    return players.map((id) => participantNames[id] ?? id).join(' / ');
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) return;
         context.read<DardosGameBloc>().add(
               ReleaseAnnotatorEvent(
                 gameId: widget.gameId,
                 deviceId: _deviceId,
               ),
             );
-        return true;
       },
       child: BlocConsumer<DardosGameBloc, DardosGameState>(
         listenWhen: (prev, curr) {
@@ -260,6 +325,9 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
                             for (final p in participantState.participants)
                               p.id: p.name,
                           };
+                          final scoreOwnerIds = game.scoreOwnerIds;
+                          final scoreOwnerNames =
+                              _scoreOwnerNames(state, participantNames);
 
                           return Stack(
                             children: [
@@ -270,8 +338,8 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
                                     totalSets: game.sets,
                                     currentLeg: game.currentLeg,
                                     totalLegs: game.legs,
-                                    playerIds: game.playerIds,
-                                    playerNames: participantNames,
+                                    playerIds: scoreOwnerIds,
+                                    playerNames: scoreOwnerNames,
                                     legWinners: game.legWinners,
                                     setWinners: game.setWinners,
                                     mode: game.mode,
@@ -317,14 +385,15 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
                                             child: Padding(
                                               padding: const EdgeInsets.all(8),
                                               child: CricketBoard(
-                                                playerIds: game.playerIds,
-                                                playerNames: participantNames,
+                                                playerIds: scoreOwnerIds,
+                                                playerNames: scoreOwnerNames,
                                                 cricketState:
                                                     state.cricketState ??
                                                         CricketMarksState.empty(
-                                                            game.playerIds),
-                                                currentPlayerId:
-                                                    game.currentTurnPlayerId,
+                                                            scoreOwnerIds),
+                                                currentPlayerId: game
+                                                    .scoreOwnerForPlayer(game
+                                                        .currentTurnPlayerId),
                                                 enabled: state.annotatorOwned,
                                                 onThrow: (target, mult) {
                                                   final number =
@@ -392,24 +461,46 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
                                         horizontal: 8, vertical: 4),
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
-                                      children: game.playerIds.map((playerId) {
-                                        final isCurrentTurn = playerId ==
+                                      children: scoreOwnerIds.map((ownerId) {
+                                        final isCurrentTurn = ownerId ==
+                                            game.scoreOwnerForPlayer(
+                                                game.currentTurnPlayerId);
+                                        final currentPlayerId =
                                             game.currentTurnPlayerId;
-                                        final turnDarts =
-                                            _displayDartsForPlayer(
-                                                state, playerId);
+                                        final turnDarts = _displayDartsForOwner(
+                                            state, ownerId);
+                                        final displayTurnIndex =
+                                            _displayTurnIndexForOwner(
+                                                state, ownerId);
+                                        final team = game.teamMode
+                                            ? game.teams.firstWhere(
+                                                (t) => t['id'] == ownerId,
+                                                orElse: () =>
+                                                    const <String, dynamic>{},
+                                              )
+                                            : const <String, dynamic>{};
+                                        final baseName =
+                                            scoreOwnerNames[ownerId] ?? ownerId;
+                                        final currentPlayerName =
+                                            participantNames[currentPlayerId] ??
+                                                currentPlayerId;
+                                        final name = game.teamMode
+                                            ? (isCurrentTurn
+                                                ? '$baseName · Juega: $currentPlayerName'
+                                                : '$baseName · ${_teamCardSubtitle(team, participantNames)}')
+                                            : baseName;
                                         return Padding(
                                           padding:
                                               const EdgeInsets.only(bottom: 4),
                                           child: PlayerDartCard(
-                                            name: participantNames[playerId] ??
-                                                playerId,
+                                            name: name,
                                             isCurrentTurn: isCurrentTurn,
                                             mode: game.mode,
                                             remainingScore:
-                                                state.liveScores[playerId],
+                                                state.liveScores[ownerId],
                                             cricketPoints: state.cricketState
-                                                ?.pointsByPlayer[playerId],
+                                                ?.pointsByPlayer[ownerId],
+                                            turnIndex: displayTurnIndex,
                                             currentTurnDarts: turnDarts,
                                           ),
                                         );

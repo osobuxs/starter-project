@@ -14,6 +14,9 @@ class CreateDardosGameEvent extends DardosGameEvent {
   final int sets;
   final int legs;
   final List<String> playerIds;
+  final bool teamMode;
+  final List<Map<String, dynamic>> teams;
+  final Map<String, String> playerTeamIds;
   final String createdBy;
 
   const CreateDardosGameEvent({
@@ -23,12 +26,25 @@ class CreateDardosGameEvent extends DardosGameEvent {
     required this.sets,
     required this.legs,
     required this.playerIds,
+    this.teamMode = false,
+    this.teams = const [],
+    this.playerTeamIds = const {},
     required this.createdBy,
   });
 
   @override
-  List<Object?> get props =>
-      [name, mode, doubleOut, sets, legs, playerIds, createdBy];
+  List<Object?> get props => [
+        name,
+        mode,
+        doubleOut,
+        sets,
+        legs,
+        playerIds,
+        teamMode,
+        teams,
+        playerTeamIds,
+        createdBy,
+      ];
 }
 
 class LoadDardosGameEvent extends DardosGameEvent {

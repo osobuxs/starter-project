@@ -11,12 +11,10 @@ import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/da
 class DardosGameFinishedPage extends StatefulWidget {
   final String gameId;
 
-  const DardosGameFinishedPage({Key? key, required this.gameId})
-      : super(key: key);
+  const DardosGameFinishedPage({super.key, required this.gameId});
 
   @override
-  State<DardosGameFinishedPage> createState() =>
-      _DardosGameFinishedPageState();
+  State<DardosGameFinishedPage> createState() => _DardosGameFinishedPageState();
 }
 
 class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
@@ -57,9 +55,23 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
               };
 
               final winnerId = game.winnerId;
-              final winnerName = winnerId != null
-                  ? (participantNames[winnerId] ?? winnerId)
-                  : 'Sin ganador';
+              Map<String, dynamic>? winnerTeam;
+              if (game.teamMode && winnerId != null) {
+                for (final team in game.teams) {
+                  if (team['id'] == winnerId) {
+                    winnerTeam = team;
+                    break;
+                  }
+                }
+              }
+              final winnerPlayerIds = winnerId == null
+                  ? const <String>[]
+                  : game.playersForWinner(winnerId);
+              final winnerName = winnerTeam != null
+                  ? (winnerTeam['name'] as String? ?? winnerId!)
+                  : (winnerId != null
+                      ? (participantNames[winnerId] ?? winnerId)
+                      : 'Sin ganador');
 
               return Column(
                 children: [
@@ -110,10 +122,11 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
                         itemBuilder: (context, index) {
                           final playerId = game.playerIds[index];
                           final name = participantNames[playerId] ?? playerId;
-                          final isWinner = playerId == winnerId;
+                          final isWinner = game.teamMode
+                              ? winnerPlayerIds.contains(playerId)
+                              : playerId == winnerId;
 
-                          final metrics =
-                              game.computedMetrics as Map<String, dynamic>?;
+                          final metrics = game.computedMetrics;
                           final perPlayer =
                               metrics?['perPlayer'] as Map<String, dynamic>?;
                           final playerMetrics =
@@ -127,9 +140,7 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
                               child: Text(
                                 '${index + 1}',
                                 style: TextStyle(
-                                  color: isWinner
-                                      ? Colors.white
-                                      : Colors.black,
+                                  color: isWinner ? Colors.white : Colors.black,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -154,7 +165,9 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
                         itemBuilder: (context, index) {
                           final playerId = game.playerIds[index];
                           final name = participantNames[playerId] ?? playerId;
-                          final isWinner = playerId == winnerId;
+                          final isWinner = game.teamMode
+                              ? winnerPlayerIds.contains(playerId)
+                              : playerId == winnerId;
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: isWinner
@@ -223,8 +236,8 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
       );
       return;
     }
-    final grouped =
-        <String, List<dynamic>>{}; // key: setX_legY_turnZ_player → list of throws
+    final grouped = <String,
+        List<dynamic>>{}; // key: setX_legY_turnZ_player → list of throws
     for (final t in throws) {
       final key =
           'Set ${t.setIndex + 1} · Leg ${t.legIndex + 1} · Turno ${t.turnIndex + 1} · ${participantNames[t.playerId] ?? t.playerId}';
@@ -277,17 +290,14 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
                         if (t.isBust == true) return s;
                         return s + (t.points as int);
                       });
-                      final hasBust =
-                          darts.any((t) => t.isBust == true);
+                      final hasBust = darts.any((t) => t.isBust == true);
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 4),
-                        color:
-                            hasBust ? Colors.red.shade50 : null,
+                        color: hasBust ? Colors.red.shade50 : null,
                         child: Padding(
                           padding: const EdgeInsets.all(10),
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
@@ -365,7 +375,6 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
     Map<String, dynamic>? allMetrics,
   ) {
     if (mode == 'cricket') {
-      final perPlayerCricket = allMetrics?['perPlayerCricket'];
       // perPlayerCricket is keyed by playerId but we only have playerMetrics here
       return null; // no easy way to get playerId here; show nothing
     }

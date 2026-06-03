@@ -16,6 +16,9 @@ abstract class DardosFirestoreDataSource {
     required int sets,
     required int legs,
     required List<String> playerIds,
+    bool teamMode = false,
+    List<Map<String, dynamic>> teams = const [],
+    Map<String, String> playerTeamIds = const {},
     required String createdBy,
   });
 
@@ -94,6 +97,7 @@ abstract class DardosFirestoreDataSource {
   Future<void> updateParticipantStatsOnGameFinished({
     required List<String> playerIds,
     required String winnerId,
+    List<String> winnerPlayerIds = const [],
     required String mode,
     required Map<String, dynamic> metricsPerPlayer,
     Map<String, Map<String, int>> freqByPlayer = const {},

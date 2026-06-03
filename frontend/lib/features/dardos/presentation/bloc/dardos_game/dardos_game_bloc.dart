@@ -46,6 +46,13 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       ));
       return;
     }
+    if (event.teamMode && event.playerIds.length != 4) {
+      emit(state.copyWith(
+        status: DardosGameStatus.error,
+        error: 'Para jugar 2 vs 2 se necesitan exactamente 4 jugadores',
+      ));
+      return;
+    }
 
     emit(state.copyWith(status: DardosGameStatus.loading));
 
@@ -56,6 +63,9 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       sets: event.sets,
       legs: event.legs,
       playerIds: event.playerIds,
+      teamMode: event.teamMode,
+      teams: event.teams,
+      playerTeamIds: event.playerTeamIds,
       createdBy: event.createdBy,
     );
 
@@ -138,11 +148,13 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       return;
     }
     // Defensive: no more than 3 darts per turn for the same player
-    final dartsInCurrentTurn = state.throws.where((t) =>
-        t.playerId == game.currentTurnPlayerId &&
-        t.setIndex == game.currentSet &&
-        t.legIndex == game.currentLeg &&
-        t.turnIndex == game.currentTurnIndex).length;
+    final dartsInCurrentTurn = state.throws
+        .where((t) =>
+            t.playerId == game.currentTurnPlayerId &&
+            t.setIndex == game.currentSet &&
+            t.legIndex == game.currentLeg &&
+            t.turnIndex == game.currentTurnIndex)
+        .length;
     if (dartsInCurrentTurn >= 3) return;
     // Drop concurrent throws — only one write may be in flight at a time
     if (_writeInFlight) return;
@@ -159,9 +171,9 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     Emitter<DardosGameState> emit,
     DardosGameEntity game,
   ) async {
-
     final mode = game.mode;
     final playerId = game.currentTurnPlayerId;
+    final scoreOwnerId = game.scoreOwnerForPlayer(playerId);
     final points = event.isMiss ? 0 : event.number * event.multiplier;
 
     // Determine isBust / remainingAfter for 501/301 using the *recomputed*
@@ -170,8 +182,8 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     bool isBust_ = false;
 
     if (!event.isMiss && (mode == '501' || mode == '301')) {
-      final currentRemaining = state.liveScores[playerId] ??
-          (mode == '501' ? 501 : 301);
+      final currentRemaining =
+          state.liveScores[scoreOwnerId] ?? (mode == '501' ? 501 : 301);
       final after = currentRemaining - points;
       isBust_ = isBust(
         remainingBefore: currentRemaining,
@@ -188,7 +200,9 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     if (mode == 'cricket' && !event.isMiss) {
       cricketTarget = event.number == 25
           ? 'bull'
-          : (event.number >= 15 && event.number <= 20 ? '${event.number}' : null);
+          : (event.number >= 15 && event.number <= 20
+              ? '${event.number}'
+              : null);
       if (cricketTarget != null) {
         cricketMarksDelta = event.multiplier;
       }
@@ -321,9 +335,9 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
         _repository.updateParticipantStatsOnGameFinished(
           playerIds: rg.playerIds,
           winnerId: rg.winnerId!,
+          winnerPlayerIds: rg.playersForWinner(rg.winnerId!),
           mode: rg.mode,
-          metricsPerPlayer:
-              metrics['perPlayer'] as Map<String, dynamic>? ?? {},
+          metricsPerPlayer: metrics['perPlayer'] as Map<String, dynamic>? ?? {},
           freqByPlayer: freqByPlayer,
         ),
       ]).catchError((_) => <DataState<void>>[]);
@@ -360,7 +374,6 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     DardosGameEntity game,
     Emitter<DardosGameState> emit,
   ) async {
-
     // 1. Optimistic local update: remove last throw, recompute, emit
     final remaining = [...state.throws]..removeLast();
     final recomputed = _recomputeGameState(
@@ -446,8 +459,7 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     required List<DardosThrowEntity> throws_,
   }) {
     final mode = baseGame.mode;
-    final legStartScore =
-        mode == '501' ? 501 : (mode == '301' ? 301 : 0);
+    final legStartScore = mode == '501' ? 501 : (mode == '301' ? 301 : 0);
 
     // Pre-compute which (player, set, leg, turn) tuples have a bust.
     // Used to void entire turns when summing.
@@ -455,7 +467,7 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     for (final t in throws_) {
       if (t.isBust) {
         bustedTurns.add(
-            '${t.playerId}|${t.setIndex}|${t.legIndex}|${t.turnIndex}');
+            '${baseGame.scoreOwnerForPlayer(t.playerId)}|${t.setIndex}|${t.legIndex}|${t.turnIndex}');
       }
     }
 
@@ -483,10 +495,12 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       }
     }
 
+    final scoreOwnerIds = baseGame.scoreOwnerIds;
+
     var liveScores = <String, int>{
-      for (final p in baseGame.playerIds) p: legStartScore,
+      for (final p in scoreOwnerIds) p: legStartScore,
     };
-    var cricket = CricketMarksState.empty(baseGame.playerIds);
+    var cricket = CricketMarksState.empty(scoreOwnerIds);
 
     // Walk throws in order, applying each one.
     var currentLegSet = -1;
@@ -498,10 +512,8 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       if (t.setIndex != currentLegSet || t.legIndex != currentLegLeg) {
         currentLegSet = t.setIndex;
         currentLegLeg = t.legIndex;
-        liveScores = {
-          for (final p in baseGame.playerIds) p: legStartScore,
-        };
-        cricket = CricketMarksState.empty(baseGame.playerIds);
+        liveScores = {for (final p in scoreOwnerIds) p: legStartScore};
+        cricket = CricketMarksState.empty(scoreOwnerIds);
       }
 
       // Make sure legWinners has a slot for this set and leg index
@@ -516,9 +528,10 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       }
 
       if (mode == 'cricket') {
+        final scoreOwnerId = baseGame.scoreOwnerForPlayer(t.playerId);
         if (t.cricketTarget != null && !t.isMiss && !t.isBust) {
           final marksForTarget = <String, int>{};
-          for (final pid in baseGame.playerIds) {
+          for (final pid in scoreOwnerIds) {
             marksForTarget[pid] =
                 cricket.marksByPlayer[pid]?[t.cricketTarget!] ?? 0;
           }
@@ -527,43 +540,42 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
               : (int.tryParse(t.cricketTarget!) ?? 0);
           final earned = computePointsFromOverflow(
             playerMarksOnTarget: marksForTarget,
-            playerId: t.playerId,
+            playerId: scoreOwnerId,
             target: t.cricketTarget!,
             multiplierApplied: t.multiplier,
             basePoints: basePoints,
           );
           cricket = computeMarksAfterThrow(
             currentState: cricket,
-            playerId: t.playerId,
+            playerId: scoreOwnerId,
             target: t.cricketTarget!,
             multiplier: t.multiplier,
           );
           if (earned > 0) {
             final newPoints = Map<String, int>.from(cricket.pointsByPlayer);
-            newPoints[t.playerId] =
-                (newPoints[t.playerId] ?? 0) + earned;
+            newPoints[scoreOwnerId] = (newPoints[scoreOwnerId] ?? 0) + earned;
             cricket = cricket.copyWith(pointsByPlayer: newPoints);
           }
           // Cricket leg-winner check
           if (isCricketWinner(
             state: cricket,
-            playerId: t.playerId,
-            playerIds: baseGame.playerIds,
+            playerId: scoreOwnerId,
+            playerIds: scoreOwnerIds,
           )) {
-            legWinners[t.setIndex][t.legIndex] = t.playerId;
+            legWinners[t.setIndex][t.legIndex] = scoreOwnerId;
           }
         }
       } else {
+        final scoreOwnerId = baseGame.scoreOwnerForPlayer(t.playerId);
         // 501/301: void entire turn if it contains any bust dart
         final turnKey =
-            '${t.playerId}|${t.setIndex}|${t.legIndex}|${t.turnIndex}';
+            '$scoreOwnerId|${t.setIndex}|${t.legIndex}|${t.turnIndex}';
         final turnBusted = bustedTurns.contains(turnKey);
 
         if (!turnBusted && !t.isMiss) {
-          final remainingBefore =
-              liveScores[t.playerId] ?? legStartScore;
+          final remainingBefore = liveScores[scoreOwnerId] ?? legStartScore;
           final remainingAfter = remainingBefore - t.points;
-          liveScores[t.playerId] = remainingAfter;
+          liveScores[scoreOwnerId] = remainingAfter;
 
           // Leg winner: reached 0 with valid checkout
           if (remainingAfter == 0) {
@@ -574,7 +586,7 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
               doubleOut: baseGame.doubleOut,
             );
             if (valid) {
-              legWinners[t.setIndex][t.legIndex] = t.playerId;
+              legWinners[t.setIndex][t.legIndex] = scoreOwnerId;
             }
           }
         }
@@ -602,8 +614,9 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       curDartIdx = 0;
     } else {
       final last = lastApplied;
+      final lastScoreOwnerId = baseGame.scoreOwnerForPlayer(last.playerId);
       final legWonByLast =
-          legWinners[last.setIndex][last.legIndex] == last.playerId &&
+          legWinners[last.setIndex][last.legIndex] == lastScoreOwnerId &&
               !last.isBust &&
               !last.isMiss;
 
@@ -626,10 +639,8 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
         curDartIdx = 0;
         // Reset live scores for new leg unless the game is over.
         if (gWinner == null) {
-          liveScores = {
-            for (final p in baseGame.playerIds) p: legStartScore,
-          };
-          cricket = CricketMarksState.empty(baseGame.playerIds);
+          liveScores = {for (final p in scoreOwnerIds) p: legStartScore};
+          cricket = CricketMarksState.empty(scoreOwnerIds);
         }
       } else {
         curSet = last.setIndex;
@@ -658,8 +669,8 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       );
       final starterIdx = baseGame.playerIds.indexOf(starter);
       if (starterIdx >= 0) {
-        currentPlayerId = baseGame.playerIds[
-            (starterIdx + curTurnIdx) % baseGame.playerIds.length];
+        currentPlayerId = baseGame
+            .playerIds[(starterIdx + curTurnIdx) % baseGame.playerIds.length];
       }
     }
 
@@ -748,17 +759,15 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     final bustedTurns = <String>{};
     for (final t in throws_) {
       if (t.isBust) {
-        bustedTurns.add(
-            '${t.playerId}|${t.setIndex}|${t.legIndex}|${t.turnIndex}');
+        bustedTurns
+            .add('${t.playerId}|${t.setIndex}|${t.legIndex}|${t.turnIndex}');
       }
     }
     for (final t in throws_) {
       final turnKey =
           '${t.playerId}|${t.setIndex}|${t.legIndex}|${t.turnIndex}';
       if (bustedTurns.contains(turnKey)) continue;
-      final key = t.isMiss
-          ? '0_1'
-          : '${t.number}_${t.multiplier}';
+      final key = t.isMiss ? '0_1' : '${t.number}_${t.multiplier}';
       final freq = result[t.playerId];
       if (freq != null) {
         freq[key] = (freq[key] ?? 0) + 1;

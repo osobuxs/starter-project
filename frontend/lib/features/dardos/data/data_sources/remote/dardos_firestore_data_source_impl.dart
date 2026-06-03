@@ -29,6 +29,9 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
     required int sets,
     required int legs,
     required List<String> playerIds,
+    bool teamMode = false,
+    List<Map<String, dynamic>> teams = const [],
+    Map<String, String> playerTeamIds = const {},
     required String createdBy,
   }) async {
     final ref = _games.doc();
@@ -52,6 +55,9 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
       createdBy: createdBy,
       playerIds: List.from(playerIds),
       starterOrder: List.from(playerIds),
+      teamMode: teamMode,
+      teams: teams,
+      playerTeamIds: playerTeamIds,
       rosterLocked: false,
       currentSet: 0,
       currentLeg: 0,
@@ -92,8 +98,7 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
 
   @override
   Future<List<DardosGameEntity>> getGameHistory() async {
-    final snap =
-        await _games.orderBy('createdAt', descending: true).get();
+    final snap = await _games.orderBy('createdAt', descending: true).get();
     return Future.wait(snap.docs.map((d) => getGame(d.id)));
   }
 
@@ -182,8 +187,7 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
       'currentTurnIndex': currentTurnIndex,
       'currentDartIndex': currentDartIndex,
       'legWinners': {
-        for (var i = 0; i < legWinners.length; i++)
-          i.toString(): legWinners[i],
+        for (var i = 0; i < legWinners.length; i++) i.toString(): legWinners[i],
       },
       'setWinners': setWinners,
       'rosterLocked': rosterLocked,
@@ -240,8 +244,7 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
       final lastAt = snap.data()?['activeAnnotatorAt'] as int?;
       final now = DateTime.now().millisecondsSinceEpoch;
 
-      final isStale =
-          lastAt != null && (now - lastAt) > _annotatorTtlMs;
+      final isStale = lastAt != null && (now - lastAt) > _annotatorTtlMs;
 
       if (current == null || current == deviceId || isStale) {
         tx.update(ref, {
@@ -320,6 +323,7 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
   Future<void> updateParticipantStatsOnGameFinished({
     required List<String> playerIds,
     required String winnerId,
+    List<String> winnerPlayerIds = const [],
     required String mode,
     required Map<String, dynamic> metricsPerPlayer,
     Map<String, Map<String, int>> freqByPlayer = const {},
@@ -333,13 +337,14 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
       final updates = <String, dynamic>{
         'totalGamesPlayed': FieldValue.increment(1),
       };
-      if (pid == winnerId) {
+      final isWinner = pid == winnerId || winnerPlayerIds.contains(pid);
+      if (isWinner) {
         updates['totalGamesWon'] = FieldValue.increment(1);
       }
       // Per-mode aggregate counters
       final modeKey = mode;
       updates['statsByMode.$modeKey.played'] = FieldValue.increment(1);
-      if (pid == winnerId) {
+      if (isWinner) {
         updates['statsByMode.$modeKey.won'] = FieldValue.increment(1);
       }
       // Per-mode score/turn aggregates from this game's metrics

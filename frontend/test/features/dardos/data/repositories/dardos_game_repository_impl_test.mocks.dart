@@ -75,6 +75,9 @@ class MockDardosFirestoreDataSource extends _i1.Mock
     required int? sets,
     required int? legs,
     required List<String>? playerIds,
+    bool? teamMode = false,
+    List<Map<String, dynamic>>? teams = const [],
+    Map<String, String>? playerTeamIds = const {},
     required String? createdBy,
   }) =>
       (super.noSuchMethod(
@@ -88,6 +91,9 @@ class MockDardosFirestoreDataSource extends _i1.Mock
             #sets: sets,
             #legs: legs,
             #playerIds: playerIds,
+            #teamMode: teamMode,
+            #teams: teams,
+            #playerTeamIds: playerTeamIds,
             #createdBy: createdBy,
           },
         ),
@@ -104,6 +110,9 @@ class MockDardosFirestoreDataSource extends _i1.Mock
               #sets: sets,
               #legs: legs,
               #playerIds: playerIds,
+              #teamMode: teamMode,
+              #teams: teams,
+              #playerTeamIds: playerTeamIds,
               #createdBy: createdBy,
             },
           ),
@@ -121,6 +130,9 @@ class MockDardosFirestoreDataSource extends _i1.Mock
               #sets: sets,
               #legs: legs,
               #playerIds: playerIds,
+              #teamMode: teamMode,
+              #teams: teams,
+              #playerTeamIds: playerTeamIds,
               #createdBy: createdBy,
             },
           ),
@@ -453,8 +465,10 @@ class MockDardosFirestoreDataSource extends _i1.Mock
   _i6.Future<void> updateParticipantStatsOnGameFinished({
     required List<String>? playerIds,
     required String? winnerId,
+    List<String>? winnerPlayerIds = const [],
     required String? mode,
     required Map<String, dynamic>? metricsPerPlayer,
+    Map<String, Map<String, int>>? freqByPlayer = const {},
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -463,8 +477,10 @@ class MockDardosFirestoreDataSource extends _i1.Mock
           {
             #playerIds: playerIds,
             #winnerId: winnerId,
+            #winnerPlayerIds: winnerPlayerIds,
             #mode: mode,
             #metricsPerPlayer: metricsPerPlayer,
+            #freqByPlayer: freqByPlayer,
           },
         ),
         returnValue: _i6.Future<void>.value(),

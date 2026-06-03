@@ -46,8 +46,7 @@ DardosGameEntity makeGame501({
     currentTurnPlayerId: playerIds.first,
     currentTurnIndex: 0,
     currentDartIndex: 0,
-    legWinners: legWinners ??
-        [List<String?>.filled(legs, null)],
+    legWinners: legWinners ?? [List<String?>.filled(legs, null)],
     setWinners: setWinners,
     winnerId: winnerId,
     activeAnnotator: activeAnnotator,
@@ -127,7 +126,8 @@ void main() {
         isA<DardosGameState>()
             .having((s) => s.status, 'loading', DardosGameStatus.loading),
         isA<DardosGameState>()
-            .having((s) => s.status, 'gameCreated', DardosGameStatus.gameCreated)
+            .having(
+                (s) => s.status, 'gameCreated', DardosGameStatus.gameCreated)
             .having((s) => s.game, 'game non-null', isNotNull),
       ],
       verify: (_) => verify(mockRepo.createGame(
@@ -228,8 +228,8 @@ void main() {
         )).thenAnswer((_) async => const DataSuccess(true));
         return buildBloc();
       },
-      act: (bloc) => bloc.add(
-          const AcquireAnnotatorEvent(gameId: 'g1', deviceId: 'deviceA')),
+      act: (bloc) => bloc
+          .add(const AcquireAnnotatorEvent(gameId: 'g1', deviceId: 'deviceA')),
       expect: () => [
         isA<DardosGameState>().having(
           (s) => s.annotatorOwned,
@@ -248,8 +248,8 @@ void main() {
         )).thenAnswer((_) async => const DataSuccess(false));
         return buildBloc();
       },
-      act: (bloc) => bloc.add(
-          const AcquireAnnotatorEvent(gameId: 'g1', deviceId: 'deviceB')),
+      act: (bloc) => bloc
+          .add(const AcquireAnnotatorEvent(gameId: 'g1', deviceId: 'deviceB')),
       expect: () => [
         isA<DardosGameState>().having(
           (s) => s.annotatorOwned,
@@ -303,8 +303,8 @@ void main() {
         )).thenAnswer((_) async => const DataSuccess(null));
         return buildBloc();
       },
-      act: (bloc) => bloc.add(
-          const ReleaseAnnotatorEvent(gameId: 'g1', deviceId: 'deviceA')),
+      act: (bloc) => bloc
+          .add(const ReleaseAnnotatorEvent(gameId: 'g1', deviceId: 'deviceA')),
       expect: () => [
         isA<DardosGameState>().having(
           (s) => s.annotatorOwned,
@@ -357,6 +357,11 @@ void main() {
           'rosterLocked',
           isTrue,
         ),
+        isA<DardosGameState>().having(
+          (s) => s.game?.rosterLocked,
+          'rosterLocked after persisted throw sync',
+          isTrue,
+        ),
       ],
     );
 
@@ -402,6 +407,11 @@ void main() {
           'rosterLocked stays true',
           isTrue,
         ),
+        isA<DardosGameState>().having(
+          (s) => s.game?.rosterLocked,
+          'rosterLocked stays true after persisted throw sync',
+          isTrue,
+        ),
       ],
     );
   });
@@ -444,8 +454,14 @@ void main() {
       )),
       expect: () => [
         isA<DardosGameState>()
-            .having((s) => s.status, 'throwRecorded', DardosGameStatus.throwRecorded)
+            .having((s) => s.status, 'throwRecorded',
+                DardosGameStatus.throwRecorded)
             .having((s) => s.liveScores['p1'], 'score updated', lessThan(501)),
+        isA<DardosGameState>()
+            .having((s) => s.status, 'throwRecorded after persisted throw sync',
+                DardosGameStatus.throwRecorded)
+            .having((s) => s.liveScores['p1'], 'score remains updated',
+                lessThan(501)),
       ],
       verify: (_) => verify(mockRepo.appendThrow(
         gameId: anyNamed('gameId'),
@@ -462,6 +478,7 @@ void main() {
           rosterLocked: true,
         ).copyWith(currentDartIndex: 1),
         annotatorOwned: true,
+        throws: [makeThrow(number: 489, multiplier: 1, remainingAfter: 12)],
         // p1 has 32 left, dart 1 scored 20, now has 12 left;
         // dart 2: 15 points → 12-15=-3 → BUST
         liveScores: const {'p1': 12, 'p2': 501},
@@ -503,6 +520,11 @@ void main() {
           'bust banner',
           DardosBannerType.bust,
         ),
+        isA<DardosGameState>().having(
+          (s) => s.bannerType,
+          'bust banner after persisted throw sync',
+          DardosBannerType.bust,
+        ),
       ],
     );
   });
@@ -521,8 +543,9 @@ void main() {
           rosterLocked: true,
           sets: 1,
           legs: 3,
-        ),
+        ).copyWith(currentDartIndex: 1),
         annotatorOwned: true,
+        throws: [makeThrow(number: 461, multiplier: 1, remainingAfter: 40)],
         liveScores: const {'p1': 40, 'p2': 200},
       ),
       build: () {
@@ -533,7 +556,7 @@ void main() {
           setIndex: 0,
           legIndex: 0,
           turnIndex: 0,
-          dartIndex: 0,
+          dartIndex: 1,
           number: 20,
           multiplier: 2,
           points: 40,
@@ -572,6 +595,11 @@ void main() {
           'bannerType=legWon',
           DardosBannerType.legWon,
         ),
+        isA<DardosGameState>().having(
+          (s) => s.bannerType,
+          'bannerType=legWon after persisted throw sync',
+          DardosBannerType.legWon,
+        ),
       ],
     );
 
@@ -591,8 +619,9 @@ void main() {
             legWinners: const [
               [null]
             ],
-          ),
+          ).copyWith(currentDartIndex: 1),
           annotatorOwned: true,
+          throws: [makeThrow(number: 461, multiplier: 1, remainingAfter: 40)],
           liveScores: const {'p1': 40, 'p2': 200},
         );
       },
@@ -603,7 +632,7 @@ void main() {
           setIndex: 0,
           legIndex: 0,
           turnIndex: 0,
-          dartIndex: 0,
+          dartIndex: 1,
           number: 20,
           multiplier: 2,
           points: 40,
@@ -637,8 +666,10 @@ void main() {
         when(mockRepo.updateParticipantStatsOnGameFinished(
           playerIds: anyNamed('playerIds'),
           winnerId: anyNamed('winnerId'),
+          winnerPlayerIds: anyNamed('winnerPlayerIds'),
           mode: anyNamed('mode'),
           metricsPerPlayer: anyNamed('metricsPerPlayer'),
+          freqByPlayer: anyNamed('freqByPlayer'),
         )).thenAnswer((_) async => const DataSuccess(null));
         when(mockRepo.releaseAnnotator(
           gameId: anyNamed('gameId'),
@@ -657,6 +688,11 @@ void main() {
           'bannerType=gameWon',
           DardosBannerType.gameWon,
         ),
+        isA<DardosGameState>().having(
+          (s) => s.bannerType,
+          'bannerType=gameWon after persisted throw sync',
+          DardosBannerType.gameWon,
+        ),
       ],
       verify: (_) {
         verify(mockRepo.finishGame(
@@ -667,8 +703,10 @@ void main() {
         verify(mockRepo.updateParticipantStatsOnGameFinished(
           playerIds: anyNamed('playerIds'),
           winnerId: anyNamed('winnerId'),
+          winnerPlayerIds: anyNamed('winnerPlayerIds'),
           mode: anyNamed('mode'),
           metricsPerPlayer: anyNamed('metricsPerPlayer'),
+          freqByPlayer: anyNamed('freqByPlayer'),
         )).called(1);
       },
     );
@@ -716,7 +754,7 @@ void main() {
       ],
       verify: (_) {
         verify(mockRepo.deleteLastThrow(any)).called(1);
-        verify(mockRepo.getThrows(any)).called(1);
+        verifyNever(mockRepo.getThrows(any));
       },
     );
 
@@ -830,8 +868,8 @@ void main() {
         isAdmin: true,
       )),
       expect: () => [
-        isA<DardosGameState>()
-            .having((s) => s.status, 'cancelled', DardosGameStatus.gameCancelled),
+        isA<DardosGameState>().having(
+            (s) => s.status, 'cancelled', DardosGameStatus.gameCancelled),
       ],
       verify: (_) => verify(mockRepo.cancelGame(
         gameId: anyNamed('gameId'),

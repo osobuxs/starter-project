@@ -12,7 +12,7 @@ import 'package:news_app_clean_architecture/features/dardos/presentation/bloc/da
 import 'package:firebase_auth/firebase_auth.dart';
 
 class DardosCreateGamePage extends StatefulWidget {
-  const DardosCreateGamePage({Key? key}) : super(key: key);
+  const DardosCreateGamePage({super.key});
 
   @override
   State<DardosCreateGamePage> createState() => _DardosCreateGamePageState();
@@ -20,9 +20,12 @@ class DardosCreateGamePage extends StatefulWidget {
 
 class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
   final _gameNameController = TextEditingController();
+  final _team1NameController = TextEditingController(text: 'Equipo 1');
+  final _team2NameController = TextEditingController(text: 'Equipo 2');
   final List<String> _selectedPlayerIds = [];
 
   String _mode = '501';
+  bool _teamMode = false;
   bool _doubleOut = false;
   int _sets = 1;
   int _legs = 3;
@@ -36,7 +39,19 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
   @override
   void dispose() {
     _gameNameController.dispose();
+    _team1NameController.dispose();
+    _team2NameController.dispose();
     super.dispose();
+  }
+
+  String _teamSlotLabel(int index) {
+    const labels = [
+      'Equipo 1 · Jugador 1',
+      'Equipo 2 · Jugador 1',
+      'Equipo 1 · Jugador 2',
+      'Equipo 2 · Jugador 2',
+    ];
+    return index >= 0 && index < labels.length ? labels[index] : 'Jugador';
   }
 
   @override
@@ -68,9 +83,52 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                   // Game name
                   const Text(
                     'Nombre de la Partida',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 8),
+
+                  SwitchListTile(
+                    title: const Text('Jugar por equipos 2 vs 2'),
+                    subtitle: const Text(
+                      'Cada equipo comparte score; las estadísticas se guardan por jugador.',
+                    ),
+                    value: _teamMode,
+                    onChanged: (value) {
+                      setState(() {
+                        _teamMode = value;
+                        if (_teamMode && _selectedPlayerIds.length > 4) {
+                          _selectedPlayerIds.removeRange(
+                            4,
+                            _selectedPlayerIds.length,
+                          );
+                        }
+                      });
+                    },
+                  ),
+
+                  if (_teamMode) ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _team1NameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre Equipo 1',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _team2NameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre Equipo 2',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Seleccioná 4 jugadores y ordenalos así: Equipo 1 J1, Equipo 2 J1, Equipo 1 J2, Equipo 2 J2.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   TextField(
                     controller: _gameNameController,
@@ -85,16 +143,14 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                   // Mode selector
                   const Text(
                     'Modo de juego',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   SegmentedButton<String>(
                     segments: const [
                       ButtonSegment(value: '501', label: Text('501')),
                       ButtonSegment(value: '301', label: Text('301')),
-                      ButtonSegment(
-                          value: 'cricket', label: Text('Cricket')),
+                      ButtonSegment(value: 'cricket', label: Text('Cricket')),
                     ],
                     selected: {_mode},
                     onSelectionChanged: (Set<String> selected) {
@@ -112,8 +168,8 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                   if (_mode != 'cricket')
                     SwitchListTile(
                       title: const Text('Double out'),
-                      subtitle: const Text(
-                          'Requiere doble para terminar el leg'),
+                      subtitle:
+                          const Text('Requiere doble para terminar el leg'),
                       value: _doubleOut,
                       onChanged: (val) {
                         setState(() => _doubleOut = val);
@@ -130,13 +186,11 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 16),
                       IconButton(
-                        onPressed: _sets > 1
-                            ? () => setState(() => _sets -= 2)
-                            : null,
+                        onPressed:
+                            _sets > 1 ? () => setState(() => _sets -= 2) : null,
                         icon: const Icon(Icons.remove),
                       ),
-                      Text('$_sets',
-                          style: const TextStyle(fontSize: 18)),
+                      Text('$_sets', style: const TextStyle(fontSize: 18)),
                       IconButton(
                         onPressed: () => setState(() => _sets += 2),
                         icon: const Icon(Icons.add),
@@ -152,13 +206,11 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 16),
                       IconButton(
-                        onPressed: _legs > 1
-                            ? () => setState(() => _legs -= 2)
-                            : null,
+                        onPressed:
+                            _legs > 1 ? () => setState(() => _legs -= 2) : null,
                         icon: const Icon(Icons.remove),
                       ),
-                      Text('$_legs',
-                          style: const TextStyle(fontSize: 18)),
+                      Text('$_legs', style: const TextStyle(fontSize: 18)),
                       IconButton(
                         onPressed: () => setState(() => _legs += 2),
                         icon: const Icon(Icons.add),
@@ -170,11 +222,11 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                   // Participants
                   const Text(
                     'Seleccionar Jugadores',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
-                  if (participantState.status == DardosParticipantStatus.loading)
+                  if (participantState.status ==
+                      DardosParticipantStatus.loading)
                     const Center(child: CircularProgressIndicator())
                   else if (participantState.participants
                       .where((p) => p.isActive)
@@ -214,6 +266,16 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                             if (isSelected) {
                               _selectedPlayerIds.remove(participant.id);
                             } else {
+                              if (_teamMode && _selectedPlayerIds.length >= 4) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'En 2 vs 2 seleccioná exactamente 4 jugadores',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
                               _selectedPlayerIds.add(participant.id);
                             }
                           });
@@ -225,8 +287,8 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                     const SizedBox(height: 24),
                     const Text(
                       'Orden de tiro',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     ReorderableListView.builder(
@@ -236,8 +298,7 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                       onReorder: (oldIndex, newIndex) {
                         setState(() {
                           if (newIndex > oldIndex) newIndex -= 1;
-                          final item =
-                              _selectedPlayerIds.removeAt(oldIndex);
+                          final item = _selectedPlayerIds.removeAt(oldIndex);
                           _selectedPlayerIds.insert(newIndex, item);
                         });
                       },
@@ -246,15 +307,15 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                         final name = participantState.participants
                             .firstWhere(
                               (p) => p.id == playerId,
-                              orElse: () => participantState
-                                  .participants.first,
+                              orElse: () => participantState.participants.first,
                             )
                             .name;
                         return ListTile(
                           key: ValueKey(playerId),
-                          leading: CircleAvatar(
-                              child: Text('${index + 1}')),
+                          leading: CircleAvatar(child: Text('${index + 1}')),
                           title: Text(name),
+                          subtitle:
+                              _teamMode ? Text(_teamSlotLabel(index)) : null,
                           trailing: const Icon(Icons.drag_handle),
                         );
                       },
@@ -290,18 +351,52 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
   void _createGame(BuildContext context) {
     if (_gameNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('El nombre no puede estar vacío')),
+        const SnackBar(content: Text('El nombre no puede estar vacío')),
       );
       return;
     }
     if (_selectedPlayerIds.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Seleccioná al menos 2 jugadores')),
+        const SnackBar(content: Text('Seleccioná al menos 2 jugadores')),
       );
       return;
     }
+    if (_teamMode && _selectedPlayerIds.length != 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Para equipos 2 vs 2 seleccioná exactamente 4 jugadores'),
+        ),
+      );
+      return;
+    }
+
+    final teams = _teamMode
+        ? [
+            {
+              'id': 'team_1',
+              'name': _team1NameController.text.trim().isEmpty
+                  ? 'Equipo 1'
+                  : _team1NameController.text.trim(),
+              'playerIds': [_selectedPlayerIds[0], _selectedPlayerIds[2]],
+            },
+            {
+              'id': 'team_2',
+              'name': _team2NameController.text.trim().isEmpty
+                  ? 'Equipo 2'
+                  : _team2NameController.text.trim(),
+              'playerIds': [_selectedPlayerIds[1], _selectedPlayerIds[3]],
+            },
+          ]
+        : const <Map<String, dynamic>>[];
+    final playerTeamIds = _teamMode
+        ? <String, String>{
+            _selectedPlayerIds[0]: 'team_1',
+            _selectedPlayerIds[2]: 'team_1',
+            _selectedPlayerIds[1]: 'team_2',
+            _selectedPlayerIds[3]: 'team_2',
+          }
+        : const <String, String>{};
 
     final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
 
@@ -313,6 +408,9 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
             sets: _sets,
             legs: _legs,
             playerIds: List.from(_selectedPlayerIds),
+            teamMode: _teamMode,
+            teams: teams,
+            playerTeamIds: playerTeamIds,
             createdBy: uid,
           ),
         );

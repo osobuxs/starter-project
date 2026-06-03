@@ -17,6 +17,9 @@ class DardosGameRepositoryImpl implements DardosGameRepository {
     required int sets,
     required int legs,
     required List<String> playerIds,
+    bool teamMode = false,
+    List<Map<String, dynamic>> teams = const [],
+    Map<String, String> playerTeamIds = const {},
     required String createdBy,
   }) async {
     try {
@@ -27,6 +30,9 @@ class DardosGameRepositoryImpl implements DardosGameRepository {
         sets: sets,
         legs: legs,
         playerIds: playerIds,
+        teamMode: teamMode,
+        teams: teams,
+        playerTeamIds: playerTeamIds,
         createdBy: createdBy,
       );
       return DataSuccess(game);
@@ -215,6 +221,7 @@ class DardosGameRepositoryImpl implements DardosGameRepository {
   Future<DataState<void>> updateParticipantStatsOnGameFinished({
     required List<String> playerIds,
     required String winnerId,
+    List<String> winnerPlayerIds = const [],
     required String mode,
     required Map<String, dynamic> metricsPerPlayer,
     Map<String, Map<String, int>> freqByPlayer = const {},
@@ -223,6 +230,7 @@ class DardosGameRepositoryImpl implements DardosGameRepository {
       await _dataSource.updateParticipantStatsOnGameFinished(
         playerIds: playerIds,
         winnerId: winnerId,
+        winnerPlayerIds: winnerPlayerIds,
         mode: mode,
         metricsPerPlayer: metricsPerPlayer,
         freqByPlayer: freqByPlayer,

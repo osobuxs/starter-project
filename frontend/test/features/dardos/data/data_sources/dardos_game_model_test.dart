@@ -38,6 +38,31 @@ void main() {
     'computedMetrics': null,
   };
 
+  final teamJson = {
+    ...baseJson,
+    'playerIds': ['p1', 'p2', 'p3', 'p4'],
+    'starterOrder': ['p1', 'p2', 'p3', 'p4'],
+    'teamMode': true,
+    'teams': [
+      {
+        'id': 'team_1',
+        'name': 'Equipo 1',
+        'playerIds': ['p1', 'p3'],
+      },
+      {
+        'id': 'team_2',
+        'name': 'Equipo 2',
+        'playerIds': ['p2', 'p4'],
+      },
+    ],
+    'playerTeamIds': {
+      'p1': 'team_1',
+      'p3': 'team_1',
+      'p2': 'team_2',
+      'p4': 'team_2',
+    },
+  };
+
   final legWinnersNestedJson = {
     'name': 'Test',
     'mode': '501',
@@ -111,7 +136,8 @@ void main() {
     });
 
     test('parses nested legWinners: List<List<String?>>', () {
-      final model = DardosGameModel.fromFirestore(legWinnersNestedJson, 'g2', []);
+      final model =
+          DardosGameModel.fromFirestore(legWinnersNestedJson, 'g2', []);
 
       expect(model.legWinners.length, 2);
       expect(model.legWinners[0], ['p1', 'p2', 'p1']);
@@ -119,7 +145,8 @@ void main() {
     });
 
     test('parses setWinners list', () {
-      final model = DardosGameModel.fromFirestore(legWinnersNestedJson, 'g2', []);
+      final model =
+          DardosGameModel.fromFirestore(legWinnersNestedJson, 'g2', []);
 
       expect(model.setWinners.length, 2);
       expect(model.setWinners[0], 'p1');
@@ -127,7 +154,8 @@ void main() {
     });
 
     test('passes throws list through', () {
-      final model = DardosGameModel.fromFirestore(baseJson, 'g1', [throwEntity]);
+      final model =
+          DardosGameModel.fromFirestore(baseJson, 'g1', [throwEntity]);
 
       expect(model.throws.length, 1);
       expect(model.throws.first.id, 't1');
@@ -141,10 +169,21 @@ void main() {
     test('parses computedMetrics when present', () {
       final jsonWithMetrics = Map<String, dynamic>.from(baseJson);
       jsonWithMetrics['computedMetrics'] = {
-        'perPlayer': {'p1': {'avg3Dart': 45.0}}
+        'perPlayer': {
+          'p1': {'avg3Dart': 45.0}
+        }
       };
       final model = DardosGameModel.fromFirestore(jsonWithMetrics, 'g1', []);
       expect(model.computedMetrics, isNotNull);
+    });
+
+    test('parses team mode fields', () {
+      final model = DardosGameModel.fromFirestore(teamJson, 'g-team', []);
+
+      expect(model.teamMode, isTrue);
+      expect(model.scoreOwnerIds, ['team_1', 'team_2']);
+      expect(model.playerTeamIds['p3'], 'team_1');
+      expect(model.playersForWinner('team_2'), ['p2', 'p4']);
     });
   });
 
@@ -165,13 +204,23 @@ void main() {
       expect(json['playerIds'], baseJson['playerIds']);
     });
 
-    test('legWinners serialized as List<List<dynamic>>', () {
-      final model = DardosGameModel.fromFirestore(legWinnersNestedJson, 'g2', []);
+    test('legWinners serialized as map for Firestore nested array support', () {
+      final model =
+          DardosGameModel.fromFirestore(legWinnersNestedJson, 'g2', []);
       final json = model.toJson();
 
-      final lw = json['legWinners'] as List;
+      final lw = json['legWinners'] as Map<String, dynamic>;
       expect(lw.length, 2);
-      expect(lw[0], ['p1', 'p2', 'p1']);
+      expect(lw['0'], ['p1', 'p2', 'p1']);
+    });
+
+    test('team mode fields are serialized', () {
+      final model = DardosGameModel.fromFirestore(teamJson, 'g-team', []);
+      final json = model.toJson();
+
+      expect(json['teamMode'], isTrue);
+      expect(json['teams'], teamJson['teams']);
+      expect(json['playerTeamIds'], teamJson['playerTeamIds']);
     });
 
     test('toJson does NOT include id', () {
@@ -186,7 +235,8 @@ void main() {
   // -----------------------------------------------------------------------
   group('DardosGameModel entity conversion', () {
     test('toEntity returns DardosGameEntity with same data', () {
-      final model = DardosGameModel.fromFirestore(legWinnersNestedJson, 'g2', [throwEntity]);
+      final model = DardosGameModel.fromFirestore(
+          legWinnersNestedJson, 'g2', [throwEntity]);
       final entity = model.toEntity();
 
       expect(entity, isA<DardosGameEntity>());

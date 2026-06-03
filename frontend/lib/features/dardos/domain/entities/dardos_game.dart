@@ -13,6 +13,9 @@ class DardosGameEntity extends Equatable {
   final String createdBy;
   final List<String> playerIds;
   final List<String> starterOrder;
+  final bool teamMode;
+  final List<Map<String, dynamic>> teams;
+  final Map<String, String> playerTeamIds;
   final bool rosterLocked;
   final int currentSet;
   final int currentLeg;
@@ -43,6 +46,9 @@ class DardosGameEntity extends Equatable {
     required this.createdBy,
     required this.playerIds,
     required this.starterOrder,
+    this.teamMode = false,
+    this.teams = const [],
+    this.playerTeamIds = const {},
     required this.rosterLocked,
     required this.currentSet,
     required this.currentLeg,
@@ -74,6 +80,9 @@ class DardosGameEntity extends Equatable {
     String? createdBy,
     List<String>? playerIds,
     List<String>? starterOrder,
+    bool? teamMode,
+    List<Map<String, dynamic>>? teams,
+    Map<String, String>? playerTeamIds,
     bool? rosterLocked,
     int? currentSet,
     int? currentLeg,
@@ -104,6 +113,9 @@ class DardosGameEntity extends Equatable {
       createdBy: createdBy ?? this.createdBy,
       playerIds: playerIds ?? this.playerIds,
       starterOrder: starterOrder ?? this.starterOrder,
+      teamMode: teamMode ?? this.teamMode,
+      teams: teams ?? this.teams,
+      playerTeamIds: playerTeamIds ?? this.playerTeamIds,
       rosterLocked: rosterLocked ?? this.rosterLocked,
       currentSet: currentSet ?? this.currentSet,
       currentLeg: currentLeg ?? this.currentLeg,
@@ -137,6 +149,9 @@ class DardosGameEntity extends Equatable {
         createdBy,
         playerIds,
         starterOrder,
+        teamMode,
+        teams,
+        playerTeamIds,
         rosterLocked,
         currentSet,
         currentLeg,
@@ -155,4 +170,22 @@ class DardosGameEntity extends Equatable {
         computedMetrics,
         throws,
       ];
+
+  List<String> get scoreOwnerIds =>
+      teamMode ? teams.map((t) => t['id'] as String).toList() : playerIds;
+
+  String scoreOwnerForPlayer(String playerId) {
+    if (!teamMode) return playerId;
+    return playerTeamIds[playerId] ?? playerId;
+  }
+
+  List<String> playersForWinner(String winnerId) {
+    if (!teamMode) return [winnerId];
+    for (final team in teams) {
+      if (team['id'] == winnerId) {
+        return List<String>.from((team['playerIds'] as List<dynamic>?) ?? []);
+      }
+    }
+    return const [];
+  }
 }
