@@ -433,6 +433,34 @@ class MockDardosGameRepository extends _i1.Mock
       ) as _i4.Future<_i2.DataState<void>>);
 
   @override
+  _i4.Future<_i2.DataState<void>> reopenGame({required String? gameId}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #reopenGame,
+          [],
+          {#gameId: gameId},
+        ),
+        returnValue:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #reopenGame,
+            [],
+            {#gameId: gameId},
+          ),
+        )),
+        returnValueForMissingStub:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #reopenGame,
+            [],
+            {#gameId: gameId},
+          ),
+        )),
+      ) as _i4.Future<_i2.DataState<void>>);
+
+  @override
   _i4.Future<_i2.DataState<void>> cancelGame({
     required String? gameId,
     required String? cancelledBy,
@@ -559,7 +587,7 @@ class MockDardosGameRepository extends _i1.Mock
     List<String>? winnerPlayerIds = const [],
     required String? mode,
     required Map<String, dynamic>? metricsPerPlayer,
-    Map<String, Map<String, int>>? freqByPlayer = const {},
+    Map<String, Map<String, int>>? freqByPlayer,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -595,6 +623,62 @@ class MockDardosGameRepository extends _i1.Mock
           this,
           Invocation.method(
             #updateParticipantStatsOnGameFinished,
+            [],
+            {
+              #playerIds: playerIds,
+              #winnerId: winnerId,
+              #winnerPlayerIds: winnerPlayerIds,
+              #mode: mode,
+              #metricsPerPlayer: metricsPerPlayer,
+              #freqByPlayer: freqByPlayer,
+            },
+          ),
+        )),
+      ) as _i4.Future<_i2.DataState<void>>);
+
+  @override
+  _i4.Future<_i2.DataState<void>> reverseParticipantStatsOnGameFinished({
+    required List<String>? playerIds,
+    required String? winnerId,
+    List<String>? winnerPlayerIds,
+    required String? mode,
+    required Map<String, dynamic>? metricsPerPlayer,
+    Map<String, Map<String, int>>? freqByPlayer,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #reverseParticipantStatsOnGameFinished,
+          [],
+          {
+            #playerIds: playerIds,
+            #winnerId: winnerId,
+            #winnerPlayerIds: winnerPlayerIds,
+            #mode: mode,
+            #metricsPerPlayer: metricsPerPlayer,
+            #freqByPlayer: freqByPlayer,
+          },
+        ),
+        returnValue:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #reverseParticipantStatsOnGameFinished,
+            [],
+            {
+              #playerIds: playerIds,
+              #winnerId: winnerId,
+              #winnerPlayerIds: winnerPlayerIds,
+              #mode: mode,
+              #metricsPerPlayer: metricsPerPlayer,
+              #freqByPlayer: freqByPlayer,
+            },
+          ),
+        )),
+        returnValueForMissingStub:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #reverseParticipantStatsOnGameFinished,
             [],
             {
               #playerIds: playerIds,

@@ -895,4 +895,109 @@ void main() {
       )),
     );
   });
+
+  // -----------------------------------------------------------------------
+  // Part H: Reopen (undo winning dart of a finished game)
+  // -----------------------------------------------------------------------
+  group('Part H: ReopenGameEvent', () {
+    DardosGameState seedFinished() {
+      final game = makeGame501(
+        status: 'finished',
+        rosterLocked: true,
+        winnerId: 'p1',
+      ).copyWith(currentTurnPlayerId: 'p1');
+      return DardosGameState(
+        status: DardosGameStatus.gameFinished,
+        game: game,
+        annotatorOwned: true,
+        throws: [makeThrow(playerId: 'p1', remainingAfter: 0)],
+        liveScores: const {'p1': 0, 'p2': 501},
+      );
+    }
+
+    blocTest<DardosGameBloc, DardosGameState>(
+      'admin on a finished game: reverses stats, deletes last dart, reopens',
+      seed: seedFinished,
+      build: () {
+        when(mockRepo.reverseParticipantStatsOnGameFinished(
+          playerIds: anyNamed('playerIds'),
+          winnerId: anyNamed('winnerId'),
+          winnerPlayerIds: anyNamed('winnerPlayerIds'),
+          mode: anyNamed('mode'),
+          metricsPerPlayer: anyNamed('metricsPerPlayer'),
+          freqByPlayer: anyNamed('freqByPlayer'),
+        )).thenAnswer((_) async => const DataSuccess(null));
+        when(mockRepo.deleteLastThrow(any))
+            .thenAnswer((_) async => const DataSuccess(null));
+        when(mockRepo.reopenGame(gameId: anyNamed('gameId')))
+            .thenAnswer((_) async => const DataSuccess(null));
+        when(mockRepo.updateGameProgress(
+          gameId: anyNamed('gameId'),
+          currentSet: anyNamed('currentSet'),
+          currentLeg: anyNamed('currentLeg'),
+          currentTurnPlayerId: anyNamed('currentTurnPlayerId'),
+          currentTurnIndex: anyNamed('currentTurnIndex'),
+          currentDartIndex: anyNamed('currentDartIndex'),
+          legWinners: anyNamed('legWinners'),
+          setWinners: anyNamed('setWinners'),
+          rosterLocked: anyNamed('rosterLocked'),
+        )).thenAnswer((_) async => const DataSuccess(null));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(const ReopenGameEvent(gameId: 'g1', isAdmin: true)),
+      expect: () => [
+        isA<DardosGameState>()
+            .having((s) => s.status, 'reopened',
+                DardosGameStatus.gameReopened)
+            .having((s) => s.game?.winnerId, 'winner cleared', isNull)
+            .having((s) => s.throws.isEmpty, 'winning dart removed', isTrue),
+      ],
+      verify: (_) {
+        verify(mockRepo.reverseParticipantStatsOnGameFinished(
+          playerIds: anyNamed('playerIds'),
+          winnerId: anyNamed('winnerId'),
+          winnerPlayerIds: anyNamed('winnerPlayerIds'),
+          mode: anyNamed('mode'),
+          metricsPerPlayer: anyNamed('metricsPerPlayer'),
+          freqByPlayer: anyNamed('freqByPlayer'),
+        )).called(1);
+        verify(mockRepo.deleteLastThrow(any)).called(1);
+        verify(mockRepo.reopenGame(gameId: anyNamed('gameId'))).called(1);
+      },
+    );
+
+    blocTest<DardosGameBloc, DardosGameState>(
+      'non-admin: emits error, no repo writes',
+      seed: seedFinished,
+      build: () => buildBloc(),
+      act: (bloc) =>
+          bloc.add(const ReopenGameEvent(gameId: 'g1', isAdmin: false)),
+      expect: () => [
+        isA<DardosGameState>()
+            .having((s) => s.status, 'error', DardosGameStatus.error),
+      ],
+      verify: (_) {
+        verifyNever(mockRepo.reopenGame(gameId: anyNamed('gameId')));
+        verifyNever(mockRepo.deleteLastThrow(any));
+      },
+    );
+
+    blocTest<DardosGameBloc, DardosGameState>(
+      'game without a winner: ignored, no repo writes',
+      seed: () => DardosGameState(
+        status: DardosGameStatus.loaded,
+        game: makeGame501(status: 'in_progress', rosterLocked: true),
+        annotatorOwned: true,
+        throws: [makeThrow()],
+        liveScores: const {'p1': 481, 'p2': 501},
+      ),
+      build: () => buildBloc(),
+      act: (bloc) => bloc.add(const ReopenGameEvent(gameId: 'g1', isAdmin: true)),
+      expect: () => <DardosGameState>[],
+      verify: (_) {
+        verifyNever(mockRepo.reopenGame(gameId: anyNamed('gameId')));
+        verifyNever(mockRepo.deleteLastThrow(any));
+      },
+    );
+  });
 }

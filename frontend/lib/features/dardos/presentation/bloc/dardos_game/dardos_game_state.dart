@@ -13,6 +13,7 @@ enum DardosGameStatus {
   legWon,
   setWon,
   gameFinished,
+  gameReopened,
   gameCancelled,
   annotatorLocked,
   error,

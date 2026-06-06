@@ -320,6 +320,17 @@ class MockDardosFirestoreDataSource extends _i1.Mock
       ) as _i6.Future<void>);
 
   @override
+  _i6.Future<void> reopenGame({required String? gameId}) => (super.noSuchMethod(
+        Invocation.method(
+          #reopenGame,
+          [],
+          {#gameId: gameId},
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
   _i6.Future<void> cancelGame({
     required String? gameId,
     required String? cancelledBy,
@@ -473,6 +484,32 @@ class MockDardosFirestoreDataSource extends _i1.Mock
       (super.noSuchMethod(
         Invocation.method(
           #updateParticipantStatsOnGameFinished,
+          [],
+          {
+            #playerIds: playerIds,
+            #winnerId: winnerId,
+            #winnerPlayerIds: winnerPlayerIds,
+            #mode: mode,
+            #metricsPerPlayer: metricsPerPlayer,
+            #freqByPlayer: freqByPlayer,
+          },
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> reverseParticipantStatsOnGameFinished({
+    required List<String>? playerIds,
+    required String? winnerId,
+    List<String>? winnerPlayerIds = const [],
+    required String? mode,
+    required Map<String, dynamic>? metricsPerPlayer,
+    Map<String, Map<String, int>>? freqByPlayer = const {},
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #reverseParticipantStatsOnGameFinished,
           [],
           {
             #playerIds: playerIds,

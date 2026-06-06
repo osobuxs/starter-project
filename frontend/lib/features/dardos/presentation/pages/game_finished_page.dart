@@ -29,6 +29,7 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
     if (participantBloc.state.participants.isEmpty) {
       participantBloc.add(FetchAllParticipantsEvent());
     }
+    participantBloc.add(CheckAdminStatusEvent());
   }
 
   @override
@@ -37,7 +38,24 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
       appBar: AppBar(
         title: const Text('Partida terminada'),
       ),
-      body: BlocBuilder<DardosGameBloc, DardosGameState>(
+      body: BlocConsumer<DardosGameBloc, DardosGameState>(
+        listenWhen: (prev, curr) =>
+            prev.status != curr.status &&
+            (curr.status == DardosGameStatus.gameReopened ||
+                curr.status == DardosGameStatus.error),
+        listener: (context, state) {
+          if (state.status == DardosGameStatus.gameReopened) {
+            Navigator.of(context).pushReplacementNamed(
+              AppRouteNames.dardosPlay,
+              arguments: widget.gameId,
+            );
+          } else if (state.status == DardosGameStatus.error &&
+              state.error != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.error!)),
+            );
+          }
+        },
         builder: (context, state) {
           if (state.status == DardosGameStatus.loading) {
             return const Center(child: CircularProgressIndicator());
@@ -200,6 +218,25 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
                       ),
                     ),
 
+                  // Admin-only: undo the winning dart and reopen the game.
+                  if (participantState.isAdmin && game.winnerId != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.undo),
+                          label: const Text(
+                              'Deshacer último dardo y reabrir partida'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.deepOrange,
+                            side: const BorderSide(color: Colors.deepOrange),
+                          ),
+                          onPressed: () => _confirmReopen(context),
+                        ),
+                      ),
+                    ),
+
                   // Actions
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -237,6 +274,34 @@ class _DardosGameFinishedPageState extends State<DardosGameFinishedPage> {
         },
       ),
     );
+  }
+
+  Future<void> _confirmReopen(BuildContext context) async {
+    // Capture the bloc before the await so we don't touch context after it.
+    final gameBloc = context.read<DardosGameBloc>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reabrir partida'),
+        content: const Text(
+          'Esto borra el último dardo, revierte las estadísticas que sumó '
+          'esta partida y la vuelve a poner en juego para corregir. '
+          '¿Continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Reabrir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    gameBloc.add(ReopenGameEvent(gameId: widget.gameId, isAdmin: true));
   }
 
   void _showThrowsHistory(

@@ -100,6 +100,7 @@ class DardosGameEntity extends Equatable {
     String? cancelledBy,
     Map<String, dynamic>? computedMetrics,
     List<DardosThrowEntity>? throws,
+    bool clearWinnerId = false,
   }) {
     return DardosGameEntity(
       id: id ?? this.id,
@@ -124,7 +125,7 @@ class DardosGameEntity extends Equatable {
       currentDartIndex: currentDartIndex ?? this.currentDartIndex,
       legWinners: legWinners ?? this.legWinners,
       setWinners: setWinners ?? this.setWinners,
-      winnerId: winnerId ?? this.winnerId,
+      winnerId: clearWinnerId ? null : (winnerId ?? this.winnerId),
       activeAnnotator: activeAnnotator ?? this.activeAnnotator,
       activeAnnotatorAt: activeAnnotatorAt ?? this.activeAnnotatorAt,
       isActive: isActive ?? this.isActive,

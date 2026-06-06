@@ -63,6 +63,8 @@ abstract class DardosFirestoreDataSource {
     required Map<String, dynamic> computedMetrics,
   });
 
+  Future<void> reopenGame({required String gameId});
+
   Future<void> cancelGame({
     required String gameId,
     required String cancelledBy,
@@ -95,6 +97,15 @@ abstract class DardosFirestoreDataSource {
   Future<DardosParticipantEntity> fetchParticipantById(String id);
 
   Future<void> updateParticipantStatsOnGameFinished({
+    required List<String> playerIds,
+    required String winnerId,
+    List<String> winnerPlayerIds = const [],
+    required String mode,
+    required Map<String, dynamic> metricsPerPlayer,
+    Map<String, Map<String, int>> freqByPlayer = const {},
+  });
+
+  Future<void> reverseParticipantStatsOnGameFinished({
     required List<String> playerIds,
     required String winnerId,
     List<String> winnerPlayerIds = const [],

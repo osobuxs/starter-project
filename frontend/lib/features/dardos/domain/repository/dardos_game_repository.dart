@@ -51,6 +51,8 @@ abstract class DardosGameRepository {
     required Map<String, dynamic> computedMetrics,
   });
 
+  Future<DataState<void>> reopenGame({required String gameId});
+
   Future<DataState<void>> cancelGame({
     required String gameId,
     required String cancelledBy,
@@ -70,6 +72,15 @@ abstract class DardosGameRepository {
     required List<String> playerIds,
     required String winnerId,
     List<String> winnerPlayerIds = const [],
+    required String mode,
+    required Map<String, dynamic> metricsPerPlayer,
+    Map<String, Map<String, int>> freqByPlayer,
+  });
+
+  Future<DataState<void>> reverseParticipantStatsOnGameFinished({
+    required List<String> playerIds,
+    required String winnerId,
+    List<String> winnerPlayerIds,
     required String mode,
     required Map<String, dynamic> metricsPerPlayer,
     Map<String, Map<String, int>> freqByPlayer,

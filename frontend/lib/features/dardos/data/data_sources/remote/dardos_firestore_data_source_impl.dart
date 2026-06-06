@@ -213,6 +213,17 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
   }
 
   @override
+  Future<void> reopenGame({required String gameId}) async {
+    await _games.doc(gameId).update({
+      'status': 'in_progress',
+      'winnerId': null,
+      'computedMetrics': null,
+      'activeAnnotator': null,
+      'activeAnnotatorAt': null,
+    });
+  }
+
+  @override
   Future<void> cancelGame({
     required String gameId,
     required String cancelledBy,
@@ -328,6 +339,50 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
     required Map<String, dynamic> metricsPerPlayer,
     Map<String, Map<String, int>> freqByPlayer = const {},
   }) async {
+    await _applyParticipantStats(
+      playerIds: playerIds,
+      winnerId: winnerId,
+      winnerPlayerIds: winnerPlayerIds,
+      mode: mode,
+      metricsPerPlayer: metricsPerPlayer,
+      freqByPlayer: freqByPlayer,
+      sign: 1,
+    );
+  }
+
+  @override
+  Future<void> reverseParticipantStatsOnGameFinished({
+    required List<String> playerIds,
+    required String winnerId,
+    List<String> winnerPlayerIds = const [],
+    required String mode,
+    required Map<String, dynamic> metricsPerPlayer,
+    Map<String, Map<String, int>> freqByPlayer = const {},
+  }) async {
+    await _applyParticipantStats(
+      playerIds: playerIds,
+      winnerId: winnerId,
+      winnerPlayerIds: winnerPlayerIds,
+      mode: mode,
+      metricsPerPlayer: metricsPerPlayer,
+      freqByPlayer: freqByPlayer,
+      sign: -1,
+    );
+  }
+
+  /// Applies (sign: 1) or reverses (sign: -1) the lifetime stat increments
+  /// for a finished game. Reversing uses the SAME computed metrics/freq that
+  /// were summed at finish time, so reopening a game leaves the participant
+  /// docs exactly as they were before it ended.
+  Future<void> _applyParticipantStats({
+    required List<String> playerIds,
+    required String winnerId,
+    required List<String> winnerPlayerIds,
+    required String mode,
+    required Map<String, dynamic> metricsPerPlayer,
+    required Map<String, Map<String, int>> freqByPlayer,
+    required int sign,
+  }) async {
     if (playerIds.isEmpty) return;
 
     final batch = _firestore.batch();
@@ -335,17 +390,17 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
     for (final pid in playerIds) {
       final ref = _participants.doc(pid);
       final updates = <String, dynamic>{
-        'totalGamesPlayed': FieldValue.increment(1),
+        'totalGamesPlayed': FieldValue.increment(sign),
       };
       final isWinner = pid == winnerId || winnerPlayerIds.contains(pid);
       if (isWinner) {
-        updates['totalGamesWon'] = FieldValue.increment(1);
+        updates['totalGamesWon'] = FieldValue.increment(sign);
       }
       // Per-mode aggregate counters
       final modeKey = mode;
-      updates['statsByMode.$modeKey.played'] = FieldValue.increment(1);
+      updates['statsByMode.$modeKey.played'] = FieldValue.increment(sign);
       if (isWinner) {
-        updates['statsByMode.$modeKey.won'] = FieldValue.increment(1);
+        updates['statsByMode.$modeKey.won'] = FieldValue.increment(sign);
       }
       // Per-mode score/turn aggregates from this game's metrics
       final pm = metricsPerPlayer[pid] as Map<String, dynamic>?;
@@ -360,26 +415,27 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
         final count140 = pm['count140plus'];
         if (totalPts is num && totalPts > 0) {
           updates['statsByMode.$modeKey.totalPoints'] =
-              FieldValue.increment(totalPts.toInt());
+              FieldValue.increment(sign * totalPts.toInt());
         }
         if (validTurns is num && validTurns > 0) {
           updates['statsByMode.$modeKey.validTurns'] =
-              FieldValue.increment(validTurns.toInt());
+              FieldValue.increment(sign * validTurns.toInt());
         }
         if (count180 is num && count180 > 0) {
           updates['statsByMode.$modeKey.count180'] =
-              FieldValue.increment(count180.toInt());
+              FieldValue.increment(sign * count180.toInt());
         }
         if (count140 is num && count140 > 0) {
           updates['statsByMode.$modeKey.count140plus'] =
-              FieldValue.increment(count140.toInt());
+              FieldValue.increment(sign * count140.toInt());
         }
       }
       // Dart frequency increments — uses dotted-path for nested map update
       final freq = freqByPlayer[pid] ?? const <String, int>{};
       for (final entry in freq.entries) {
         if (entry.value <= 0) continue;
-        updates['numberFreq.${entry.key}'] = FieldValue.increment(entry.value);
+        updates['numberFreq.${entry.key}'] =
+            FieldValue.increment(sign * entry.value);
       }
       batch.update(ref, updates);
     }

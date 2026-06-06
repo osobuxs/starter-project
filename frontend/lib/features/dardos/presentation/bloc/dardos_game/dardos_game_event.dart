@@ -108,4 +108,14 @@ class CancelGameEvent extends DardosGameEvent {
   List<Object?> get props => [gameId, cancelledBy, isAdmin];
 }
 
+class ReopenGameEvent extends DardosGameEvent {
+  final String gameId;
+  final bool isAdmin;
+
+  const ReopenGameEvent({required this.gameId, required this.isAdmin});
+
+  @override
+  List<Object?> get props => [gameId, isAdmin];
+}
+
 class AcknowledgeBannerEvent extends DardosGameEvent {}

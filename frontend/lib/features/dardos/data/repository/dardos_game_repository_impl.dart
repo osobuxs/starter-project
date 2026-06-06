@@ -170,6 +170,16 @@ class DardosGameRepositoryImpl implements DardosGameRepository {
   }
 
   @override
+  Future<DataState<void>> reopenGame({required String gameId}) async {
+    try {
+      await _dataSource.reopenGame(gameId: gameId);
+      return const DataSuccess(null);
+    } on Exception catch (e) {
+      return DataFailed(e);
+    }
+  }
+
+  @override
   Future<DataState<void>> cancelGame({
     required String gameId,
     required String cancelledBy,
@@ -228,6 +238,30 @@ class DardosGameRepositoryImpl implements DardosGameRepository {
   }) async {
     try {
       await _dataSource.updateParticipantStatsOnGameFinished(
+        playerIds: playerIds,
+        winnerId: winnerId,
+        winnerPlayerIds: winnerPlayerIds,
+        mode: mode,
+        metricsPerPlayer: metricsPerPlayer,
+        freqByPlayer: freqByPlayer,
+      );
+      return const DataSuccess(null);
+    } on Exception catch (e) {
+      return DataFailed(e);
+    }
+  }
+
+  @override
+  Future<DataState<void>> reverseParticipantStatsOnGameFinished({
+    required List<String> playerIds,
+    required String winnerId,
+    List<String> winnerPlayerIds = const [],
+    required String mode,
+    required Map<String, dynamic> metricsPerPlayer,
+    Map<String, Map<String, int>> freqByPlayer = const {},
+  }) async {
+    try {
+      await _dataSource.reverseParticipantStatsOnGameFinished(
         playerIds: playerIds,
         winnerId: winnerId,
         winnerPlayerIds: winnerPlayerIds,

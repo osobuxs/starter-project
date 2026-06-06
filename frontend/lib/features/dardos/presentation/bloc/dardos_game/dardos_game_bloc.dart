@@ -23,6 +23,7 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     on<ReleaseAnnotatorEvent>(_onReleaseAnnotator);
     on<RecordThrowEvent>(_onRecordThrow);
     on<UndoLastThrowEvent>(_onUndo);
+    on<ReopenGameEvent>(_onReopen);
     on<CancelGameEvent>(_onCancel);
     on<AcknowledgeBannerEvent>(_onAcknowledgeBanner);
   }
@@ -426,6 +427,102 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
     }
   }
 
+  // ─── Reopen (undo the winning dart of a finished game) ──────────────────
+  // Reverses the lifetime stats that were written at finish time, deletes
+  // the dart that closed the game, and flips the doc back to in_progress.
+  // Because the whole state is event-sourced from the throws collection,
+  // removing the winning dart makes _recomputeGameState clear the winner
+  // and hand the turn back to the player who threw it.
+  Future<void> _onReopen(
+    ReopenGameEvent event,
+    Emitter<DardosGameState> emit,
+  ) async {
+    if (!event.isAdmin) {
+      emit(state.copyWith(
+        status: DardosGameStatus.error,
+        error: 'Solo el administrador puede reabrir partidas',
+      ));
+      return;
+    }
+    final game = state.game;
+    // Nothing to reopen unless the game actually finished.
+    if (game == null || game.winnerId == null) return;
+    if (_writeInFlight) return;
+    _writeInFlight = true;
+    try {
+      await _processReopen(game, emit);
+    } finally {
+      _writeInFlight = false;
+    }
+  }
+
+  Future<void> _processReopen(
+    DardosGameEntity game,
+    Emitter<DardosGameState> emit,
+  ) async {
+    final winnerId = game.winnerId!;
+    final throws_ = state.throws;
+
+    // 1. Revert the exact stats that were summed at finish time. We
+    //    recompute them from the same throws so the decrement matches.
+    final metrics = _computeMetrics(
+      mode: game.mode,
+      playerIds: game.playerIds,
+      throws_: throws_,
+    );
+    final freqByPlayer = _computeFreqByPlayer(
+      playerIds: game.playerIds,
+      throws_: throws_,
+    );
+    await _repository.reverseParticipantStatsOnGameFinished(
+      playerIds: game.playerIds,
+      winnerId: winnerId,
+      winnerPlayerIds: game.playersForWinner(winnerId),
+      mode: game.mode,
+      metricsPerPlayer: metrics['perPlayer'] as Map<String, dynamic>? ?? {},
+      freqByPlayer: freqByPlayer,
+    );
+
+    // 2. Delete the dart that closed the game.
+    await _repository.deleteLastThrow(game.id);
+
+    // 3. Flip the doc back to in_progress (clears winnerId + metrics).
+    await _repository.reopenGame(gameId: game.id);
+
+    // 4. Recompute local state without the winning dart.
+    final remaining =
+        throws_.isEmpty ? <DardosThrowEntity>[] : ([...throws_]..removeLast());
+    final reopenedBase = game.copyWith(status: 'in_progress');
+    final recomputed = _recomputeGameState(
+      baseGame: reopenedBase,
+      throws_: remaining,
+    );
+
+    // 5. Persist the rolled-back cursor.
+    final rg = recomputed.game;
+    if (rg != null) {
+      await _repository
+          .updateGameProgress(
+            gameId: rg.id,
+            currentSet: rg.currentSet,
+            currentLeg: rg.currentLeg,
+            currentTurnPlayerId: rg.currentTurnPlayerId,
+            currentTurnIndex: rg.currentTurnIndex,
+            currentDartIndex: rg.currentDartIndex,
+            legWinners: rg.legWinners,
+            setWinners: rg.setWinners,
+            rosterLocked: rg.rosterLocked,
+          )
+          .catchError((_) => const DataSuccess(null));
+    }
+
+    emit(recomputed.copyWith(
+      status: DardosGameStatus.gameReopened,
+      annotatorOwned: state.annotatorOwned,
+      clearBanner: true,
+    ));
+  }
+
   // ─── Cancel ────────────────────────────────────────────────────────────
   Future<void> _onCancel(
     CancelGameEvent event,
@@ -701,6 +798,9 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
       legWinners: legWinners,
       setWinners: setWinners,
       winnerId: gWinner,
+      // copyWith uses `?? this`, so passing null alone won't clear a
+      // previously-set winner (e.g. when reopening a finished game).
+      clearWinnerId: gWinner == null,
       rosterLocked: throws_.isNotEmpty || baseGame.rosterLocked,
       status: gWinner != null ? 'finished' : baseGame.status,
     );
