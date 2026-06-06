@@ -65,6 +65,8 @@ abstract class DardosFirestoreDataSource {
 
   Future<void> reopenGame({required String gameId});
 
+  Future<void> deleteGame({required String gameId});
+
   Future<void> cancelGame({
     required String gameId,
     required String cancelledBy,

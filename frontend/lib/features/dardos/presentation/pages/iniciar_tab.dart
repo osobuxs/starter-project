@@ -22,6 +22,29 @@ class _IniciarTabState extends State<IniciarTab> {
     context.read<DardosParticipantBloc>().add(CheckAdminStatusEvent());
   }
 
+  Future<bool> _confirmDelete(BuildContext context, String name) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar partida'),
+        content: Text(
+          '¿Eliminar "$name"? Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<DardosMultiGameBloc, DardosMultiGameState>(
@@ -32,6 +55,7 @@ class _IniciarTabState extends State<IniciarTab> {
 
         final allGames = List.from(state.games)
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        final isAdmin = context.watch<DardosParticipantBloc>().state.isAdmin;
 
         if (allGames.isEmpty) {
           return Scaffold(
@@ -116,29 +140,57 @@ class _IniciarTabState extends State<IniciarTab> {
                         separatorBuilder: (_, __) =>
                             const Divider(height: 1),
                         itemBuilder: (context, index) {
-                        final game = allGames[index];
-                        return ListTile(
-                          title: Text(game.name as String),
-                          subtitle: Text(
-                            '${(game.mode as String).toUpperCase()} · '
-                            '${(game.playerIds as List).length} jugadores · '
-                            '${game.status}',
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            if (game.status == 'finished') {
+                          final game = allGames[index];
+                          final tile = ListTile(
+                            title: Text(game.name as String),
+                            subtitle: Text(
+                              '${(game.mode as String).toUpperCase()} · '
+                              '${(game.playerIds as List).length} jugadores · '
+                              '${game.status}',
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              if (game.status == 'finished') {
+                                Navigator.of(context).pushNamed(
+                                  AppRouteNames.dardosFinished,
+                                  arguments: game.id,
+                                );
+                                return;
+                              }
                               Navigator.of(context).pushNamed(
-                                AppRouteNames.dardosFinished,
+                                AppRouteNames.dardosPlay,
                                 arguments: game.id,
                               );
-                              return;
-                            }
-                            Navigator.of(context).pushNamed(
-                              AppRouteNames.dardosPlay,
-                              arguments: game.id,
-                            );
-                          },
-                        );
+                            },
+                          );
+                          // Admins can delete non-finished games by swiping.
+                          // Finished games hold counted stats — reopen first.
+                          final canDelete =
+                              isAdmin && game.status != 'finished';
+                          if (!canDelete) return tile;
+                          return Dismissible(
+                            key: ValueKey(game.id),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              color: Colors.red,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: const Icon(Icons.delete,
+                                  color: Colors.white),
+                            ),
+                            confirmDismiss: (_) =>
+                                _confirmDelete(context, game.name as String),
+                            onDismissed: (_) {
+                              context.read<DardosMultiGameBloc>().add(
+                                    DeleteGameEvent(
+                                      gameId: game.id as String,
+                                      isAdmin: true,
+                                    ),
+                                  );
+                            },
+                            child: tile,
+                          );
                         },
                       ),
                     ),

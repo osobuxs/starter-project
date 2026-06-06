@@ -331,6 +331,17 @@ class MockDardosFirestoreDataSource extends _i1.Mock
       ) as _i6.Future<void>);
 
   @override
+  _i6.Future<void> deleteGame({required String? gameId}) => (super.noSuchMethod(
+        Invocation.method(
+          #deleteGame,
+          [],
+          {#gameId: gameId},
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
   _i6.Future<void> cancelGame({
     required String? gameId,
     required String? cancelledBy,

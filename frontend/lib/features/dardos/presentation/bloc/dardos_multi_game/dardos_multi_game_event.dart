@@ -19,3 +19,13 @@ class LoadGamesByModeEvent extends DardosMultiGameEvent {
 }
 
 class RefreshGamesEvent extends DardosMultiGameEvent {}
+
+class DeleteGameEvent extends DardosMultiGameEvent {
+  final String gameId;
+  final bool isAdmin;
+
+  const DeleteGameEvent({required this.gameId, required this.isAdmin});
+
+  @override
+  List<Object?> get props => [gameId, isAdmin];
+}

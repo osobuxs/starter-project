@@ -53,6 +53,8 @@ abstract class DardosGameRepository {
 
   Future<DataState<void>> reopenGame({required String gameId});
 
+  Future<DataState<void>> deleteGame({required String gameId});
+
   Future<DataState<void>> cancelGame({
     required String gameId,
     required String cancelledBy,

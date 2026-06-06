@@ -213,6 +213,19 @@ class DardosFirestoreDataSourceImpl implements DardosFirestoreDataSource {
   }
 
   @override
+  Future<void> deleteGame({required String gameId}) async {
+    // Firestore doesn't cascade-delete subcollections, so we remove the
+    // throws first, then the game doc — all in one batch.
+    final throwsSnap = await _games.doc(gameId).collection('throws').get();
+    final batch = _firestore.batch();
+    for (final doc in throwsSnap.docs) {
+      batch.delete(doc.reference);
+    }
+    batch.delete(_games.doc(gameId));
+    await batch.commit();
+  }
+
+  @override
   Future<void> reopenGame({required String gameId}) async {
     await _games.doc(gameId).update({
       'status': 'in_progress',

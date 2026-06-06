@@ -180,6 +180,16 @@ class DardosGameRepositoryImpl implements DardosGameRepository {
   }
 
   @override
+  Future<DataState<void>> deleteGame({required String gameId}) async {
+    try {
+      await _dataSource.deleteGame(gameId: gameId);
+      return const DataSuccess(null);
+    } on Exception catch (e) {
+      return DataFailed(e);
+    }
+  }
+
+  @override
   Future<DataState<void>> cancelGame({
     required String gameId,
     required String cancelledBy,

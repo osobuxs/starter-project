@@ -461,6 +461,34 @@ class MockDardosGameRepository extends _i1.Mock
       ) as _i4.Future<_i2.DataState<void>>);
 
   @override
+  _i4.Future<_i2.DataState<void>> deleteGame({required String? gameId}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #deleteGame,
+          [],
+          {#gameId: gameId},
+        ),
+        returnValue:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #deleteGame,
+            [],
+            {#gameId: gameId},
+          ),
+        )),
+        returnValueForMissingStub:
+            _i4.Future<_i2.DataState<void>>.value(_FakeDataState_0<void>(
+          this,
+          Invocation.method(
+            #deleteGame,
+            [],
+            {#gameId: gameId},
+          ),
+        )),
+      ) as _i4.Future<_i2.DataState<void>>);
+
+  @override
   _i4.Future<_i2.DataState<void>> cancelGame({
     required String? gameId,
     required String? cancelledBy,

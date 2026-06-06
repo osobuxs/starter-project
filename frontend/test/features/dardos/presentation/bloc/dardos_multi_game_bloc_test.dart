@@ -165,4 +165,63 @@ void main() {
       verify: (_) => verify(mockRepo.getGameHistory()).called(1),
     );
   });
+
+  // -----------------------------------------------------------------------
+  // DeleteGameEvent
+  // -----------------------------------------------------------------------
+  group('DeleteGameEvent', () {
+    blocTest<DardosMultiGameBloc, DardosMultiGameState>(
+      'admin deletes a non-finished game: repo called and list reloaded',
+      seed: () => DardosMultiGameState(
+        status: DardosMultiGameStatus.success,
+        games: [makeGame(id: 'g1', status: 'in_progress')],
+      ),
+      build: () {
+        when(mockRepo.deleteGame(gameId: anyNamed('gameId')))
+            .thenAnswer((_) async => const DataSuccess(null));
+        when(mockRepo.getGameHistory())
+            .thenAnswer((_) async => const DataSuccess([]));
+        return buildBloc();
+      },
+      act: (bloc) =>
+          bloc.add(const DeleteGameEvent(gameId: 'g1', isAdmin: true)),
+      expect: () => [
+        isA<DardosMultiGameState>()
+            .having((s) => s.status, 'status', DardosMultiGameStatus.success)
+            .having((s) => s.games.isEmpty, 'list reloaded empty', isTrue),
+      ],
+      verify: (_) {
+        verify(mockRepo.deleteGame(gameId: 'g1')).called(1);
+        verify(mockRepo.getGameHistory()).called(1);
+      },
+    );
+
+    blocTest<DardosMultiGameBloc, DardosMultiGameState>(
+      'non-admin: deleteGame NOT called',
+      seed: () => DardosMultiGameState(
+        status: DardosMultiGameStatus.success,
+        games: [makeGame(id: 'g1', status: 'in_progress')],
+      ),
+      build: () => buildBloc(),
+      act: (bloc) =>
+          bloc.add(const DeleteGameEvent(gameId: 'g1', isAdmin: false)),
+      expect: () => <DardosMultiGameState>[],
+      verify: (_) =>
+          verifyNever(mockRepo.deleteGame(gameId: anyNamed('gameId'))),
+    );
+
+    blocTest<DardosMultiGameBloc, DardosMultiGameState>(
+      'finished game is protected: deleteGame NOT called',
+      seed: () => DardosMultiGameState(
+        status: DardosMultiGameStatus.success,
+        games: [makeGame(id: 'g1', status: 'finished')],
+      ),
+      build: () => buildBloc(),
+      act: (bloc) =>
+          bloc.add(const DeleteGameEvent(gameId: 'g1', isAdmin: true)),
+      expect: () => <DardosMultiGameState>[],
+      verify: (_) =>
+          verifyNever(mockRepo.deleteGame(gameId: anyNamed('gameId'))),
+    );
+  });
 }
