@@ -142,6 +142,50 @@ void main() {
     );
 
     blocTest<DardosGameBloc, DardosGameState>(
+      'rapid double-tap: createGame called only once (droppable transformer)',
+      build: () {
+        when(mockRepo.createGame(
+          name: anyNamed('name'),
+          mode: anyNamed('mode'),
+          doubleOut: anyNamed('doubleOut'),
+          sets: anyNamed('sets'),
+          legs: anyNamed('legs'),
+          playerIds: anyNamed('playerIds'),
+          createdBy: anyNamed('createdBy'),
+        )).thenAnswer((_) async {
+          // Simulate an in-flight create (network latency) so the second
+          // tap arrives while the first is still being processed.
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          return DataSuccess(makeGame501());
+        });
+        return buildBloc();
+      },
+      act: (bloc) {
+        const event = CreateDardosGameEvent(
+          name: 'Final',
+          mode: '501',
+          doubleOut: true,
+          sets: 1,
+          legs: 3,
+          playerIds: ['p1', 'p2'],
+          createdBy: 'uid',
+        );
+        bloc.add(event);
+        bloc.add(event);
+      },
+      wait: const Duration(milliseconds: 120),
+      verify: (_) => verify(mockRepo.createGame(
+        name: anyNamed('name'),
+        mode: anyNamed('mode'),
+        doubleOut: anyNamed('doubleOut'),
+        sets: anyNamed('sets'),
+        legs: anyNamed('legs'),
+        playerIds: anyNamed('playerIds'),
+        createdBy: anyNamed('createdBy'),
+      )).called(1),
+    );
+
+    blocTest<DardosGameBloc, DardosGameState>(
       'fewer than 2 participants: emits error, repo NOT called',
       build: () => buildBloc(),
       act: (bloc) => bloc.add(CreateDardosGameEvent(
@@ -688,10 +732,12 @@ void main() {
           'bannerType=gameWon',
           DardosBannerType.gameWon,
         ),
+        // After the final writes land, the banner is cleared so the play
+        // page gets the gameWon → none transition it needs to navigate.
         isA<DardosGameState>().having(
           (s) => s.bannerType,
-          'bannerType=gameWon after persisted throw sync',
-          DardosBannerType.gameWon,
+          'banner cleared after persisted throw sync',
+          DardosBannerType.none,
         ),
       ],
       verify: (_) {

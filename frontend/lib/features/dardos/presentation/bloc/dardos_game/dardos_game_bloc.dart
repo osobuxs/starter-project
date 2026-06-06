@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/dardos/domain/entities/cricket_marks_state.dart';
@@ -17,7 +18,9 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
   DardosGameBloc({required DardosGameRepository repository})
       : _repository = repository,
         super(const DardosGameState()) {
-    on<CreateDardosGameEvent>(_onCreate);
+    // droppable: while a create is in flight, additional create events are
+    // ignored — prevents rapid double-taps from creating duplicate games.
+    on<CreateDardosGameEvent>(_onCreate, transformer: droppable());
     on<LoadDardosGameEvent>(_onLoad);
     on<AcquireAnnotatorEvent>(_onAcquireAnnotator);
     on<ReleaseAnnotatorEvent>(_onReleaseAnnotator);
@@ -360,10 +363,11 @@ class DardosGameBloc extends Bloc<DardosGameEvent, DardosGameState> {
           freqByPlayer: freqByPlayer,
         ),
       ]).catchError((_) => <DataState<void>>[]);
-      // Emit final throws (replace tmp with persisted) but keep
-      // gameFinished status + banner — the listener will navigate
-      // when the banner dismisses.
-      emit(state.copyWith(throws: finalThrows));
+      // Final writes have landed. Clear the gameWon banner so the play
+      // page gets the gameWon → none transition it needs to navigate to
+      // the summary. (The banner never renders on the winner screen, so it
+      // would otherwise stay 'gameWon' forever and the redirect would hang.)
+      emit(state.copyWith(throws: finalThrows, clearBanner: true));
       return;
     }
 

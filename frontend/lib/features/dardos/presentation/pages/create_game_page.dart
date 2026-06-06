@@ -28,6 +28,7 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
   bool _doubleOut = false;
   int _sets = 1;
   int _legs = 3;
+  bool _isCreating = false;
 
   // New states for dynamic team configuration
   int _numberOfTeams = 2;
@@ -84,6 +85,7 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
             );
           }
           if (state.status == DardosGameStatus.error && state.error != null) {
+            if (mounted) setState(() => _isCreating = false);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error!)),
             );
@@ -425,14 +427,20 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
                   const SizedBox(height: 32),
 
                   ElevatedButton(
-                    onPressed: () => _createGame(context),
+                    onPressed: _isCreating ? null : () => _createGame(context),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text(
-                      'Crear Partida',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    child: _isCreating
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Crear Partida',
+                            style: TextStyle(fontSize: 16),
+                          ),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton(
@@ -450,6 +458,10 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
   }
 
   void _createGame(BuildContext context) {
+    // Guard against double submission (belt-and-suspenders with the
+    // disabled button and the bloc-level _createInFlight guard).
+    if (_isCreating) return;
+
     if (_gameNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('El nombre no puede estar vacío')),
@@ -467,6 +479,7 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
 
       final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
 
+      setState(() => _isCreating = true);
       context.read<DardosGameBloc>().add(
             CreateDardosGameEvent(
               name: _gameNameController.text.trim(),
@@ -525,6 +538,7 @@ class _DardosCreateGamePageState extends State<DardosCreateGamePage> {
 
     final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
 
+    setState(() => _isCreating = true);
     context.read<DardosGameBloc>().add(
           CreateDardosGameEvent(
             name: _gameNameController.text.trim(),
