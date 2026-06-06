@@ -48,3 +48,6 @@ app.*.map.json
 # Generated APK exports
 /apk/*.apk
 !/apk/.gitkeep
+
+# Flutter screenshots (captured with `s` in `flutter run`)
+flutter_*.png
