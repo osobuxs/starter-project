@@ -33,6 +33,7 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
   late final DardosAudioController _audioController;
   String? _lastAnnouncedThrowKey;
   String? _lastBannerKey;
+  bool _navigatedToFinished = false;
 
   @override
   void initState() {
@@ -116,6 +117,23 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
     }
   }
 
+  /// Navigates to the finished summary exactly once. Safe to call from both
+  /// the BlocConsumer listener and the builder (post-frame) — the guard makes
+  /// sure the user is never stuck on the "Redirigiendo…" screen.
+  void _goToFinished() {
+    if (_navigatedToFinished || !mounted) return;
+    _navigatedToFinished = true;
+    final multi = context.read<DardosMultiGameBloc>();
+    final participantBloc = context.read<DardosParticipantBloc>();
+    final nav = Navigator.of(context);
+    multi.add(LoadGamesEvent());
+    participantBloc.add(FetchAllParticipantsEvent());
+    nav.pushReplacementNamed(
+      AppRouteNames.dardosFinished,
+      arguments: widget.gameId,
+    );
+  }
+
   List<DardosThrowEntity> _displayDartsForOwner(
     DardosGameState state,
     String ownerId,
@@ -153,11 +171,14 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
       if (currentPlayerThrows.isNotEmpty) return currentPlayerThrows;
     }
 
-    final turnIndexes = matchingThrows.map((t) => t.turnIndex).toSet().toList()
-      ..sort();
-    final lastTurnIdx = isCurrentTurn && turnIndexes.length > 1
-        ? turnIndexes[turnIndexes.length - 2]
-        : turnIndexes.last;
+    // Not on turn (or on turn but hasn't thrown yet): show this owner's
+    // most recent COMPLETED turn — the HIGHEST turnIndex they own.
+    // turnIndex is GLOBAL/sequential across all players, so each owner
+    // holds a sparse set of indexes (0,2,4… / 1,3,5…). Take the max of
+    // THIS owner's throws — never offset it.
+    final lastTurnIdx = matchingThrows
+        .map((t) => t.turnIndex)
+        .reduce((a, b) => a > b ? a : b);
     return matchingThrows.where((t) => t.turnIndex == lastTurnIdx).toList();
   }
 
@@ -183,13 +204,19 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
             t.legIndex == game.currentLeg)
         .toList();
     if (matchingThrows.isEmpty) return null;
-    final turnIndexes = matchingThrows.map((t) => t.turnIndex).toSet().toList()
-      ..sort();
     final isCurrentTurn =
         ownerId == game.scoreOwnerForPlayer(game.currentTurnPlayerId);
-    return isCurrentTurn && turnIndexes.length > 1
-        ? turnIndexes[turnIndexes.length - 2]
-        : turnIndexes.last;
+    // Keep this in lock-step with _displayDartsForOwner so the label
+    // always matches the darts shown.
+    if (isCurrentTurn) {
+      final hasCurrentThrows = matchingThrows.any((t) =>
+          t.playerId == game.currentTurnPlayerId &&
+          t.turnIndex == game.currentTurnIndex);
+      if (hasCurrentThrows) return game.currentTurnIndex;
+    }
+    return matchingThrows
+        .map((t) => t.turnIndex)
+        .reduce((a, b) => a > b ? a : b);
   }
 
   String _teamName(Map<String, dynamic> team) =>
@@ -304,17 +331,8 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
               return;
             }
             if (!mounted) return;
-            final multi = context.read<DardosMultiGameBloc>();
-            final participantBloc = context.read<DardosParticipantBloc>();
-            final nav = Navigator.of(context);
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              multi.add(LoadGamesEvent());
-              participantBloc.add(FetchAllParticipantsEvent());
-              nav.pushReplacementNamed(
-                AppRouteNames.dardosFinished,
-                arguments: widget.gameId,
-              );
+              _goToFinished();
             });
             return;
           }
@@ -334,30 +352,49 @@ class _DardosGamePlayPageState extends State<DardosGamePlayPage> {
             body: (state.status == DardosGameStatus.loading || game == null)
                 ? const Center(child: CircularProgressIndicator())
                 : (game.winnerId != null)
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.emoji_events,
-                                  size: 72, color: Colors.amber),
-                              SizedBox(height: 12),
-                              Text(
-                                'Partida terminada',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                    ? Builder(
+                        builder: (context) {
+                          // Fallback: if the listener transition never fired,
+                          // navigate from here so the user is never stuck.
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (state.bannerType != DardosBannerType.gameWon) {
+                              _goToFinished();
+                            }
+                          });
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.emoji_events,
+                                      size: 72, color: Colors.amber),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Partida terminada',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Redirigiendo al resumen…',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const CircularProgressIndicator(),
+                                  const SizedBox(height: 24),
+                                  TextButton.icon(
+                                    onPressed: _goToFinished,
+                                    icon: const Icon(Icons.arrow_forward),
+                                    label: const Text('Ver resumen ahora'),
+                                  ),
+                                ],
                               ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Redirigiendo al resumen…',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       )
                     : BlocBuilder<DardosParticipantBloc,
                         DardosParticipantState>(

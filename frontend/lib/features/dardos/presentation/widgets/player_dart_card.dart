@@ -141,7 +141,9 @@ class PlayerDartCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Turno: $_turnTotal',
+                  isCurrentTurn
+                      ? 'Turno actual: $_turnTotal'
+                      : 'Total turno ant.: $_turnTotal',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -164,7 +166,9 @@ class PlayerDartCard extends StatelessWidget {
                 if (turnIndex != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Turno ${turnIndex! + 1}',
+                    isCurrentTurn
+                        ? 'Turno ${turnIndex! + 1}'
+                        : 'Turno ant. ${turnIndex! + 1}',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,

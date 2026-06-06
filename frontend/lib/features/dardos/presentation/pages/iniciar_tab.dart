@@ -104,10 +104,18 @@ class _IniciarTabState extends State<IniciarTab> {
                   ),
                   const SizedBox(height: 12),
                   Expanded(
-                    child: ListView.separated(
-                      itemCount: allGames.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        context
+                            .read<DardosMultiGameBloc>()
+                            .add(LoadGamesEvent());
+                      },
+                      child: ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: allGames.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1),
+                        itemBuilder: (context, index) {
                         final game = allGames[index];
                         return ListTile(
                           title: Text(game.name as String),
@@ -131,7 +139,8 @@ class _IniciarTabState extends State<IniciarTab> {
                             );
                           },
                         );
-                      },
+                        },
+                      ),
                     ),
                   ),
                 ],
