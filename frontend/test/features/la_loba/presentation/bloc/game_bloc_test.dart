@@ -1,122 +1,58 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game_over_result.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/partida.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/player.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/repository/game_repository.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/usecases/add_player_usecase.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/usecases/check_game_over_usecase.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/usecases/create_game_usecase.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/usecases/do_retry_usecase.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/usecases/fetch_game_history_usecase.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/usecases/fetch_game_usecase.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/usecases/finish_partida_usecase.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/usecases/record_scores_usecase.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/usecases/reject_retry_usecase.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/usecases/start_game_usecase.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_bloc.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_event.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_state.dart';
 
-@GenerateNiceMocks([
-  MockSpec<CreateGameUseCase>(),
-  MockSpec<AddPlayerUseCase>(),
-  MockSpec<StartGameUseCase>(),
-  MockSpec<RecordScoresUseCase>(),
-  MockSpec<FinishPartidaUseCase>(),
-  MockSpec<CheckGameOverUseCase>(),
-  MockSpec<DoRetryUseCase>(),
-  MockSpec<RejectRetryUseCase>(),
-  MockSpec<FetchGameUseCase>(),
-  MockSpec<FetchGameHistoryUseCase>(),
-  MockSpec<GameRepository>(),
-])
-import 'game_bloc_test.mocks.dart';
-
+// Cubre los flujos básicos del GameBloc actual (repository-driven):
+// crear partida, agregar participante, cargar partida y registrar puntaje
+// en memoria. Los flujos de cierre de mano / reingreso / eliminación viven
+// en game_bloc_new_rules_test.dart.
 void main() {
+  late _FakeGameRepository repository;
   late GameBloc bloc;
-  late MockCreateGameUseCase mockCreateGame;
-  late MockAddPlayerUseCase mockAddPlayer;
-  late MockStartGameUseCase mockStartGame;
-  late MockRecordScoresUseCase mockRecordScores;
-  late MockFinishPartidaUseCase mockFinishPartida;
-  late MockCheckGameOverUseCase mockCheckGameOver;
-  late MockDoRetryUseCase mockDoRetry;
-  late MockRejectRetryUseCase mockRejectRetry;
-  late MockFetchGameUseCase mockFetchGame;
-  late MockFetchGameHistoryUseCase mockFetchHistory;
-  late MockGameRepository mockRepository;
-
-  final now = DateTime.now().millisecondsSinceEpoch;
 
   setUp(() {
-    mockCreateGame = MockCreateGameUseCase();
-    mockAddPlayer = MockAddPlayerUseCase();
-    mockStartGame = MockStartGameUseCase();
-    mockRecordScores = MockRecordScoresUseCase();
-    mockFinishPartida = MockFinishPartidaUseCase();
-    mockCheckGameOver = MockCheckGameOverUseCase();
-    mockDoRetry = MockDoRetryUseCase();
-    mockRejectRetry = MockRejectRetryUseCase();
-    mockFetchGame = MockFetchGameUseCase();
-    mockFetchHistory = MockFetchGameHistoryUseCase();
-    mockRepository = MockGameRepository();
-
-    bloc = GameBloc(
-      createGame: mockCreateGame,
-      addPlayer: mockAddPlayer,
-      startGame: mockStartGame,
-      recordScores: mockRecordScores,
-      finishPartida: mockFinishPartida,
-      checkGameOver: mockCheckGameOver,
-      doRetry: mockDoRetry,
-      rejectRetry: mockRejectRetry,
-      fetchGame: mockFetchGame,
-      fetchHistory: mockFetchHistory,
-      repository: mockRepository,
-    );
+    repository = _FakeGameRepository();
+    bloc = GameBloc(repository: repository);
   });
 
-  tearDown(() {
-    bloc.close();
+  tearDown(() async {
+    await bloc.close();
   });
 
   group('CreateGameEvent', () {
-    final tGame = GameEntity(
-      id: 1,
-      name: 'Test',
-      status: 'created',
-      createdAt: now,
-    );
-
     blocTest<GameBloc, GameState>(
       'emits [loading, gameCreated] when CreateGameEvent succeeds',
       build: () {
-        when(mockCreateGame('Test'))
-            .thenAnswer((_) async => DataSuccess(tGame));
+        repository.createGameResult = const DataSuccess(_game);
         return bloc;
       },
       act: (bloc) => bloc.add(const CreateGameEvent('Test')),
       expect: () => [
-        const GameState(status: GameBlocStatus.loading),
-        GameState(status: GameBlocStatus.gameCreated, game: tGame),
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.loading),
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.gameCreated)
+            .having((s) => s.game?.id, 'game id', 'g1'),
       ],
     );
 
     blocTest<GameBloc, GameState>(
       'emits [loading, error] when CreateGameEvent fails',
       build: () {
-        when(mockCreateGame(''))
-            .thenAnswer((_) async => DataFailed(Exception('Empty name')));
+        repository.createGameResult =
+            DataFailed<GameEntity>(Exception('Empty name'));
         return bloc;
       },
       act: (bloc) => bloc.add(const CreateGameEvent('')),
       expect: () => [
-        const GameState(status: GameBlocStatus.loading),
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.loading),
         isA<GameState>()
             .having((s) => s.status, 'status', GameBlocStatus.error),
       ],
@@ -124,81 +60,53 @@ void main() {
   });
 
   group('AddPlayerEvent', () {
-    final tGame = GameEntity(
-      id: 1,
-      name: 'Test',
-      status: 'created',
-      createdAt: now,
-      players: const [PlayerEntity(id: 1, name: 'Juan', gameId: 1)],
-    );
-
     blocTest<GameBloc, GameState>(
-      'emits [loading, gameCreated] when AddPlayerEvent succeeds',
+      'emits [loading, loaded] when adding a participant succeeds',
       build: () {
-        when(mockAddPlayer(1, 'Juan')).thenAnswer(
-          (_) async => const DataSuccess(
-            PlayerEntity(id: 1, name: 'Juan', gameId: 1),
-          ),
-        );
-        when(mockFetchGame(1))
-            .thenAnswer((_) async => DataSuccess(tGame));
+        repository.getGameResult = const DataSuccess(_game);
         return bloc;
       },
       act: (bloc) => bloc.add(
-        const AddPlayerEvent(gameId: 1, playerName: 'Juan'),
+        const AddPlayerEvent(gameId: 'g1', participantId: 'p1'),
       ),
       expect: () => [
-        const GameState(status: GameBlocStatus.loading),
-        GameState(status: GameBlocStatus.gameCreated, game: tGame),
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.loading),
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.loaded)
+            .having((s) => s.game?.id, 'game id', 'g1'),
       ],
     );
   });
 
-  group('StartGameEvent', () {
-    final tStartedGame = GameEntity(
-      id: 1,
-      name: 'Test',
-      status: 'playing',
-      createdAt: now,
-      players: const [
-        PlayerEntity(id: 1, name: 'Juan', gameId: 1),
-        PlayerEntity(id: 2, name: 'Maria', gameId: 1),
-      ],
-      partidas: [
-        PartidaEntity(id: 1, partidaNumber: 1, gameId: 1, createdAt: now),
+  group('LoadGameEvent', () {
+    blocTest<GameBloc, GameState>(
+      'emits [loading, loaded] when the game loads',
+      build: () {
+        repository.getGameResult = const DataSuccess(_game);
+        return bloc;
+      },
+      act: (bloc) => bloc.add(const LoadGameEvent('g1')),
+      expect: () => [
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.loading),
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.loaded)
+            .having((s) => s.game?.id, 'game id', 'g1'),
       ],
     );
 
     blocTest<GameBloc, GameState>(
-      'emits [loading, playing] when StartGameEvent succeeds',
+      'emits [loading, error] when the game fails to load',
       build: () {
-        when(mockStartGame(1))
-            .thenAnswer((_) async => DataSuccess(tStartedGame));
+        repository.getGameResult =
+            DataFailed<GameEntity>(Exception('not found'));
         return bloc;
       },
-      act: (bloc) => bloc.add(const StartGameEvent(1)),
+      act: (bloc) => bloc.add(const LoadGameEvent('g1')),
       expect: () => [
-        const GameState(status: GameBlocStatus.loading),
-        GameState(
-          status: GameBlocStatus.playing,
-          game: tStartedGame,
-          currentPartidaNumber: 1,
-          currentPartidaId: 1,
-        ),
-      ],
-    );
-
-    blocTest<GameBloc, GameState>(
-      'emits [loading, error] when StartGameEvent fails (< 2 players)',
-      build: () {
-        when(mockStartGame(1)).thenAnswer(
-          (_) async => DataFailed(Exception('Need 2 players')),
-        );
-        return bloc;
-      },
-      act: (bloc) => bloc.add(const StartGameEvent(1)),
-      expect: () => [
-        const GameState(status: GameBlocStatus.loading),
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.loading),
         isA<GameState>()
             .having((s) => s.status, 'status', GameBlocStatus.error),
       ],
@@ -207,98 +115,120 @@ void main() {
 
   group('RecordScoreEvent', () {
     blocTest<GameBloc, GameState>(
-      'updates in-memory scores without DB call',
+      'updates in-memory hand scores without persisting',
       build: () => bloc,
       seed: () => const GameState(
-        status: GameBlocStatus.playing,
-        currentPartidaScores: {},
+        status: GameBlocStatus.loaded,
+        game: _game,
       ),
       act: (bloc) => bloc.add(
-        const RecordScoreEvent(playerId: 1, points: 25),
+        const RecordScoreEvent(participantId: 'p1', points: 25),
       ),
       expect: () => [
         isA<GameState>()
-            .having((s) => s.currentPartidaScores, 'scores', {1: 25}),
+            .having((s) => s.currentHandScores, 'scores', {'p1': 25}),
       ],
       verify: (_) {
-        verifyZeroInteractions(mockRecordScores);
+        expect(repository.createHandCalls, 0);
       },
     );
   });
+}
 
-  group('LoadHistoryEvent', () {
-    blocTest<GameBloc, GameState>(
-      'emits [loading, historyLoaded] when LoadHistoryEvent succeeds',
-      build: () {
-        final tGames = [
-          GameEntity(id: 1, name: 'Game 1', createdAt: now),
-          GameEntity(id: 2, name: 'Game 2', createdAt: now - 1000),
-        ];
-        when(mockFetchHistory())
-            .thenAnswer((_) async => DataSuccess(tGames));
-        return bloc;
-      },
-      act: (bloc) => bloc.add(const LoadHistoryEvent()),
-      expect: () => [
-        const GameState(status: GameBlocStatus.loading),
-        isA<GameState>()
-            .having((s) => s.status, 'status', GameBlocStatus.historyLoaded)
-            .having((s) => s.games.length, 'games count', 2),
-      ],
-    );
-  });
+const _game = GameEntity(
+  id: 'g1',
+  name: 'Test',
+  status: 'playing',
+  date: 1,
+  participantIds: ['p1', 'p2'],
+  currentDealerId: 'p1',
+  currentHand: 1,
+  participantStates: {
+    'p1': {'score': 0, 'status': 'active'},
+    'p2': {'score': 0, 'status': 'active'},
+  },
+  winnerId: null,
+  hands: <HandEntity>[],
+);
 
-  group('LoadGameEvent', () {
-    blocTest<GameBloc, GameState>(
-      'emits playing state for active game',
-      build: () {
-        final tGame = GameEntity(
-          id: 1,
-          name: 'Test',
-          status: 'playing',
-          createdAt: now,
-          partidas: [
-            PartidaEntity(
-              id: 3,
-              partidaNumber: 3,
-              gameId: 1,
-              createdAt: now,
-            ),
-          ],
-        );
-        when(mockFetchGame(1))
-            .thenAnswer((_) async => DataSuccess(tGame));
-        return bloc;
-      },
-      act: (bloc) => bloc.add(const LoadGameEvent(1)),
-      expect: () => [
-        const GameState(status: GameBlocStatus.loading),
-        isA<GameState>()
-            .having((s) => s.status, 'status', GameBlocStatus.playing)
-            .having((s) => s.currentPartidaNumber, 'partida', 3)
-            .having((s) => s.currentPartidaId, 'partidaId', 3),
-      ],
-    );
+class _FakeGameRepository implements GameRepository {
+  DataState<GameEntity> createGameResult = const DataSuccess(_game);
+  DataState<GameEntity> getGameResult = const DataSuccess(_game);
+  int createHandCalls = 0;
 
-    blocTest<GameBloc, GameState>(
-      'emits gameOver state for finished game',
-      build: () {
-        final tGame = GameEntity(
-          id: 1,
-          name: 'Test',
-          status: 'finished',
-          createdAt: now,
-        );
-        when(mockFetchGame(1))
-            .thenAnswer((_) async => DataSuccess(tGame));
-        return bloc;
-      },
-      act: (bloc) => bloc.add(const LoadGameEvent(1)),
-      expect: () => [
-        const GameState(status: GameBlocStatus.loading),
-        isA<GameState>()
-            .having((s) => s.status, 'status', GameBlocStatus.gameOver),
-      ],
+  @override
+  Future<DataState<void>> addParticipantToGame(
+    String gameId,
+    String participantId, {
+    int? insertIndex,
+  }) async {
+    return const DataSuccess(null);
+  }
+
+  @override
+  Future<DataState<GameEntity>> createGame(
+    String name, [
+    List<String>? participantIds,
+  ]) async {
+    return createGameResult;
+  }
+
+  @override
+  Future<DataState<HandEntity>> createHand(
+    String gameId,
+    int handNumber,
+    String dealerId,
+    Map<String, int> scores,
+  ) async {
+    createHandCalls += 1;
+    return DataSuccess(
+      HandEntity(
+        handNumber: handNumber,
+        dealerId: dealerId,
+        scores: scores,
+        timestamp: 1,
+      ),
     );
-  });
+  }
+
+  @override
+  Future<DataState<GameEntity>> getGame(String gameId) async {
+    return getGameResult;
+  }
+
+  @override
+  Future<DataState<List<GameEntity>>> getGameHistory() async {
+    return const DataSuccess([]);
+  }
+
+  @override
+  Future<DataState<void>> updateGameStatus(String gameId, String status) async {
+    return const DataSuccess(null);
+  }
+
+  @override
+  Future<DataState<void>> updateGameWinner(
+    String gameId,
+    String winnerId,
+  ) async {
+    return const DataSuccess(null);
+  }
+
+  @override
+  Future<DataState<void>> updateParticipantScores(
+    String gameId,
+    String currentDealerId,
+    int currentHand,
+    Map<String, dynamic> participantStates,
+  ) async {
+    return const DataSuccess(null);
+  }
+
+  @override
+  Future<DataState<void>> updateParticipantStatsOnGameFinished(
+    List<String> participantIds,
+    String winnerId,
+  ) async {
+    return const DataSuccess(null);
+  }
 }
