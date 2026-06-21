@@ -6,21 +6,32 @@ part of 'app_database.dart';
 // FloorGenerator
 // **************************************************************************
 
+abstract class $AppDatabaseBuilderContract {
+  /// Adds migrations to the builder.
+  $AppDatabaseBuilderContract addMigrations(List<Migration> migrations);
+
+  /// Adds a database [Callback] to the builder.
+  $AppDatabaseBuilderContract addCallback(Callback callback);
+
+  /// Creates the database and initializes it.
+  Future<AppDatabase> build();
+}
+
 // ignore: avoid_classes_with_only_static_members
 class $FloorAppDatabase {
   /// Creates a database builder for a persistent database.
   /// Once a database is built, you should keep a reference to it and re-use it.
-  static _$AppDatabaseBuilder databaseBuilder(String name) =>
+  static $AppDatabaseBuilderContract databaseBuilder(String name) =>
       _$AppDatabaseBuilder(name);
 
   /// Creates a database builder for an in memory database.
   /// Information stored in an in memory database disappears when the process is killed.
   /// Once a database is built, you should keep a reference to it and re-use it.
-  static _$AppDatabaseBuilder inMemoryDatabaseBuilder() =>
+  static $AppDatabaseBuilderContract inMemoryDatabaseBuilder() =>
       _$AppDatabaseBuilder(null);
 }
 
-class _$AppDatabaseBuilder {
+class _$AppDatabaseBuilder implements $AppDatabaseBuilderContract {
   _$AppDatabaseBuilder(this.name);
 
   final String? name;
@@ -29,19 +40,19 @@ class _$AppDatabaseBuilder {
 
   Callback? _callback;
 
-  /// Adds migrations to the builder.
-  _$AppDatabaseBuilder addMigrations(List<Migration> migrations) {
+  @override
+  $AppDatabaseBuilderContract addMigrations(List<Migration> migrations) {
     _migrations.addAll(migrations);
     return this;
   }
 
-  /// Adds a database [Callback] to the builder.
-  _$AppDatabaseBuilder addCallback(Callback callback) {
+  @override
+  $AppDatabaseBuilderContract addCallback(Callback callback) {
     _callback = callback;
     return this;
   }
 
-  /// Creates the database and initializes it.
+  @override
   Future<AppDatabase> build() async {
     final path = name != null
         ? await sqfliteDatabaseFactory.getDatabasePath(name!)
@@ -63,8 +74,11 @@ class _$AppDatabase extends AppDatabase {
 
   ArticleDao? _articleDAOInstance;
 
-  Future<sqflite.Database> open(String path, List<Migration> migrations,
-      [Callback? callback]) async {
+  Future<sqflite.Database> open(
+    String path,
+    List<Migration> migrations, [
+    Callback? callback,
+  ]) async {
     final databaseOptions = sqflite.OpenDatabaseOptions(
       version: 1,
       onConfigure: (database) async {
@@ -82,7 +96,7 @@ class _$AppDatabase extends AppDatabase {
       },
       onCreate: (database, version) async {
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `article` (`id` INTEGER, `author` TEXT, `title` TEXT, `description` TEXT, `url` TEXT, `urlToImage` TEXT, `publishedAt` TEXT, `content` TEXT, PRIMARY KEY (`id`))');
+            'CREATE TABLE IF NOT EXISTS `article` (`id` INTEGER, `firestoreId` TEXT, `authorId` TEXT, `author` TEXT, `authorPhotoUrl` TEXT, `title` TEXT, `description` TEXT, `category` TEXT, `url` TEXT, `urlToImage` TEXT, `publishedAt` TEXT, `content` TEXT, `createdAt` INTEGER, `updatedAt` INTEGER, `isPublished` INTEGER, `isActive` INTEGER, `favoritesVersion` INTEGER, PRIMARY KEY (`id`))');
 
         await callback?.onCreate?.call(database, version);
       },
@@ -97,20 +111,34 @@ class _$AppDatabase extends AppDatabase {
 }
 
 class _$ArticleDao extends ArticleDao {
-  _$ArticleDao(this.database, this.changeListener)
-      : _queryAdapter = QueryAdapter(database),
+  _$ArticleDao(
+    this.database,
+    this.changeListener,
+  )   : _queryAdapter = QueryAdapter(database),
         _articleModelInsertionAdapter = InsertionAdapter(
             database,
             'article',
             (ArticleModel item) => <String, Object?>{
                   'id': item.id,
+                  'firestoreId': item.firestoreId,
+                  'authorId': item.authorId,
                   'author': item.author,
+                  'authorPhotoUrl': item.authorPhotoUrl,
                   'title': item.title,
                   'description': item.description,
+                  'category': item.category,
                   'url': item.url,
                   'urlToImage': item.urlToImage,
                   'publishedAt': item.publishedAt,
-                  'content': item.content
+                  'content': item.content,
+                  'createdAt': _dateTimeConverter.encode(item.createdAt),
+                  'updatedAt': _dateTimeConverter.encode(item.updatedAt),
+                  'isPublished': item.isPublished == null
+                      ? null
+                      : (item.isPublished! ? 1 : 0),
+                  'isActive':
+                      item.isActive == null ? null : (item.isActive! ? 1 : 0),
+                  'favoritesVersion': item.favoritesVersion
                 }),
         _articleModelDeletionAdapter = DeletionAdapter(
             database,
@@ -118,13 +146,25 @@ class _$ArticleDao extends ArticleDao {
             ['id'],
             (ArticleModel item) => <String, Object?>{
                   'id': item.id,
+                  'firestoreId': item.firestoreId,
+                  'authorId': item.authorId,
                   'author': item.author,
+                  'authorPhotoUrl': item.authorPhotoUrl,
                   'title': item.title,
                   'description': item.description,
+                  'category': item.category,
                   'url': item.url,
                   'urlToImage': item.urlToImage,
                   'publishedAt': item.publishedAt,
-                  'content': item.content
+                  'content': item.content,
+                  'createdAt': _dateTimeConverter.encode(item.createdAt),
+                  'updatedAt': _dateTimeConverter.encode(item.updatedAt),
+                  'isPublished': item.isPublished == null
+                      ? null
+                      : (item.isPublished! ? 1 : 0),
+                  'isActive':
+                      item.isActive == null ? null : (item.isActive! ? 1 : 0),
+                  'favoritesVersion': item.favoritesVersion
                 });
 
   final sqflite.DatabaseExecutor database;
@@ -142,13 +182,25 @@ class _$ArticleDao extends ArticleDao {
     return _queryAdapter.queryList('SELECT * FROM article',
         mapper: (Map<String, Object?> row) => ArticleModel(
             id: row['id'] as int?,
+            firestoreId: row['firestoreId'] as String?,
+            authorId: row['authorId'] as String?,
             author: row['author'] as String?,
+            authorPhotoUrl: row['authorPhotoUrl'] as String?,
             title: row['title'] as String?,
             description: row['description'] as String?,
+            category: row['category'] as String?,
             url: row['url'] as String?,
             urlToImage: row['urlToImage'] as String?,
             publishedAt: row['publishedAt'] as String?,
-            content: row['content'] as String?));
+            content: row['content'] as String?,
+            createdAt: _dateTimeConverter.decode(row['createdAt'] as int?),
+            updatedAt: _dateTimeConverter.decode(row['updatedAt'] as int?),
+            isPublished: row['isPublished'] == null
+                ? null
+                : (row['isPublished'] as int) != 0,
+            isActive:
+                row['isActive'] == null ? null : (row['isActive'] as int) != 0,
+            favoritesVersion: row['favoritesVersion'] as int?));
   }
 
   @override
@@ -162,3 +214,6 @@ class _$ArticleDao extends ArticleDao {
     await _articleModelDeletionAdapter.delete(articleModel);
   }
 }
+
+// ignore_for_file: unused_element
+final _dateTimeConverter = DateTimeConverter();
