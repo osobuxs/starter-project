@@ -9,13 +9,13 @@ class ParticipantListItem extends StatelessWidget {
   final VoidCallback? onDelete;
 
   const ParticipantListItem({
-    Key? key,
+    super.key,
     required this.participant,
     required this.onTap,
     required this.isAdmin,
     this.onEdit,
     this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

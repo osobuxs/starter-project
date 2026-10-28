@@ -7,7 +7,7 @@ import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/p
 import 'package:news_app_clean_architecture/features/la_loba/presentation/widgets/participant_list_item.dart';
 
 class UsuariosTab extends StatefulWidget {
-  const UsuariosTab({Key? key}) : super(key: key);
+  const UsuariosTab({super.key});
 
   @override
   State<UsuariosTab> createState() => _UsuariosTabState();

@@ -10,7 +10,7 @@ import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/
 import 'package:news_app_clean_architecture/features/la_loba/presentation/pages/usuarios_tab.dart';
 
 class LaLobaWrapper extends StatelessWidget {
-  const LaLobaWrapper({Key? key}) : super(key: key);
+  const LaLobaWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -3,24 +3,15 @@ import 'package:news_app_clean_architecture/features/la_loba/domain/entities/par
 
 class ParticipantModel extends ParticipantEntity {
   const ParticipantModel({
-    required String id,
-    required String name,
-    String? email,
-    int totalGamesPlayed = 0,
-    int totalGamesWon = 0,
-    String? uid,
-    bool isActive = true,
-    DateTime? deletedAt,
-  }) : super(
-          id: id,
-          name: name,
-          email: email,
-          totalGamesPlayed: totalGamesPlayed,
-          totalGamesWon: totalGamesWon,
-          uid: uid,
-          isActive: isActive,
-          deletedAt: deletedAt,
-        );
+    required super.id,
+    required super.name,
+    super.email,
+    super.totalGamesPlayed,
+    super.totalGamesWon,
+    super.uid,
+    super.isActive,
+    super.deletedAt,
+  });
 
   factory ParticipantModel.fromFirestore(
     Map<String, dynamic> json,

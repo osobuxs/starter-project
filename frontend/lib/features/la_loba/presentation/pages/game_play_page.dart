@@ -83,10 +83,10 @@ class _GamePlayPageState extends State<GamePlayPage> {
             participantId: state.currentRetryParticipantId!,
             gameState: state,
           );
+          return;
         }
 
         if (state.status == GameBlocStatus.gameFinished) {
-          if (!mounted) return;
           context.read<MultiGameBloc>().add(const LoadGamesEvent());
           context
               .read<ParticipantBloc>()
@@ -527,7 +527,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
       },
     );
 
-    if (!mounted || decision == null) return;
+    if (!context.mounted || decision == null) return;
     context.read<GameBloc>().add(
           ResolveRetryDecisionEvent(
             participantId: participantId,
@@ -565,7 +565,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
       },
     );
 
-    if (!mounted || confirm != true) return;
+    if (!context.mounted || confirm != true) return;
     context.read<GameBloc>().add(FinishPartidaEvent(widget.gameId));
   }
 
@@ -678,7 +678,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
       },
     );
 
-    if (!mounted || chosen == null) return;
+    if (!context.mounted || chosen == null) return;
 
     context.read<GameBloc>().add(
           AddPlayerEvent(

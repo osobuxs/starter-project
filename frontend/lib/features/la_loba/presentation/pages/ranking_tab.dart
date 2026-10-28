@@ -11,7 +11,7 @@ import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/p
 import 'package:news_app_clean_architecture/features/la_loba/presentation/utils/participant_display.dart';
 
 class RankingTab extends StatefulWidget {
-  const RankingTab({Key? key}) : super(key: key);
+  const RankingTab({super.key});
 
   @override
   State<RankingTab> createState() => _RankingTabState();

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/participant.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/multi_game_bloc.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/multi_game_state.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/participant_bloc.dart';
@@ -12,9 +11,9 @@ class ParticipantDetailPage extends StatefulWidget {
   final String participantId;
 
   const ParticipantDetailPage({
-    Key? key,
+    super.key,
     required this.participantId,
-  }) : super(key: key);
+  });
 
   @override
   State<ParticipantDetailPage> createState() => _ParticipantDetailPageState();
@@ -25,13 +24,9 @@ class _ParticipantDetailPageState extends State<ParticipantDetailPage> {
   Widget build(BuildContext context) {
     return BlocBuilder<ParticipantBloc, ParticipantState>(
       builder: (context, participantState) {
-        ParticipantEntity? participant;
-        try {
-          participant = participantState.participants
-              .firstWhere((p) => p.id == widget.participantId);
-        } catch (e) {
-          participant = null;
-        }
+        final participant = participantState.participants
+            .where((p) => p.id == widget.participantId)
+            .firstOrNull;
 
         if (participant == null) {
           return Scaffold(
@@ -60,7 +55,7 @@ class _ParticipantDetailPageState extends State<ParticipantDetailPage> {
 
             return Scaffold(
               appBar: AppBar(
-                title: Text(participant!.name),
+                title: Text(participant.name),
                 elevation: 0,
               ),
               body: CustomScrollView(
@@ -81,16 +76,16 @@ class _ParticipantDetailPageState extends State<ParticipantDetailPage> {
                                 children: [
                                   _StatColumn(
                                     label: 'Partidas',
-                                    value: '${participant!.totalGamesPlayed}',
+                                    value: '${participant.totalGamesPlayed}',
                                   ),
                                   _StatColumn(
                                     label: 'Ganadas',
-                                    value: '${participant!.totalGamesWon}',
+                                    value: '${participant.totalGamesWon}',
                                   ),
                                   _StatColumn(
                                     label: 'Tasa de Win',
                                     value:
-                                        '${(participant!.totalGamesPlayed > 0 ? (participant!.totalGamesWon / participant!.totalGamesPlayed * 100).toStringAsFixed(1) : '0.0')}%',
+                                        '${(participant.totalGamesPlayed > 0 ? (participant.totalGamesWon / participant.totalGamesPlayed * 100).toStringAsFixed(1) : '0.0')}%',
                                   ),
                                 ],
                               ),

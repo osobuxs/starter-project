@@ -16,10 +16,8 @@ class GameHistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = game.date != null
-        ? DateFormat('dd/MM/yyyy HH:mm')
-            .format(DateTime.fromMillisecondsSinceEpoch(game.date))
-        : 'Sin fecha';
+    final dateStr = DateFormat('dd/MM/yyyy HH:mm')
+        .format(DateTime.fromMillisecondsSinceEpoch(game.date));
 
     final isFinished = game.status == 'finished';
     final isPaused = game.status == 'paused';
@@ -57,7 +55,7 @@ class GameHistoryTile extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Participantes: ${game.participantIds?.length ?? 0}',
+            'Participantes: ${game.participantIds.length}',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],

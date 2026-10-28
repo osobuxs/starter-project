@@ -2,26 +2,16 @@ import 'package:news_app_clean_architecture/features/la_loba/domain/entities/han
 
 class HandModel extends HandEntity {
   const HandModel({
-    required int handNumber,
-    required String dealerId,
-    Map<String, int> scores = const {},
-    required int timestamp,
-    Map<String, dynamic>? participantStatesBefore,
-    String? dealerIdBefore,
-    bool finishedGame = false,
-    String? winnerId,
-    Map<String, int>? rejoinScores,
-  }) : super(
-    handNumber: handNumber,
-    dealerId: dealerId,
-    scores: scores,
-    timestamp: timestamp,
-    participantStatesBefore: participantStatesBefore,
-    dealerIdBefore: dealerIdBefore,
-    finishedGame: finishedGame,
-    winnerId: winnerId,
-    rejoinScores: rejoinScores,
-  );
+    required super.handNumber,
+    required super.dealerId,
+    super.scores,
+    required super.timestamp,
+    super.participantStatesBefore,
+    super.dealerIdBefore,
+    super.finishedGame,
+    super.winnerId,
+    super.rejoinScores,
+  });
 
   factory HandModel.fromFirestore(Map<String, dynamic> json, String docId) {
     final statesBefore = json['participantStatesBefore'];

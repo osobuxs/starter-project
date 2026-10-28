@@ -9,7 +9,7 @@ import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/p
 import 'package:news_app_clean_architecture/features/la_loba/presentation/widgets/game_history_tile.dart';
 
 class IniciarTab extends StatelessWidget {
-  const IniciarTab({Key? key}) : super(key: key);
+  const IniciarTab({super.key});
 
   @override
   Widget build(BuildContext context) {

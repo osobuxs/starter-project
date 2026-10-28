@@ -7,16 +7,15 @@ class GameDetailView extends StatelessWidget {
   final Map<String, String> participantNames; // participantId -> name
 
   const GameDetailView({
-    Key? key,
+    super.key,
     required this.game,
     required this.participantNames,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = game.date != null
-        ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.fromMillisecondsSinceEpoch(game.date))
-        : 'Sin fecha';
+    final dateStr = DateFormat('dd/MM/yyyy HH:mm')
+        .format(DateTime.fromMillisecondsSinceEpoch(game.date));
 
     return SingleChildScrollView(
       child: Padding(
@@ -67,7 +66,7 @@ class GameDetailView extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text('${game.participantIds?.length ?? 0}'),
+                            Text('${game.participantIds.length}'),
                           ],
                         ),
                       ],
@@ -152,7 +151,7 @@ class GameDetailView extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Column(
                   children: [
-                    if ((game.participantStates?.isEmpty ?? true))
+                    if (game.participantStates.isEmpty)
                       const Padding(
                         padding: EdgeInsets.all(16),
                         child: Text(
@@ -161,7 +160,7 @@ class GameDetailView extends StatelessWidget {
                         ),
                       )
                     else
-                      ...game.participantStates!.entries.map((entry) {
+                      ...game.participantStates.entries.map((entry) {
                         final participantId = entry.key;
                         final score = entry.value['totalScore'] ?? 0;
                         final name = participantNames[participantId] ?? 'Desconocido';
@@ -184,7 +183,7 @@ class GameDetailView extends StatelessWidget {
                             ),
                           ),
                         );
-                      }).toList(),
+                      }),
                   ],
                 ),
               ),
