@@ -44,6 +44,7 @@ import 'package:news_app_clean_architecture/features/truco/presentation/bloc/tru
 import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_participant/truco_participant_event.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/pages/truco_create_game_page.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/pages/truco_game_play_page.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/pages/truco_player_detail_page.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/pages/truco_wrapper.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/truco_route_names.dart';
 import 'package:news_app_clean_architecture/injection_container.dart';
@@ -403,6 +404,36 @@ class AppRoutes {
               ),
             ],
             child: TrucoGamePlayPage(gameId: trucoGameId),
+          ),
+        );
+
+      case TrucoRouteNames.playerDetail:
+        final trucoPlayerId = settings.arguments as String?;
+        if (trucoPlayerId == null || trucoPlayerId.isEmpty) {
+          return _materialRoute(
+            settings,
+            policy: policy,
+            child: const AppCenteredMessageState(
+              icon: Icons.error_outline,
+              title: 'Ruta inválida',
+              message: 'No se encontró un jugador válido.',
+            ),
+          );
+        }
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<TrucoMultiGameBloc>(
+                create: (_) =>
+                    sl<TrucoMultiGameBloc>()..add(const LoadTrucoGamesEvent()),
+              ),
+              BlocProvider<TrucoParticipantBloc>(
+                create: (_) => _trucoParticipantBloc(),
+              ),
+            ],
+            child: TrucoPlayerDetailPage(playerId: trucoPlayerId),
           ),
         );
 

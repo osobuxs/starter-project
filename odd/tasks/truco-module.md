@@ -42,8 +42,8 @@ The app has La Loba and Dardos scorers but no Truco. Paper "anotadores" use grou
 - [x] T4 — Create game: mode, target 18/30, team names, pick players per team, seating preview.
 - [x] T5 — Game board: per-team numeric entry (+/−), confirm, matchstick painter with malas/buenas divider, winner, correct last hand, realtime.
 - [x] T6 — Wiring: DI, routes, module entry, game history list.
-- [ ] T6b — History, ranking and player detail (user request): stats on finish in the hand batch (net deltas on correction), finished games history, ranking (win counts for every member of the winning team), player detail page, bottom nav like La Loba/Dardos.
-- [ ] T6b — History, ranking and player detail (user scope addition 2026-10-28): per-player stats persisted in the hand-commit batch with net deltas on correction; Historial tab (finished games, read-only), Ranking tab mirroring La Loba/Dardos (a win counts for every member of the winning team), player detail page; bottom nav wrapper.
+- [x] T6b — History, ranking and player detail (user request): stats on finish in the hand batch (net deltas on correction), finished games history, ranking (win counts for every member of the winning team), player detail page, bottom nav like La Loba/Dardos.
+- [x] T6b — History, ranking and player detail (user scope addition 2026-10-28): per-player stats persisted in the hand-commit batch with net deltas on correction; Historial tab (finished games, read-only), Ranking tab mirroring La Loba/Dardos (a win counts for every member of the winning team), player detail page; bottom nav wrapper.
 - [ ] T7 — Firestore rules for Truco collections (admin-only writes, public reads). Not deployed by the agent.
 
 ## Decisions
@@ -51,6 +51,7 @@ The app has La Loba and Dardos scorers but no Truco. Paper "anotadores" use grou
 - Both teams reaching the target in the same hand: the higher raw (unclamped) total wins; an exact tie blocks the hand with an error so the admin corrects the entry.
 - Create defaults to 2 vs 2 at 30 points; picking a player for the other team moves them; reordering uses up/down arrows within a team.
 - Confirm closes the hand immediately (no confirmation dialog) because the board updates locally and the last hand can be corrected; a 0–0 hand is rejected. Per-hand entry is bounded to -99..99.
+- Ranking uses the persisted per-player totals (like La Loba/Dardos); the player detail totals are computed from that player's finished games, and finished games open on the same board page in read-only mode.
 - Malas/buenas are drawn from the clamped total: malas = min(total, half), buenas = the rest, each regrouped in fives from zero (so a half of 9 closes with a group of four).
 
 ## Acceptance criteria
@@ -71,5 +72,6 @@ The app has La Loba and Dardos scorers but no Truco. Paper "anotadores" use grou
 - T4 (delegated writer). RED: validator and create-game cubit tests failed to compile. GREEN: 58 truco tests passed (validator rules, toggle/move between teams, trim on mode change, reorder, seating, submit valid/invalid/failure; create page widget tests for seating preview + start); analyze: No issues found.
 - T5 (delegated writer). RED: game bloc test failed to compile (no `TrucoGameBloc`). GREEN: 76 truco tests passed (optimistic confirm + single commit, empty hand, finish, tie error, failed commit keeps board, remote updates/finish, edit/cancel with buffered remote, 10-minute window, legacy hands; play page widget tests: board names/members/totals/stick groups, read-only viewer, confirm flow, pencil correction); analyze: No issues found. `dart format` applied to the whole module (also reformatted T1–T4 files). Golden test skipped (optional).
 - T6 (delegated writer). RED: multi-game bloc test failed to compile. GREEN: 79 truco tests passed (playing/finished split; Iniciar tab lists games and opens board/create). Wired `lib/di/truco_di.dart`, routes `/Truco`, `/Truco/Create`, `/Truco/Play` (route names in `features/truco/presentation/truco_route_names.dart`, since `core/navigation/route_names.dart` is outside the edit surface), dashboard chip. PENDING outside the edit surface: `frontend/lib/injection_container.dart` must call `await registerTrucoDependencies(sl);` (the surface listed `lib/di/injection_container.dart`, which does not exist); optional drawer entry in `frontend/lib/core/widgets/app_section_scaffold.dart`.
+- T6b (delegated writer). Stats (`totalGamesPlayed`/`totalGamesWon` with net deltas on correction) were already persisted in the T2 hand-commit batch and tested there. RED: `truco_stats_test.dart` failed to compile (no `truco_stats.dart`). GREEN: 86 truco tests passed (ranking order wins → win rate → name, zero-games rate; per-player history newest first with partners/opponents/results and finished-only totals; widget tests for Historial, Ranking and player detail). Wrapper now has Iniciar / Jugadores / Historial / Ranking; route `/Truco/PlayerDetail`.
 
 Branch `feat/truco` created from `main` (v1.1.0). Next: T1–T6 via one delegated writer, then T7.
