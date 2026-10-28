@@ -203,31 +203,47 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
     if (winnerId != null) {
       gameUpdate['winnerId'] = winnerId;
       gameUpdate['status'] = 'finished';
+    } else if (commit.isEdit) {
+      // The corrected hand no longer finishes the game.
+      gameUpdate['winnerId'] = null;
+      gameUpdate['status'] = 'playing';
     }
     batch.update(gameRef, gameUpdate);
 
-    if (winnerId != null) {
-      _addStatsIncrements(batch, commit.participantIds, winnerId, 1);
-    }
+    _addStatsDeltas(
+      batch,
+      participantIds: commit.participantIds,
+      revertWinnerId: commit.revertWinnerId,
+      winnerId: winnerId,
+    );
 
     // Applied to the local cache right away (listeners fire immediately);
     // the returned future completes once the server acknowledges it.
     await batch.commit();
   }
 
-  void _addStatsIncrements(
-    WriteBatch batch,
-    List<String> participantIds,
-    String winnerId,
-    int delta,
-  ) {
+  /// Undoes the stats of [revertWinnerId]'s finish (if any) and applies the
+  /// ones of [winnerId]'s finish (if any), as net increments per participant.
+  void _addStatsDeltas(
+    WriteBatch batch, {
+    required List<String> participantIds,
+    required String? revertWinnerId,
+    required String? winnerId,
+  }) {
+    final playedDelta =
+        (winnerId != null ? 1 : 0) - (revertWinnerId != null ? 1 : 0);
+
     for (final participantId in participantIds) {
+      final wonDelta = (participantId == winnerId ? 1 : 0) -
+          (participantId == revertWinnerId ? 1 : 0);
+      if (playedDelta == 0 && wonDelta == 0) continue;
+
       final participantRef =
           _firestore.collection('participants').doc(participantId);
       batch.update(participantRef, {
-        'totalGamesPlayed': FieldValue.increment(delta),
-        if (participantId == winnerId)
-          'totalGamesWon': FieldValue.increment(delta),
+        if (playedDelta != 0)
+          'totalGamesPlayed': FieldValue.increment(playedDelta),
+        if (wonDelta != 0) 'totalGamesWon': FieldValue.increment(wonDelta),
       });
     }
   }

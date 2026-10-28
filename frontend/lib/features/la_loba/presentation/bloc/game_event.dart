@@ -73,6 +73,16 @@ class FinishPartidaEvent extends GameEvent {
   List<Object?> get props => [gameId];
 }
 
+/// Reopens the last closed hand so its scores can be corrected.
+class StartEditLastHandEvent extends GameEvent {
+  const StartEditLastHandEvent();
+}
+
+/// Leaves edit mode restoring the board as it was.
+class CancelEditLastHandEvent extends GameEvent {
+  const CancelEditLastHandEvent();
+}
+
 class LoadGameEvent extends GameEvent {
   final String gameId;
 

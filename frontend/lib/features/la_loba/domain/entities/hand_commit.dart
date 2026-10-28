@@ -5,6 +5,10 @@ import 'hand.dart';
 /// Everything that must be persisted atomically when a hand is closed:
 /// the hand document plus the resulting game state (and, when the hand
 /// finishes the game, the winner and participant stats).
+///
+/// When [isEdit] is true the hand document is overwritten and the game
+/// status/winner are always rewritten; [revertWinnerId] is the winner the
+/// original hand produced, whose stats must be undone first.
 class HandCommit extends Equatable {
   final String gameId;
   final HandEntity hand;
@@ -13,6 +17,8 @@ class HandCommit extends Equatable {
   final String nextDealerId;
   final int nextHandNumber;
   final String? winnerId;
+  final bool isEdit;
+  final String? revertWinnerId;
 
   const HandCommit({
     required this.gameId,
@@ -22,6 +28,8 @@ class HandCommit extends Equatable {
     required this.nextDealerId,
     required this.nextHandNumber,
     this.winnerId,
+    this.isEdit = false,
+    this.revertWinnerId,
   });
 
   @override
@@ -33,5 +41,7 @@ class HandCommit extends Equatable {
         nextDealerId,
         nextHandNumber,
         winnerId,
+        isEdit,
+        revertWinnerId,
       ];
 }

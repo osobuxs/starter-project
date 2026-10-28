@@ -12,7 +12,7 @@ import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/g
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_state.dart';
 
 // Live scoring: realtime board updates from the repository stream and
-// instant (non-blocking) hand commits.
+// instant (non-blocking) hand commits, and editing the last hand.
 void main() {
   late _FakeGameRepository repository;
 
@@ -255,6 +255,208 @@ void main() {
       },
     );
   });
+
+  group('Edit last hand', () {
+    blocTest<GameBloc, GameState>(
+      'stores the pre-hand snapshot in every committed hand',
+      build: () => GameBloc(repository: repository),
+      seed: () => const GameState(
+        status: GameBlocStatus.loaded,
+        game: _game,
+        currentHandScores: {'p1': 10, 'p2': 3},
+      ),
+      act: (bloc) => bloc.add(const FinishPartidaEvent('g1')),
+      verify: (bloc) {
+        final hand = repository.commits.single.hand;
+        expect(hand.participantStatesBefore, _game.participantStates);
+        expect(hand.dealerIdBefore, 'p1');
+        expect(hand.finishedGame, isFalse);
+        expect(hand.winnerId, isNull);
+        expect(bloc.state.game?.hands.single.canBeEdited, isTrue);
+      },
+    );
+
+    blocTest<GameBloc, GameState>(
+      'marks the hand that finished the game with its winner',
+      build: () => GameBloc(repository: repository),
+      seed: () => const GameState(
+        status: GameBlocStatus.loaded,
+        game: _twoPlayersGame,
+        currentHandScores: {'p1': 5, 'p2': 0},
+      ),
+      act: (bloc) => bloc.add(const FinishPartidaEvent('g1')),
+      verify: (_) {
+        final hand = repository.commits.single.hand;
+        expect(hand.finishedGame, isTrue);
+        expect(hand.winnerId, 'p2');
+      },
+    );
+
+    blocTest<GameBloc, GameState>(
+      'reverts the board to the snapshot and prefills the hand scores',
+      build: () => GameBloc(repository: repository),
+      seed: () => const GameState(
+        status: GameBlocStatus.handFinished,
+        game: _afterEditableHand1,
+      ),
+      act: (bloc) => bloc.add(const StartEditLastHandEvent()),
+      expect: () => [
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.loaded)
+            .having((s) => s.editingHandNumber, 'editing', 1)
+            .having((s) => s.currentHandScores, 'scores',
+                {'p1': 10, 'p2': 3, 'p3': 0})
+            .having((s) => s.game?.currentHand, 'hand', 1)
+            .having((s) => s.game?.currentDealerId, 'dealer', 'p1')
+            .having((s) => s.game?.participantStates, 'states',
+                _game.participantStates)
+            .having((s) => s.game?.hands, 'hands', isEmpty),
+      ],
+    );
+
+    blocTest<GameBloc, GameState>(
+      'keeps participants added after the snapshot when reverting',
+      build: () => GameBloc(repository: repository),
+      seed: () => GameState(
+        status: GameBlocStatus.loaded,
+        game: _afterEditableHand1.copyWith(
+          participantIds: ['p1', 'p2', 'p3', 'p4'],
+          participantStates: {
+            ..._afterEditableHand1.participantStates,
+            'p4': {'score': 10, 'status': 'active'},
+          },
+        ),
+      ),
+      act: (bloc) => bloc.add(const StartEditLastHandEvent()),
+      expect: () => [
+        isA<GameState>()
+            .having((s) => s.game?.participantStates['p4'], 'p4',
+                {'score': 10, 'status': 'active'})
+            .having((s) => s.game?.participantStates['p1']?['score'],
+                'p1', 0),
+      ],
+    );
+
+    blocTest<GameBloc, GameState>(
+      'does not edit legacy hands without snapshot',
+      build: () => GameBloc(repository: repository),
+      seed: () => const GameState(
+        status: GameBlocStatus.loaded,
+        game: _remoteAfterHand1,
+      ),
+      act: (bloc) => bloc.add(const StartEditLastHandEvent()),
+      expect: () => <GameState>[],
+    );
+
+    blocTest<GameBloc, GameState>(
+      'cancel restores the board as it was',
+      build: () => GameBloc(repository: repository),
+      seed: () => const GameState(
+        status: GameBlocStatus.handFinished,
+        game: _afterEditableHand1,
+      ),
+      act: (bloc) {
+        bloc.add(const StartEditLastHandEvent());
+        bloc.add(const CancelEditLastHandEvent());
+      },
+      skip: 1,
+      expect: () => [
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.loaded)
+            .having((s) => s.isEditingHand, 'editing', isFalse)
+            .having((s) => s.currentHandScores, 'scores', isEmpty)
+            .having((s) => s.game, 'game', _afterEditableHand1),
+      ],
+      verify: (_) => expect(repository.commits, isEmpty),
+    );
+
+    blocTest<GameBloc, GameState>(
+      'closing while editing overwrites the same hand keeping its snapshot',
+      build: () => GameBloc(repository: repository),
+      seed: () => const GameState(
+        status: GameBlocStatus.handFinished,
+        game: _afterEditableHand1,
+      ),
+      act: (bloc) {
+        bloc.add(const StartEditLastHandEvent());
+        bloc.add(const RecordScoreEvent(participantId: 'p1', points: 4));
+        bloc.add(const FinishPartidaEvent('g1'));
+      },
+      skip: 2,
+      expect: () => [
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.handFinished)
+            .having((s) => s.isEditingHand, 'editing', isFalse)
+            .having((s) => s.game?.currentHand, 'hand', 2)
+            .having((s) => s.game?.currentDealerId, 'dealer', 'p2')
+            .having((s) => s.game?.participantStates['p1']?['score'],
+                'p1 total', 4)
+            .having((s) => s.game?.hands.single.scores,
+                'hand scores', {'p1': 4, 'p2': 3, 'p3': 0}),
+      ],
+      verify: (_) {
+        final commit = repository.commits.single;
+        expect(commit.isEdit, isTrue);
+        expect(commit.revertWinnerId, isNull);
+        expect(commit.hand.handNumber, 1);
+        expect(commit.hand.participantStatesBefore, _game.participantStates);
+        expect(commit.hand.dealerIdBefore, 'p1');
+        expect(commit.nextHandNumber, 2);
+      },
+    );
+
+    blocTest<GameBloc, GameState>(
+      'editing the hand that finished the game reopens it and reverts stats',
+      build: () => GameBloc(repository: repository),
+      seed: () => const GameState(
+        status: GameBlocStatus.loaded,
+        game: _finishedByHand1,
+      ),
+      act: (bloc) async {
+        bloc.add(const StartEditLastHandEvent());
+        await pumpEventQueue();
+        expect(bloc.state.game?.status, 'playing');
+        expect(bloc.state.game?.winnerId, isNull);
+        bloc.add(const RecordScoreEvent(participantId: 'p1', points: 1));
+        bloc.add(const FinishPartidaEvent('g1'));
+      },
+      skip: 2,
+      expect: () => [
+        isA<GameState>()
+            .having((s) => s.status, 'status', GameBlocStatus.handFinished)
+            .having((s) => s.game?.status, 'game status', 'playing')
+            .having((s) => s.game?.winnerId, 'winner', isNull),
+      ],
+      verify: (_) {
+        final commit = repository.commits.single;
+        expect(commit.isEdit, isTrue);
+        expect(commit.revertWinnerId, 'p2');
+        expect(commit.winnerId, isNull);
+        expect(commit.hand.finishedGame, isFalse);
+      },
+    );
+
+    blocTest<GameBloc, GameState>(
+      'buffers remote updates while editing and applies them on cancel',
+      build: () => GameBloc(repository: repository),
+      act: (bloc) async {
+        repository.getGameResult = const DataSuccess(_afterEditableHand1);
+        bloc.add(const LoadGameEvent('g1'));
+        await pumpEventQueue();
+        bloc.add(const StartEditLastHandEvent());
+        await pumpEventQueue();
+        repository.pushRemote(_afterEditableHand1.copyWith(name: 'Remoto'));
+        await pumpEventQueue();
+        bloc.add(const CancelEditLastHandEvent());
+      },
+      skip: 3,
+      expect: () => [
+        isA<GameState>()
+            .having((s) => s.isEditingHand, 'editing', isFalse)
+            .having((s) => s.game?.name, 'name', 'Remoto'),
+      ],
+    );
+  });
 }
 
 const _game = GameEntity(
@@ -292,6 +494,67 @@ const _remoteAfterHand1 = GameEntity(
       dealerId: 'p1',
       scores: {'p1': 10, 'p2': 3, 'p3': 0},
       timestamp: 1,
+    ),
+  ],
+);
+
+// State after hand 1 was closed with snapshot (p1 dealt, no eliminations).
+const _afterEditableHand1 = GameEntity(
+  id: 'g1',
+  name: 'Live',
+  status: 'playing',
+  date: 1,
+  participantIds: ['p1', 'p2', 'p3'],
+  currentDealerId: 'p2',
+  currentHand: 2,
+  participantStates: {
+    'p1': {'score': 10, 'status': 'active'},
+    'p2': {'score': 3, 'status': 'active'},
+    'p3': {'score': 0, 'status': 'active'},
+  },
+  hands: <HandEntity>[
+    HandEntity(
+      handNumber: 1,
+      dealerId: 'p1',
+      scores: {'p1': 10, 'p2': 3, 'p3': 0},
+      timestamp: 1,
+      participantStatesBefore: {
+        'p1': {'score': 0, 'status': 'active'},
+        'p2': {'score': 0, 'status': 'active'},
+        'p3': {'score': 0, 'status': 'active'},
+      },
+      dealerIdBefore: 'p1',
+    ),
+  ],
+);
+
+// Hand 1 eliminated p1 (98 + 5) and finished the game for p2.
+const _finishedByHand1 = GameEntity(
+  id: 'g1',
+  name: 'Live',
+  status: 'finished',
+  date: 1,
+  participantIds: ['p1', 'p2'],
+  currentDealerId: 'p2',
+  currentHand: 2,
+  participantStates: {
+    'p1': {'score': 103, 'status': 'eliminated', 'eliminatedAtHand': 1},
+    'p2': {'score': 40, 'status': 'active'},
+  },
+  winnerId: 'p2',
+  hands: <HandEntity>[
+    HandEntity(
+      handNumber: 1,
+      dealerId: 'p1',
+      scores: {'p1': 5, 'p2': 0},
+      timestamp: 1,
+      participantStatesBefore: {
+        'p1': {'score': 98, 'status': 'active'},
+        'p2': {'score': 40, 'status': 'active'},
+      },
+      dealerIdBefore: 'p1',
+      finishedGame: true,
+      winnerId: 'p2',
     ),
   ],
 );

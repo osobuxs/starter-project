@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart';
 
 enum GameBlocStatus {
   initial,
@@ -22,6 +23,9 @@ class GameState extends Equatable {
   final String? currentRetryParticipantId;
   final int? retryReentryBaseScore;
 
+  /// Hand number being corrected; null when not editing.
+  final int? editingHandNumber;
+
   const GameState({
     this.status = GameBlocStatus.initial,
     this.game,
@@ -30,7 +34,26 @@ class GameState extends Equatable {
     this.pendingRetryParticipantIds = const [],
     this.currentRetryParticipantId,
     this.retryReentryBaseScore,
+    this.editingHandNumber,
   });
+
+  bool get isEditingHand => editingHandNumber != null;
+
+  /// The last closed hand when it can be reopened: it must carry a pre-hand
+  /// snapshot (legacy hands do not), be the hand right before the current
+  /// one and, on a finished game, be the hand that finished it.
+  HandEntity? get editableLastHand {
+    final game = this.game;
+    if (game == null || game.hands.isEmpty || isEditingHand) return null;
+
+    final last = game.hands.reduce(
+      (a, b) => a.handNumber >= b.handNumber ? a : b,
+    );
+    if (!last.canBeEdited) return null;
+    if (last.handNumber != game.currentHand - 1) return null;
+    if (game.status == 'finished' && !last.finishedGame) return null;
+    return last;
+  }
 
   GameState copyWith({
     GameBlocStatus? status,
@@ -45,6 +68,8 @@ class GameState extends Equatable {
     bool clearCurrentRetryParticipantId = false,
     int? retryReentryBaseScore,
     bool clearRetryReentryBaseScore = false,
+    int? editingHandNumber,
+    bool clearEditingHandNumber = false,
   }) {
     return GameState(
       status: status ?? this.status,
@@ -60,6 +85,9 @@ class GameState extends Equatable {
       retryReentryBaseScore: clearRetryReentryBaseScore
           ? null
           : (retryReentryBaseScore ?? this.retryReentryBaseScore),
+      editingHandNumber: clearEditingHandNumber
+          ? null
+          : (editingHandNumber ?? this.editingHandNumber),
     );
   }
 
@@ -72,5 +100,6 @@ class GameState extends Equatable {
         pendingRetryParticipantIds,
         currentRetryParticipantId,
         retryReentryBaseScore,
+        editingHandNumber,
       ];
 }

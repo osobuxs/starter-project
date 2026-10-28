@@ -37,6 +37,7 @@ class GameEntity extends Equatable {
     int? currentHand,
     Map<String, dynamic>? participantStates,
     String? winnerId,
+    bool clearWinnerId = false,
     List<HandEntity>? hands,
   }) {
     return GameEntity(
@@ -48,7 +49,7 @@ class GameEntity extends Equatable {
       currentDealerId: currentDealerId ?? this.currentDealerId,
       currentHand: currentHand ?? this.currentHand,
       participantStates: participantStates ?? this.participantStates,
-      winnerId: winnerId ?? this.winnerId,
+      winnerId: clearWinnerId ? null : (winnerId ?? this.winnerId),
       hands: hands ?? this.hands,
     );
   }

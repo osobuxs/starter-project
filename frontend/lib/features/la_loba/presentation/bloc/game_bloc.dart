@@ -48,6 +48,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   /// closed, retry dialog open). Applied once the board is idle again.
   GameEntity? _bufferedRemoteGame;
 
+  /// Board shown before entering edit mode, restored on cancel.
+  GameEntity? _gameBeforeEdit;
+
+  /// The hand being corrected, as it was originally committed.
+  HandEntity? _editingOriginalHand;
+
   GameBloc({required GameRepository repository})
       : _repository = repository,
         super(const GameState()) {
@@ -59,6 +65,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<ResolveRetryDecisionEvent>(_onResolveRetryDecision);
     on<_RemoteGameUpdatedEvent>(_onRemoteGameUpdated);
     on<_HandCommitFailedEvent>(_onHandCommitFailed);
+    on<StartEditLastHandEvent>(_onStartEditLastHand);
+    on<CancelEditLastHandEvent>(_onCancelEditLastHand);
   }
 
   @override
@@ -145,6 +153,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   bool get _isBoardBusy =>
+      state.isEditingHand ||
       _pendingParticipantStates != null ||
       state.status == GameBlocStatus.loading ||
       state.status == GameBlocStatus.retryRequired;
@@ -160,6 +169,84 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           finishedRemotely ? GameBlocStatus.gameFinished : GameBlocStatus.loaded,
       game: remote,
     ));
+  }
+
+  void _onStartEditLastHand(
+    StartEditLastHandEvent event,
+    Emitter<GameState> emit,
+  ) {
+    final game = state.game;
+    final hand = state.editableLastHand;
+    if (game == null || hand == null || _pendingParticipantStates != null) {
+      return;
+    }
+
+    _gameBeforeEdit = game;
+    _editingOriginalHand = hand;
+
+    // Go back to the moment right before the hand was closed. Participants
+    // added after that hand are not in the snapshot: keep their state.
+    final statesBefore = _copyStates(hand.participantStatesBefore!);
+    for (final participantId in game.participantIds) {
+      if (!statesBefore.containsKey(participantId) &&
+          game.participantStates.containsKey(participantId)) {
+        statesBefore[participantId] = _copyStates(
+          {participantId: game.participantStates[participantId]},
+        )[participantId];
+      }
+    }
+    final reverted = game.copyWith(
+      participantStates: statesBefore,
+      currentDealerId: hand.dealerIdBefore,
+      currentHand: hand.handNumber,
+      hands: game.hands.where((h) => h.handNumber != hand.handNumber).toList(),
+      status: hand.finishedGame ? 'playing' : null,
+      clearWinnerId: hand.finishedGame,
+    );
+
+    emit(state.copyWith(
+      status: GameBlocStatus.loaded,
+      game: reverted,
+      currentHandScores: Map<String, int>.from(hand.scores),
+      editingHandNumber: hand.handNumber,
+      clearError: true,
+    ));
+  }
+
+  void _onCancelEditLastHand(
+    CancelEditLastHandEvent event,
+    Emitter<GameState> emit,
+  ) {
+    if (!state.isEditingHand) return;
+
+    final restored = _bufferedRemoteGame ?? _gameBeforeEdit;
+    _bufferedRemoteGame = null;
+    _clearEditing();
+    _clearPendingRound();
+
+    emit(state.copyWith(
+      status: GameBlocStatus.loaded,
+      game: restored,
+      currentHandScores: const {},
+      clearEditingHandNumber: true,
+      clearPendingRetryParticipantIds: true,
+      clearCurrentRetryParticipantId: true,
+      clearRetryReentryBaseScore: true,
+    ));
+  }
+
+  void _clearEditing() {
+    _gameBeforeEdit = null;
+    _editingOriginalHand = null;
+  }
+
+  Map<String, dynamic> _copyStates(Map<String, dynamic> states) {
+    return {
+      for (final entry in states.entries)
+        entry.key: entry.value is Map
+            ? Map<String, dynamic>.from(entry.value as Map)
+            : entry.value,
+    };
   }
 
   Future<void> _onAddPlayer(
@@ -383,11 +470,20 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     final winnerId = determineAutomaticWinner(participantStates);
 
+    final originalHand = state.isEditingHand ? _editingOriginalHand : null;
+
+    // `game` is the board right before this hand (reverted when editing),
+    // so it doubles as the snapshot that makes the hand editable later.
     final hand = HandEntity(
       handNumber: handNumber,
       dealerId: game.currentDealerId,
       scores: roundScores,
-      timestamp: DateTime.now().millisecondsSinceEpoch,
+      timestamp:
+          originalHand?.timestamp ?? DateTime.now().millisecondsSinceEpoch,
+      participantStatesBefore: _copyStates(game.participantStates),
+      dealerIdBefore: game.currentDealerId,
+      finishedGame: winnerId != null,
+      winnerId: winnerId,
     );
     final hands = [
       ...game.hands.where((h) => h.handNumber != handNumber),
@@ -412,11 +508,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       clearPendingRetryParticipantIds: true,
       clearCurrentRetryParticipantId: true,
       clearRetryReentryBaseScore: true,
+      clearEditingHandNumber: true,
     ));
 
     // Anything buffered predates this local write.
     _bufferedRemoteGame = null;
     _clearPendingRound();
+    _clearEditing();
 
     unawaited(_persistHand(HandCommit(
       gameId: gameId,
@@ -426,6 +524,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       nextDealerId: nextDealerId,
       nextHandNumber: nextHandNumber,
       winnerId: winnerId,
+      isEdit: originalHand != null,
+      revertWinnerId:
+          originalHand?.finishedGame == true ? originalHand?.winnerId : null,
     )));
   }
 

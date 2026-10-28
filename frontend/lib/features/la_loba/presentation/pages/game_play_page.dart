@@ -109,6 +109,12 @@ class _GamePlayPageState extends State<GamePlayPage> {
       },
       builder: (context, state) {
         final game = state.game;
+        final isAdmin = context.select<ParticipantBloc, bool>(
+          (bloc) => bloc.state.isAdmin,
+        );
+        final canEditLastHand = isAdmin &&
+            state.editableLastHand != null &&
+            state.status != GameBlocStatus.retryRequired;
 
         return Scaffold(
           appBar: AppBar(
@@ -116,6 +122,16 @@ class _GamePlayPageState extends State<GamePlayPage> {
               '${game?.name ?? "La Loba"} — Mano ${game?.currentHand ?? 0}',
               style: const TextStyle(color: Colors.black),
             ),
+            actions: [
+              if (canEditLastHand)
+                IconButton(
+                  tooltip: 'Editar última mano',
+                  icon: const Icon(Icons.edit_note, color: Colors.black),
+                  onPressed: () => context
+                      .read<GameBloc>()
+                      .add(const StartEditLastHandEvent()),
+                ),
+            ],
           ),
           body: state.status == GameBlocStatus.loading
               ? const Center(child: CircularProgressIndicator())
@@ -154,6 +170,13 @@ class _GamePlayPageState extends State<GamePlayPage> {
 
                         return Column(
                           children: [
+                            if (state.isEditingHand)
+                              _EditingHandBanner(
+                                handNumber: state.editingHandNumber!,
+                                onCancel: () => context
+                                    .read<GameBloc>()
+                                    .add(const CancelEditLastHandEvent()),
+                              ),
                             Padding(
                               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                               child: Row(
@@ -314,7 +337,8 @@ class _GamePlayPageState extends State<GamePlayPage> {
                                             ),
                                           ),
                                           TextButton.icon(
-                                            onPressed: isReadOnly
+                                            onPressed: isReadOnly ||
+                                                    state.isEditingHand
                                                 ? null
                                                 : () =>
                                                     _showAddParticipantDialog(
@@ -434,9 +458,12 @@ class _GamePlayPageState extends State<GamePlayPage> {
                                               vertical: 16,
                                             ),
                                           ),
-                                          child: const Text(
-                                            'Confirmar ronda',
-                                            style: TextStyle(fontSize: 16),
+                                          child: Text(
+                                            state.isEditingHand
+                                                ? 'Guardar corrección'
+                                                : 'Confirmar ronda',
+                                            style:
+                                                const TextStyle(fontSize: 16),
                                           ),
                                         ),
                                       ),
@@ -512,12 +539,20 @@ class _GamePlayPageState extends State<GamePlayPage> {
   }
 
   Future<void> _confirmAndFinishRound(BuildContext context) async {
+    final editingHand = context.read<GameBloc>().state.editingHandNumber;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Confirmar ronda'),
-          content: const Text('¿Confirmás los puntajes de esta ronda?'),
+          title: Text(
+            editingHand == null ? 'Confirmar ronda' : 'Corregir mano',
+          ),
+          content: Text(
+            editingHand == null
+                ? '¿Confirmás los puntajes de esta ronda?'
+                : '¿Guardás los puntajes corregidos de la mano $editingHand? '
+                    'Se recalculan totales, eliminaciones, dealer y ganador.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -830,4 +865,39 @@ class _InsertPositionOption {
   final String label;
 
   const _InsertPositionOption({required this.index, required this.label});
+}
+
+class _EditingHandBanner extends StatelessWidget {
+  final int handNumber;
+  final VoidCallback onCancel;
+
+  const _EditingHandBanner({
+    required this.handNumber,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: Colors.amber.shade100,
+      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      child: Row(
+        children: [
+          const Icon(Icons.edit_note, color: Colors.black87),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Editando mano $handNumber',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          TextButton(
+            onPressed: onCancel,
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+  }
 }
