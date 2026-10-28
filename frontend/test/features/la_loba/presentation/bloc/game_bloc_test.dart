@@ -130,7 +130,7 @@ void main() {
             .having((s) => s.currentHandScores, 'scores', {'p1': 25}),
       ],
       verify: (_) {
-        expect(repository.createHandCalls, 0);
+        expect(repository.commitHandCalls, 0);
       },
     );
   });
@@ -155,7 +155,7 @@ const _game = GameEntity(
 class _FakeGameRepository implements GameRepository {
   DataState<GameEntity> createGameResult = const DataSuccess(_game);
   DataState<GameEntity> getGameResult = const DataSuccess(_game);
-  int createHandCalls = 0;
+  int commitHandCalls = 0;
 
   @override
   Future<DataState<void>> addParticipantToGame(
@@ -175,24 +175,6 @@ class _FakeGameRepository implements GameRepository {
   }
 
   @override
-  Future<DataState<HandEntity>> createHand(
-    String gameId,
-    int handNumber,
-    String dealerId,
-    Map<String, int> scores,
-  ) async {
-    createHandCalls += 1;
-    return DataSuccess(
-      HandEntity(
-        handNumber: handNumber,
-        dealerId: dealerId,
-        scores: scores,
-        timestamp: 1,
-      ),
-    );
-  }
-
-  @override
   Future<DataState<GameEntity>> getGame(String gameId) async {
     return getGameResult;
   }
@@ -209,37 +191,12 @@ class _FakeGameRepository implements GameRepository {
 
   @override
   Future<DataState<void>> commitHand(HandCommit commit) async {
+    commitHandCalls += 1;
     return const DataSuccess(null);
   }
 
   @override
   Future<DataState<void>> updateGameStatus(String gameId, String status) async {
-    return const DataSuccess(null);
-  }
-
-  @override
-  Future<DataState<void>> updateGameWinner(
-    String gameId,
-    String winnerId,
-  ) async {
-    return const DataSuccess(null);
-  }
-
-  @override
-  Future<DataState<void>> updateParticipantScores(
-    String gameId,
-    String currentDealerId,
-    int currentHand,
-    Map<String, dynamic> participantStates,
-  ) async {
-    return const DataSuccess(null);
-  }
-
-  @override
-  Future<DataState<void>> updateParticipantStatsOnGameFinished(
-    List<String> participantIds,
-    String winnerId,
-  ) async {
     return const DataSuccess(null);
   }
 }

@@ -693,55 +693,12 @@ class _FakeGameRepository implements GameRepository {
   }
 
   @override
-  Future<DataState<HandEntity>> createHand(
-    String gameId,
-    int handNumber,
-    String dealerId,
-    Map<String, int> scores,
-  ) async {
-    return DataSuccess(
-      HandEntity(
-        handNumber: handNumber,
-        dealerId: dealerId,
-        scores: scores,
-        timestamp: 1,
-      ),
-    );
-  }
-
-  @override
   Future<DataState<List<GameEntity>>> getGameHistory() async {
     return const DataSuccess([]);
   }
 
   @override
   Future<DataState<void>> updateGameStatus(String gameId, String status) async {
-    return const DataSuccess(null);
-  }
-
-  @override
-  Future<DataState<void>> updateGameWinner(
-    String gameId,
-    String winnerId,
-  ) async {
-    return const DataSuccess(null);
-  }
-
-  @override
-  Future<DataState<void>> updateParticipantScores(
-    String gameId,
-    String currentDealerId,
-    int currentHand,
-    Map<String, dynamic> participantStates,
-  ) async {
-    return const DataSuccess(null);
-  }
-
-  @override
-  Future<DataState<void>> updateParticipantStatsOnGameFinished(
-    List<String> participantIds,
-    String winnerId,
-  ) async {
     return const DataSuccess(null);
   }
 }

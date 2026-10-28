@@ -143,6 +143,19 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
     );
   }
 
+  /// Builds the games of a query reusing its documents (no second read of
+  /// each game) and loading every game's hands in parallel.
+  Future<List<GameEntity>> _gamesWithHands(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    return Future.wait(
+      snapshot.docs.map((doc) async {
+        final handsSnapshot = await _handsQuery(doc.id).get();
+        return _gameFromData(doc.id, doc.data(), _handsFrom(handsSnapshot));
+      }),
+    );
+  }
+
   @override
   Future<List<GameEntity>> getGameHistory() async {
     final snapshot = await _firestore
@@ -150,39 +163,7 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
         .orderBy('date', descending: true)
         .get();
 
-    return Future.wait(
-      snapshot.docs.map((doc) async => getGame(doc.id)),
-    );
-  }
-
-  @override
-  Future<HandEntity> createHand(
-    String gameId,
-    int handNumber,
-    String dealerId,
-    Map<String, int> scores,
-  ) async {
-    final handRef = _firestore
-        .collection('games')
-        .doc(gameId)
-        .collection('hands')
-        .doc(handNumber.toString());
-
-    final hand = HandEntity(
-      handNumber: handNumber,
-      dealerId: dealerId,
-      scores: scores,
-      timestamp: DateTime.now().millisecondsSinceEpoch,
-    );
-
-    await handRef.set({
-      'handNumber': hand.handNumber,
-      'dealerId': hand.dealerId,
-      'scores': hand.scores,
-      'timestamp': hand.timestamp,
-    });
-
-    return hand;
+    return _gamesWithHands(snapshot);
   }
 
   @override
@@ -262,28 +243,6 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
   }
 
   @override
-  Future<void> updateParticipantScores(
-    String gameId,
-    String currentDealerId,
-    int currentHand,
-    Map<String, dynamic> participantStates,
-  ) async {
-    await _firestore.collection('games').doc(gameId).update({
-      'currentDealerId': currentDealerId,
-      'currentHand': currentHand,
-      'participantStates': participantStates,
-    });
-  }
-
-  @override
-  Future<void> updateGameWinner(String gameId, String winnerId) async {
-    await _firestore.collection('games').doc(gameId).update({
-      'winnerId': winnerId,
-      'status': 'finished',
-    });
-  }
-
-  @override
   Future<void> addParticipantToGame(
     String gameId,
     String participantId, {
@@ -325,34 +284,6 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
   }
 
   @override
-  Future<void> updateParticipantStatsOnGameFinished(
-    List<String> participantIds,
-    String winnerId,
-  ) async {
-    if (participantIds.isEmpty) {
-      return;
-    }
-
-    final batch = _firestore.batch();
-
-    for (final participantId in participantIds) {
-      final participantRef =
-          _firestore.collection('participants').doc(participantId);
-      batch.update(participantRef, {
-        'totalGamesPlayed': FieldValue.increment(1),
-      });
-
-      if (participantId == winnerId) {
-        batch.update(participantRef, {
-          'totalGamesWon': FieldValue.increment(1),
-        });
-      }
-    }
-
-    await batch.commit();
-  }
-
-  @override
   Future<List<GameEntity>> queryGamesByStatus(String status) async {
     final snapshot = await _firestore
         .collection('games')
@@ -360,9 +291,7 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
         .orderBy('date', descending: true)
         .get();
 
-    return Future.wait(
-      snapshot.docs.map((doc) async => getGame(doc.id)),
-    );
+    return _gamesWithHands(snapshot);
   }
 
   @override
@@ -373,9 +302,7 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
         .orderBy('date', descending: true)
         .get();
 
-    return Future.wait(
-      snapshot.docs.map((doc) async => getGame(doc.id)),
-    );
+    return _gamesWithHands(snapshot);
   }
 
   @override
@@ -386,9 +313,7 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
         .orderBy('date', descending: true)
         .get();
 
-    return Future.wait(
-      snapshot.docs.map((doc) async => getGame(doc.id)),
-    );
+    return _gamesWithHands(snapshot);
   }
 
   @override
@@ -401,8 +326,6 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
         .orderBy('date', descending: true)
         .get();
 
-    return Future.wait(
-      snapshot.docs.map((doc) async => getGame(doc.id)),
-    );
+    return _gamesWithHands(snapshot);
   }
 }

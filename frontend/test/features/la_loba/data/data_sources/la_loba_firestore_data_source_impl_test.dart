@@ -158,4 +158,28 @@ void main() {
       });
     });
   });
+
+  group('getGameHistory', () {
+    test('returns every game newest first with its hands', () async {
+      await seedGame('old', ['p1', 'p2']);
+      await seedGame('new', ['p1', 'p2']);
+      await firestore.collection('games').doc('new').update({'date': 5});
+      final hands =
+          firestore.collection('games').doc('new').collection('hands');
+      for (final number in [2, 1]) {
+        await hands.doc('$number').set({
+          'handNumber': number,
+          'dealerId': 'p1',
+          'scores': {'p1': number, 'p2': 0},
+          'timestamp': number,
+        });
+      }
+
+      final games = await dataSource.getGameHistory();
+
+      expect(games.map((g) => g.id), ['new', 'old']);
+      expect(games.first.hands.map((h) => h.handNumber), [1, 2]);
+      expect(games.last.hands, isEmpty);
+    });
+  });
 }

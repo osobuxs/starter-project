@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/la_loba/data/data_sources/remote/la_loba_firestore_data_source_impl.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
-import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand_commit.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/repository/game_repository.dart';
 
@@ -58,26 +57,6 @@ class GameRepositoryImpl implements GameRepository {
   }
 
   @override
-  Future<DataState<HandEntity>> createHand(
-    String gameId,
-    int handNumber,
-    String dealerId,
-    Map<String, int> scores,
-  ) async {
-    try {
-      final hand = await _firestoreDataSource.createHand(
-        gameId,
-        handNumber,
-        dealerId,
-        scores,
-      );
-      return DataSuccess(hand);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
   Future<DataState<void>> commitHand(HandCommit commit) async {
     try {
       await _firestoreDataSource.commitHand(commit);
@@ -98,37 +77,6 @@ class GameRepositoryImpl implements GameRepository {
   }
 
   @override
-  Future<DataState<void>> updateParticipantScores(
-    String gameId,
-    String currentDealerId,
-    int currentHand,
-    Map<String, dynamic> participantStates,
-  ) async {
-    try {
-      await _firestoreDataSource.updateParticipantScores(
-        gameId,
-        currentDealerId,
-        currentHand,
-        participantStates,
-      );
-      return const DataSuccess(null);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
-  Future<DataState<void>> updateGameWinner(
-      String gameId, String winnerId) async {
-    try {
-      await _firestoreDataSource.updateGameWinner(gameId, winnerId);
-      return const DataSuccess(null);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
   Future<DataState<void>> addParticipantToGame(
     String gameId,
     String participantId, {
@@ -139,22 +87,6 @@ class GameRepositoryImpl implements GameRepository {
         gameId,
         participantId,
         insertIndex: insertIndex,
-      );
-      return const DataSuccess(null);
-    } on Exception catch (e) {
-      return DataFailed(e);
-    }
-  }
-
-  @override
-  Future<DataState<void>> updateParticipantStatsOnGameFinished(
-    List<String> participantIds,
-    String winnerId,
-  ) async {
-    try {
-      await _firestoreDataSource.updateParticipantStatsOnGameFinished(
-        participantIds,
-        winnerId,
       );
       return const DataSuccess(null);
     } on Exception catch (e) {

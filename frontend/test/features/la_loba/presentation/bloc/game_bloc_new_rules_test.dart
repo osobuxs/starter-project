@@ -403,7 +403,7 @@ const _doubleOverLimitSameBatchGame = GameEntity(
 );
 
 class _FakeGameRepository implements GameRepository {
-  GameEntity _gameAfterReload = _initialGame;
+  final GameEntity _gameAfterReload = _initialGame;
   int commitHandCalls = 0;
   HandCommit? lastCommit;
   String? lastWinnerId;
@@ -425,23 +425,6 @@ class _FakeGameRepository implements GameRepository {
     List<String>? participantIds,
   ]) async {
     return DataSuccess(_initialGame.copyWith(name: name));
-  }
-
-  @override
-  Future<DataState<HandEntity>> createHand(
-    String gameId,
-    int handNumber,
-    String dealerId,
-    Map<String, int> scores,
-  ) async {
-    return DataSuccess(
-      HandEntity(
-        handNumber: handNumber,
-        dealerId: dealerId,
-        scores: scores,
-        timestamp: 1,
-      ),
-    );
   }
 
   @override
@@ -471,40 +454,6 @@ class _FakeGameRepository implements GameRepository {
 
   @override
   Future<DataState<void>> updateGameStatus(String gameId, String status) async {
-    return const DataSuccess(null);
-  }
-
-  @override
-  Future<DataState<void>> updateGameWinner(
-      String gameId, String winnerId) async {
-    _gameAfterReload = _gameAfterReload.copyWith(
-      status: 'finished',
-      winnerId: winnerId,
-    );
-    return const DataSuccess(null);
-  }
-
-  @override
-  Future<DataState<void>> updateParticipantScores(
-    String gameId,
-    String currentDealerId,
-    int currentHand,
-    Map<String, dynamic> participantStates,
-  ) async {
-    _gameAfterReload = _gameAfterReload.copyWith(
-      currentDealerId: currentDealerId,
-      currentHand: currentHand,
-      participantStates: participantStates,
-      status: _gameAfterReload.status,
-    );
-    return const DataSuccess(null);
-  }
-
-  @override
-  Future<DataState<void>> updateParticipantStatsOnGameFinished(
-    List<String> participantIds,
-    String winnerId,
-  ) async {
     return const DataSuccess(null);
   }
 }
