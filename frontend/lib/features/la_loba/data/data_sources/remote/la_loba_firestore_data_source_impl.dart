@@ -240,11 +240,17 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
 
       final participantRef =
           _firestore.collection('participants').doc(participantId);
-      batch.update(participantRef, {
-        if (playedDelta != 0)
-          'totalGamesPlayed': FieldValue.increment(playedDelta),
-        if (wonDelta != 0) 'totalGamesWon': FieldValue.increment(wonDelta),
-      });
+      // Merge instead of update: a missing participant doc must not make the
+      // whole hand batch fail (update throws not-found).
+      batch.set(
+        participantRef,
+        {
+          if (playedDelta != 0)
+            'totalGamesPlayed': FieldValue.increment(playedDelta),
+          if (wonDelta != 0) 'totalGamesWon': FieldValue.increment(wonDelta),
+        },
+        SetOptions(merge: true),
+      );
     }
   }
 
