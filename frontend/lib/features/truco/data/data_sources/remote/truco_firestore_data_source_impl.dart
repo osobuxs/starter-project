@@ -30,14 +30,20 @@ class TrucoFirestoreDataSourceImpl implements TrucoFirestoreDataSource {
 
   @override
   Future<TrucoGame> createGame({
+    required String name,
     required TrucoMode mode,
     required int targetScore,
     required TrucoTeam teamA,
     required TrucoTeam teamB,
+    required List<String> seatingOrder,
+    required String firstDealerId,
   }) async {
     final ref = _games.doc();
     final game = TrucoGame(
       id: ref.id,
+      name: name,
+      seatingOrder: seatingOrder,
+      currentDealerId: firstDealerId,
       mode: mode,
       targetScore: targetScore,
       teamA: teamA,
@@ -137,6 +143,7 @@ class TrucoFirestoreDataSourceImpl implements TrucoFirestoreDataSource {
       'scoreA': commit.scoreA,
       'scoreB': commit.scoreB,
       'currentHand': commit.nextHandNumber,
+      if (commit.nextDealerId != null) 'currentDealerId': commit.nextDealerId,
     };
     final winner = commit.winner;
     if (winner != null) {

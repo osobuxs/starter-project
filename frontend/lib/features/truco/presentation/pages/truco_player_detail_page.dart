@@ -75,7 +75,8 @@ class TrucoPlayerDetailPage extends StatelessWidget {
                     ),
                     subtitle: Text(
                       [
-                        '${formatTrucoDate(entry.game.date)} · '
+                        '${entry.game.name} · '
+                            '${formatTrucoDate(entry.game.date)} · '
                             '${entry.game.mode.label} · a ${entry.game.targetScore}',
                         if (entry.partnerIds.isNotEmpty)
                           'Compañeros: ${namesOf(entry.partnerIds)}',

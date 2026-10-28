@@ -5,13 +5,17 @@ import 'package:news_app_clean_architecture/features/truco/domain/services/truco
 
 void main() {
   String? validate({
+    String name = 'Truco 28/10',
     TrucoMode mode = TrucoMode.twoVsTwo,
     int target = 30,
     TrucoTeam teamA =
         const TrucoTeam(name: 'Nosotros', playerIds: ['a1', 'a2']),
     TrucoTeam teamB = const TrucoTeam(name: 'Ellos', playerIds: ['b1', 'b2']),
+    String? firstDealerId = 'a1',
   }) {
     return validateTrucoGameConfig(
+      name: name,
+      firstDealerId: firstDealerId,
       mode: mode,
       targetScore: target,
       teamA: teamA,
@@ -21,6 +25,16 @@ void main() {
 
   test('a complete 2 vs 2 at 30 is valid', () {
     expect(validate(), isNull);
+  });
+
+  test('the game needs a name', () {
+    expect(validate(name: '   '), 'La partida necesita un nombre.');
+  });
+
+  test('the first dealer must be seated at the table', () {
+    expect(validate(firstDealerId: 'zz'), 'Elija quién reparte primero.');
+    expect(validate(firstDealerId: null), 'Elija quién reparte primero.');
+    expect(validate(firstDealerId: 'b2'), isNull);
   });
 
   test('only 18 or 30 are valid targets', () {

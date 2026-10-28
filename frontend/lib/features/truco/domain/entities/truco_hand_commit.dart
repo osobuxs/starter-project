@@ -21,6 +21,9 @@ class TrucoHandCommit extends Equatable {
   final bool isEdit;
   final TrucoTeamSide? revertWinner;
 
+  /// Who deals the next hand (stored on the game as `currentDealerId`).
+  final String? nextDealerId;
+
   const TrucoHandCommit({
     required this.gameId,
     required this.hand,
@@ -32,6 +35,7 @@ class TrucoHandCommit extends Equatable {
     this.winner,
     this.isEdit = false,
     this.revertWinner,
+    this.nextDealerId,
   });
 
   List<String> playersOf(TrucoTeamSide side) =>
@@ -49,5 +53,6 @@ class TrucoHandCommit extends Equatable {
         winner,
         isEdit,
         revertWinner,
+        nextDealerId,
       ];
 }

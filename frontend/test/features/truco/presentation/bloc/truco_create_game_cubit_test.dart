@@ -12,7 +12,10 @@ void main() {
 
   setUp(() => repository = FakeTrucoGameRepository());
 
-  TrucoCreateGameCubit build() => TrucoCreateGameCubit(repository);
+  TrucoCreateGameCubit build() => TrucoCreateGameCubit(
+        repository,
+        now: () => DateTime(2026, 10, 28),
+      );
 
   test('starts as a 2 vs 2 to 30 with default team names', () {
     final state = build().state;
@@ -22,6 +25,43 @@ void main() {
     expect(state.teamA.name, 'Nosotros');
     expect(state.teamB.name, 'Ellos');
     expect(state.canSubmit, isFalse);
+  });
+
+  test('suggests a dated game name that can be changed', () {
+    final cubit = build();
+    expect(cubit.state.name, 'Truco 28/10');
+
+    cubit.rename('Revancha');
+    expect(cubit.state.name, 'Revancha');
+  });
+
+  test('an empty name blocks the game', () {
+    final cubit = build()
+      ..selectMode(TrucoMode.oneVsOne)
+      ..togglePlayer(TrucoTeamSide.a, 'a1')
+      ..togglePlayer(TrucoTeamSide.b, 'b1')
+      ..rename('   ');
+
+    expect(cubit.state.validationError, 'La partida necesita un nombre.');
+    expect(cubit.state.canSubmit, isFalse);
+  });
+
+  test('the first dealer defaults to A1 and can be any seated player', () {
+    final cubit = build()
+      ..togglePlayer(TrucoTeamSide.a, 'a1')
+      ..togglePlayer(TrucoTeamSide.a, 'a2')
+      ..togglePlayer(TrucoTeamSide.b, 'b1')
+      ..togglePlayer(TrucoTeamSide.b, 'b2');
+    expect(cubit.state.firstDealerId, 'a1');
+
+    cubit.selectFirstDealer('b2');
+    expect(cubit.state.firstDealerId, 'b2');
+
+    cubit.selectFirstDealer('zz');
+    expect(cubit.state.firstDealerId, 'b2', reason: 'not seated: ignored');
+
+    cubit.togglePlayer(TrucoTeamSide.b, 'b2');
+    expect(cubit.state.firstDealerId, 'a1', reason: 'dealer left the table');
   });
 
   test('toggling adds players until the team is full', () {
@@ -101,10 +141,12 @@ void main() {
         ..selectTarget(18)
         ..renameTeam(TrucoTeamSide.a, '  Los de acá ')
         ..togglePlayer(TrucoTeamSide.a, 'a1')
-        ..togglePlayer(TrucoTeamSide.b, 'b1');
+        ..togglePlayer(TrucoTeamSide.b, 'b1')
+        ..rename('  Final  ')
+        ..selectFirstDealer('b1');
       await cubit.submit();
     },
-    skip: 5,
+    skip: 7,
     expect: () => [
       isA<TrucoCreateGameState>()
           .having((s) => s.status, 'status', TrucoCreateGameStatus.submitting),
@@ -119,6 +161,9 @@ void main() {
       expect(
           game.teamA, const TrucoTeam(name: 'Los de acá', playerIds: ['a1']));
       expect(game.teamB, const TrucoTeam(name: 'Ellos', playerIds: ['b1']));
+      expect(game.name, 'Final');
+      expect(game.seatingOrder, ['a1', 'b1']);
+      expect(game.currentDealerId, 'b1');
     },
   );
 

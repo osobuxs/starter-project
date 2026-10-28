@@ -23,6 +23,8 @@ const _players = [
 
 const _game = TrucoGame(
   id: 'g1',
+  name: 'Final del jueves',
+  currentDealerId: 'b1',
   mode: TrucoMode.twoVsTwo,
   targetScore: 30,
   teamA: TrucoTeam(name: 'Nosotros', playerIds: ['a1', 'a2']),
@@ -46,8 +48,12 @@ const _game = TrucoGame(
 void main() {
   late FakeTrucoGameRepository repository;
 
-  Future<void> pump(WidgetTester tester, {required bool admin}) async {
-    tester.view.physicalSize = const Size(1000, 2800);
+  Future<void> pump(
+    WidgetTester tester, {
+    required bool admin,
+    Size size = const Size(1000, 2800),
+  }) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
@@ -116,11 +122,71 @@ void main() {
     expect(find.byTooltip('Corregir última mano'), findsNothing);
   });
 
+  testWidgets('shows the game name and the table with dealer and mano',
+      (tester) async {
+    await pump(tester, admin: false);
+
+    expect(find.text('Final del jueves'), findsOneWidget);
+    expect(find.textContaining('a 30 puntos'), findsWidgets);
+    expect(find.byKey(const ValueKey('truco-table')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('truco-seat-b1')),
+        matching: find.text('Reparte'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('truco-seat-a2')),
+        matching: find.text('Mano'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Reparte'), findsOneWidget);
+  });
+
+  testWidgets('fits a phone width without overflow', (tester) async {
+    await pump(tester, admin: true, size: const Size(360, 2400));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('truco-table')), findsOneWidget);
+    expect(find.text('Confirmar'), findsOneWidget);
+  });
+
+  testWidgets('entry shows 0 with minus disabled and no keyboard input',
+      (tester) async {
+    await pump(tester, admin: true);
+
+    expect(find.byType(TextField), findsNothing);
+    expect(entry(tester, 'a'), '0');
+    expect(entry(tester, 'b'), '0');
+    expect(button(tester, 'minus', 'a').onPressed, isNull);
+    expect(button(tester, 'plus', 'a').onPressed, isNotNull);
+  });
+
+  testWidgets('plus stops at the points the team still needs', (tester) async {
+    await pump(tester, admin: true);
+
+    // Team A has 17 of 30: it needs 13.
+    for (var i = 0; i < 13; i++) {
+      await tester.tap(find.byKey(const ValueKey('truco-plus-a')));
+      await tester.pump();
+    }
+
+    expect(entry(tester, 'a'), '13');
+    expect(button(tester, 'plus', 'a').onPressed, isNull);
+    expect(button(tester, 'minus', 'a').onPressed, isNotNull);
+  });
+
   testWidgets('admin confirms a hand and the board updates at once',
       (tester) async {
     await pump(tester, admin: true);
 
-    await tester.enterText(find.byKey(const ValueKey('truco-entry-a')), '2');
+    await tester.tap(find.byKey(const ValueKey('truco-plus-a')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('truco-plus-a')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('truco-plus-b')));
     await tester.pump();
     await tester.tap(find.text('Confirmar'));
@@ -136,14 +202,16 @@ void main() {
     expect(find.byKey(const ValueKey('truco-hand-2')), findsOneWidget);
     expect(repository.commits.single.hand.pointsA, 2);
     expect(repository.commits.single.hand.pointsB, 1);
-    // Entry fields are cleared for the next hand.
+    expect(repository.commits.single.hand.dealerId, 'b1');
+    // The deck moves one seat and the entries reset for the next hand.
     expect(
-      tester
-          .widget<TextField>(find.byKey(const ValueKey('truco-entry-a')))
-          .controller!
-          .text,
-      '',
+      find.descendant(
+        of: find.byKey(const ValueKey('truco-seat-a2')),
+        matching: find.text('Reparte'),
+      ),
+      findsOneWidget,
     );
+    expect(entry(tester, 'a'), '0');
   });
 
   testWidgets('admin corrects the last hand with the pencil', (tester) async {
@@ -153,15 +221,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Editando mano 1'), findsOneWidget);
-    expect(
-      tester
-          .widget<TextField>(find.byKey(const ValueKey('truco-entry-a')))
-          .controller!
-          .text,
-      '17',
-    );
+    expect(entry(tester, 'a'), '17');
 
-    await tester.enterText(find.byKey(const ValueKey('truco-entry-a')), '12');
+    for (var i = 0; i < 5; i++) {
+      await tester.tap(find.byKey(const ValueKey('truco-minus-a')));
+      await tester.pump();
+    }
     await tester.tap(find.text('Guardar corrección'));
     await tester.pumpAndSettle();
 
@@ -171,6 +236,16 @@ void main() {
     );
     expect(repository.commits.single.isEdit, isTrue);
   });
+}
+
+String? entry(WidgetTester tester, String side) =>
+    tester.widget<Text>(find.byKey(ValueKey('truco-entry-$side'))).data;
+
+ButtonStyleButton button(WidgetTester tester, String kind, String side) {
+  return tester.widget<ButtonStyleButton>(find.descendant(
+    of: find.byKey(ValueKey('truco-$kind-$side')),
+    matching: find.bySubtype<ButtonStyleButton>(),
+  ));
 }
 
 /// Painter of the matchsticks drawn for one half of one team's tally.

@@ -5,12 +5,39 @@ import 'package:news_app_clean_architecture/features/truco/domain/entities/truco
 import 'package:news_app_clean_architecture/features/truco/domain/repository/truco_game_repository.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_create_game/truco_create_game_state.dart';
 
-/// Form state of the "new Truco game" screen: mode, target, team names and
-/// the seated players of each team.
+/// Suggested name for a new game, e.g. "Truco 28/10".
+String trucoSuggestedGameName(DateTime date) {
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${TrucoGame.defaultName} ${two(date.day)}/${two(date.month)}';
+}
+
+/// Form state of the "new Truco game" screen: name, mode, target, team
+/// names, the seated players of each team and who deals first.
 class TrucoCreateGameCubit extends Cubit<TrucoCreateGameState> {
   final TrucoGameRepository _repository;
 
-  TrucoCreateGameCubit(this._repository) : super(const TrucoCreateGameState());
+  TrucoCreateGameCubit(this._repository, {DateTime Function()? now})
+      : super(TrucoCreateGameState(
+          name: trucoSuggestedGameName((now ?? DateTime.now)()),
+        ));
+
+  void rename(String name) {
+    emit(state.copyWith(
+      status: TrucoCreateGameStatus.editing,
+      name: name,
+      clearError: true,
+    ));
+  }
+
+  /// Picks who deals the first hand; ignored for players not seated.
+  void selectFirstDealer(String playerId) {
+    if (!state.seatingOrder.contains(playerId)) return;
+    emit(state.copyWith(
+      status: TrucoCreateGameStatus.editing,
+      preferredDealerId: playerId,
+      clearError: true,
+    ));
+  }
 
   void selectMode(TrucoMode mode) {
     final size = mode.playersPerTeam;
@@ -78,10 +105,14 @@ class TrucoCreateGameCubit extends Cubit<TrucoCreateGameState> {
       clearError: true,
     ));
     final result = await _repository.createGame(
+      name: state.name.trim(),
       mode: state.mode,
       targetScore: state.targetScore,
       teamA: state.teamA.copyWith(name: state.teamA.name.trim()),
       teamB: state.teamB.copyWith(name: state.teamB.name.trim()),
+      seatingOrder: state.seatingOrder,
+      // Validated above: a complete table always has a dealer.
+      firstDealerId: state.firstDealerId!,
     );
     if (result is DataSuccess) {
       emit(state.copyWith(

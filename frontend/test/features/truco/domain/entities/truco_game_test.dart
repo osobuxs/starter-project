@@ -33,6 +33,27 @@ void main() {
     expect(game.seatingOrder, ['a1', 'b1', 'a2', 'b2']);
   });
 
+  test('games without name, seating or dealer get safe defaults', () {
+    expect(game.name, 'Truco');
+    expect(game.currentDealerId, 'a1');
+  });
+
+  test('stored seating and dealer win over the derived ones', () {
+    final custom = game.copyWith(
+      name: 'Truco 28/10',
+      seatingOrder: ['a2', 'b1', 'a1', 'b2'],
+      currentDealerId: 'b1',
+    );
+
+    expect(custom.name, 'Truco 28/10');
+    expect(custom.seatingOrder, ['a2', 'b1', 'a1', 'b2']);
+    expect(custom.currentDealerId, 'b1');
+  });
+
+  test('a dealer that is not seated falls back to the first seat', () {
+    expect(game.copyWith(currentDealerId: 'zz').currentDealerId, 'a1');
+  });
+
   test('mode maps to players per team and back', () {
     expect(TrucoMode.oneVsOne.playersPerTeam, 1);
     expect(TrucoMode.threeVsThree.playersPerTeam, 3);

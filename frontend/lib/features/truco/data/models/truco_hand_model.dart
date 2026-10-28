@@ -15,6 +15,7 @@ class TrucoHandModel {
       scoreBBefore: json['scoreBBefore'] as int?,
       finishedGame: json['finishedGame'] as bool? ?? false,
       winner: TrucoTeamSide.fromKey(json['winnerTeam']),
+      dealerId: json['dealerId'] as String?,
     );
   }
 
@@ -28,6 +29,7 @@ class TrucoHandModel {
       if (hand.scoreBBefore != null) 'scoreBBefore': hand.scoreBBefore,
       'finishedGame': hand.finishedGame,
       'winnerTeam': hand.winner?.key,
+      if (hand.dealerId != null) 'dealerId': hand.dealerId,
     };
   }
 }

@@ -5,10 +5,13 @@ import 'package:news_app_clean_architecture/features/truco/domain/entities/truco
 
 abstract class TrucoFirestoreDataSource {
   Future<TrucoGame> createGame({
+    required String name,
     required TrucoMode mode,
     required int targetScore,
     required TrucoTeam teamA,
     required TrucoTeam teamB,
+    required List<String> seatingOrder,
+    required String firstDealerId,
   });
 
   Future<TrucoGame> getGame(String gameId);

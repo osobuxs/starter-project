@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/entities/truco_game.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/entities/truco_team.dart';
-import 'package:news_app_clean_architecture/features/truco/presentation/widgets/truco_seating_preview.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/widgets/truco_table_view.dart';
 
-/// One game in a list: date, mode, target, both teams with members, score
+/// One game in a list: name, date, mode, target, both teams with members, score
 /// and (when finished) the winner.
 class TrucoGameTile extends StatelessWidget {
   final TrucoGame game;
@@ -29,6 +29,13 @@ class TrucoGameTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                game.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
               Row(
                 children: [
                   Expanded(
@@ -87,7 +94,7 @@ class _TeamLine extends StatelessWidget {
           Container(
             width: 4,
             height: 28,
-            color: side == TrucoTeamSide.a ? trucoTeamAColor : trucoTeamBColor,
+            color: trucoTeamColor(side),
           ),
           const SizedBox(width: 8),
           Expanded(

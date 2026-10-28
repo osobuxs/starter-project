@@ -11,8 +11,14 @@ class TrucoGameModel {
     Map<String, dynamic> json,
     List<TrucoHand> hands,
   ) {
+    final name = (json['name'] as String?)?.trim() ?? '';
+    final seating = json['seatingOrder'];
     return TrucoGame(
       id: id,
+      name: name.isEmpty ? TrucoGame.defaultName : name,
+      // Games saved before these fields derive them from the teams.
+      seatingOrder: seating is List ? List<String>.from(seating) : null,
+      currentDealerId: json['currentDealerId'] as String?,
       mode: TrucoMode.fromPlayersPerTeam(json['mode'] as int? ?? 1),
       targetScore: json['targetScore'] as int? ?? 30,
       teamA: _teamFrom(json['teamA'], TrucoTeam.defaultNameA),
@@ -29,6 +35,7 @@ class TrucoGameModel {
 
   static Map<String, dynamic> toJson(TrucoGame game) {
     return {
+      'name': game.name,
       'mode': game.mode.playersPerTeam,
       'targetScore': game.targetScore,
       'teamA': _teamToJson(game.teamA),
@@ -41,6 +48,8 @@ class TrucoGameModel {
       'winnerTeam': game.winner?.key,
       'date': game.date,
       'currentHand': game.currentHand,
+      'seatingOrder': game.seatingOrder,
+      'currentDealerId': game.currentDealerId,
     };
   }
 

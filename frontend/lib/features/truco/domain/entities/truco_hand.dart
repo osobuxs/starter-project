@@ -19,6 +19,9 @@ class TrucoHand extends Equatable {
   final bool finishedGame;
   final TrucoTeamSide? winner;
 
+  /// Who dealt this hand; null on hands saved before dealers were tracked.
+  final String? dealerId;
+
   const TrucoHand({
     required this.handNumber,
     required this.pointsA,
@@ -28,6 +31,7 @@ class TrucoHand extends Equatable {
     this.scoreBBefore,
     this.finishedGame = false,
     this.winner,
+    this.dealerId,
   });
 
   bool get canBeEdited => scoreABefore != null && scoreBBefore != null;
@@ -45,5 +49,6 @@ class TrucoHand extends Equatable {
         scoreBBefore,
         finishedGame,
         winner,
+        dealerId,
       ];
 }

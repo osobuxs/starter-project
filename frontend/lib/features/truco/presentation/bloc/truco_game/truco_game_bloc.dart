@@ -7,6 +7,7 @@ import 'package:news_app_clean_architecture/features/truco/domain/entities/truco
 import 'package:news_app_clean_architecture/features/truco/domain/entities/truco_hand_commit.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/entities/truco_team.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/repository/truco_game_repository.dart';
+import 'package:news_app_clean_architecture/features/truco/domain/services/truco_dealer_rules.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/services/truco_score_rules.dart';
 
 import 'truco_game_event.dart';
@@ -33,10 +34,6 @@ class _TrucoHandCommitFailedEvent extends TrucoGameEvent {
 }
 
 class TrucoGameBloc extends Bloc<TrucoGameEvent, TrucoGameState> {
-  /// Upper bound of what can be typed; the bloc further caps each entry at
-  /// the points the team still needs to reach the target.
-  static const maxTypedPoints = 30;
-
   final TrucoGameRepository _repository;
   final DateTime Function() _now;
 
@@ -177,6 +174,9 @@ class TrucoGameBloc extends Bloc<TrucoGameEvent, TrucoGameState> {
 
     final original = state.isEditingHand ? _editingOriginalHand : null;
     final winner = outcome.winner;
+    // When editing, `game` already has the hand's dealer restored.
+    final dealerId = game.currentDealerId;
+    final nextDealerId = trucoNextSeat(game.seatingOrder, dealerId);
     // `game` is the board right before this hand (reverted when editing),
     // so its totals are the snapshot that makes the hand editable later.
     final hand = TrucoHand(
@@ -188,6 +188,7 @@ class TrucoGameBloc extends Bloc<TrucoGameEvent, TrucoGameState> {
       scoreBBefore: game.scoreB,
       finishedGame: winner != null,
       winner: winner,
+      dealerId: dealerId,
     );
     final hands = [
       ...game.hands.where((h) => h.handNumber != hand.handNumber),
@@ -198,6 +199,7 @@ class TrucoGameBloc extends Bloc<TrucoGameEvent, TrucoGameState> {
       scoreA: outcome.scoreA,
       scoreB: outcome.scoreB,
       currentHand: game.currentHand + 1,
+      currentDealerId: nextDealerId,
       hands: hands,
       status:
           winner == null ? TrucoGameStatus.playing : TrucoGameStatus.finished,
@@ -227,6 +229,7 @@ class TrucoGameBloc extends Bloc<TrucoGameEvent, TrucoGameState> {
       winner: winner,
       isEdit: original != null,
       revertWinner: original?.finishedGame == true ? original?.winner : null,
+      nextDealerId: nextDealerId,
     )));
   }
 
@@ -264,6 +267,10 @@ class TrucoGameBloc extends Bloc<TrucoGameEvent, TrucoGameState> {
       scoreA: hand.scoreABefore,
       scoreB: hand.scoreBBefore,
       currentHand: hand.handNumber,
+      // Legacy hands did not store their dealer: the deck moves one seat per
+      // hand, so it was the seat before the current dealer.
+      currentDealerId: hand.dealerId ??
+          trucoPreviousSeat(game.seatingOrder, game.currentDealerId),
       hands: game.hands.where((h) => h.handNumber != hand.handNumber).toList(),
       status: TrucoGameStatus.playing,
       clearWinner: true,

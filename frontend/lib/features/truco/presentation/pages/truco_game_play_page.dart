@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/entities/truco_game.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/entities/truco_hand.dart';
@@ -9,12 +8,14 @@ import 'package:news_app_clean_architecture/features/truco/presentation/bloc/tru
 import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_game/truco_game_state.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_participant/truco_participant_bloc.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/widgets/truco_board.dart';
-import 'package:news_app_clean_architecture/features/truco/presentation/widgets/truco_seating_preview.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/widgets/truco_table_view.dart';
 
-/// Live board of one game. The admin enters each hand; everyone else sees
-/// the board update in real time. Finished games are shown read-only (the
-/// admin can still correct the finishing hand for a few minutes).
-class TrucoGamePlayPage extends StatefulWidget {
+/// Live board of one game, top to bottom: the table with the dealer, the
+/// matchstick board and the hand entry. The admin enters each hand with
+/// +/- buttons; everyone else sees the board update in real time. Finished
+/// games are shown read-only (the admin can still correct the finishing
+/// hand for a few minutes).
+class TrucoGamePlayPage extends StatelessWidget {
   final String gameId;
 
   /// Clock used to decide whether the last hand is still correctable.
@@ -25,33 +26,6 @@ class TrucoGamePlayPage extends StatefulWidget {
     required this.gameId,
     this.now = DateTime.now,
   });
-
-  @override
-  State<TrucoGamePlayPage> createState() => _TrucoGamePlayPageState();
-}
-
-class _TrucoGamePlayPageState extends State<TrucoGamePlayPage> {
-  final Map<TrucoTeamSide, TextEditingController> _controllers = {
-    for (final side in TrucoTeamSide.values) side: TextEditingController(),
-  };
-
-  @override
-  void dispose() {
-    for (final controller in _controllers.values) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
-  void _syncControllers(TrucoGameState state) {
-    for (final side in TrucoTeamSide.values) {
-      final controller = _controllers[side]!;
-      final entry = state.entryOf(side);
-      if (_parse(controller.text) != entry) {
-        controller.text = entry == 0 ? '' : '$entry';
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,18 +42,12 @@ class _TrucoGamePlayPageState extends State<TrucoGamePlayPage> {
         final participantState = context.watch<TrucoParticipantBloc>().state;
         final isAdmin = participantState.isAdmin;
         final canEditLastHand =
-            isAdmin && state.editableLastHandAt(widget.now()) != null;
-        _syncControllers(state);
+            isAdmin && state.editableLastHandAt(now()) != null;
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(
-              game == null
-                  ? 'Truco'
-                  : game.isFinished
-                      ? 'Truco — Partida terminada'
-                      : 'Truco — Mano ${game.currentHand}',
-            ),
+            title:
+                game == null ? const Text('Truco') : _AppBarTitle(game: game),
             actions: [
               if (canEditLastHand)
                 IconButton(
@@ -106,23 +74,17 @@ class _TrucoGamePlayPageState extends State<TrucoGamePlayPage> {
                             .add(const CancelEditLastTrucoHandEvent()),
                       ),
                     if (game.isFinished) _WinnerBanner(game: game),
-                    Text(
-                      '${game.mode.label} · a ${game.targetScore} puntos',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade700),
+                    TrucoTableView(
+                      seats: _tableSeats(game, participantState.namesById),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     TrucoBoard(
                       game: game,
                       namesById: participantState.namesById,
                     ),
                     const SizedBox(height: 16),
                     if (isAdmin && !game.isFinished)
-                      _HandEntry(
-                        game: game,
-                        state: state,
-                        controllers: _controllers,
-                      )
+                      _HandEntry(game: game, state: state)
                     else if (!isAdmin)
                       const Text(
                         'Modo lectura: solo el administrador puede cargar puntos.',
@@ -139,29 +101,57 @@ class _TrucoGamePlayPageState extends State<TrucoGamePlayPage> {
   }
 }
 
-int _parse(String text) {
-  final value = text.trim();
-  if (value.isEmpty) return 0;
-  return (int.tryParse(value) ?? 0).clamp(0, TrucoGameBloc.maxTypedPoints);
+/// Game name, plus target and hand (or "terminada") underneath.
+class _AppBarTitle extends StatelessWidget {
+  final TrucoGame game;
+
+  const _AppBarTitle({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = game.isFinished
+        ? '${game.mode.label} · a ${game.targetScore} puntos · Terminada'
+        : '${game.mode.label} · a ${game.targetScore} puntos · '
+            'Mano ${game.currentHand}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(game.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(
+          detail,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+        ),
+      ],
+    );
+  }
 }
 
-final TextInputFormatter _pointsFormatter =
-    TextInputFormatter.withFunction((oldValue, newValue) {
-  final value = newValue.text;
-  if (value.isEmpty) return newValue;
-  return RegExp(r'^\d{1,2}$').hasMatch(value) ? newValue : oldValue;
-});
+/// Seats in the game's table order with the current dealer and mano.
+List<TrucoTableSeat> _tableSeats(TrucoGame game, Map<String, String> names) {
+  final dealer = game.currentDealerId;
+  final mano = game.manoId;
+  return [
+    for (final id in game.seatingOrder)
+      TrucoTableSeat(
+        playerId: id,
+        label: names[id] ?? '…',
+        side: game.sideOf(id) ?? TrucoTeamSide.a,
+        isDealer: id == dealer,
+        isMano: id == mano,
+      ),
+  ];
+}
 
+/// Per-team points of the hand: a read-only number with -/+ buttons. The
+/// bloc keeps each entry within [0, points the team still needs].
 class _HandEntry extends StatelessWidget {
   final TrucoGame game;
   final TrucoGameState state;
-  final Map<TrucoTeamSide, TextEditingController> controllers;
 
-  const _HandEntry({
-    required this.game,
-    required this.state,
-    required this.controllers,
-  });
+  const _HandEntry({required this.game, required this.state});
 
   @override
   Widget build(BuildContext context) {
@@ -187,48 +177,12 @@ class _HandEntry extends StatelessWidget {
             for (final side in TrucoTeamSide.values)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 96,
-                      child: Text(
-                        game.teamOf(side).name,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: side == TrucoTeamSide.a
-                              ? trucoTeamAColor
-                              : trucoTeamBColor,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        key: ValueKey('truco-entry-${side.key}'),
-                        controller: controllers[side],
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: '0',
-                          isDense: true,
-                        ),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [_pointsFormatter],
-                        onChanged: (value) => setPoints(side, _parse(value)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _AdjustButton(
-                      key: ValueKey('truco-minus-${side.key}'),
-                      icon: Icons.remove,
-                      onPressed: () => setPoints(side, state.entryOf(side) - 1),
-                    ),
-                    const SizedBox(width: 4),
-                    _AdjustButton(
-                      key: ValueKey('truco-plus-${side.key}'),
-                      icon: Icons.add,
-                      onPressed: () => setPoints(side, state.entryOf(side) + 1),
-                    ),
-                  ],
+                child: _EntryRow(
+                  side: side,
+                  teamName: game.teamOf(side).name,
+                  value: state.entryOf(side),
+                  max: game.targetScore - game.scoreOf(side),
+                  onChanged: (points) => setPoints(side, points),
                 ),
               ),
             const SizedBox(height: 4),
@@ -249,21 +203,87 @@ class _HandEntry extends StatelessWidget {
   }
 }
 
-class _AdjustButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onPressed;
+class _EntryRow extends StatelessWidget {
+  final TrucoTeamSide side;
+  final String teamName;
+  final int value;
+  final int max;
+  final ValueChanged<int> onChanged;
 
-  const _AdjustButton({super.key, required this.icon, required this.onPressed});
+  const _EntryRow({
+    required this.side,
+    required this.teamName,
+    required this.value,
+    required this.max,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 40,
-      height: 40,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
-        child: Icon(icon, size: 18),
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            teamName,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: trucoTeamColor(side),
+            ),
+          ),
+        ),
+        _AdjustButton(
+          key: ValueKey('truco-minus-${side.key}'),
+          icon: Icons.remove,
+          tooltip: 'Restar',
+          onPressed: value > 0 ? () => onChanged(value - 1) : null,
+        ),
+        SizedBox(
+          width: 56,
+          child: Text(
+            '$value',
+            key: ValueKey('truco-entry-${side.key}'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          ),
+        ),
+        _AdjustButton(
+          key: ValueKey('truco-plus-${side.key}'),
+          icon: Icons.add,
+          tooltip: 'Sumar',
+          onPressed: value < max ? () => onChanged(value + 1) : null,
+        ),
+      ],
+    );
+  }
+}
+
+class _AdjustButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+
+  /// Null disables the button (at 0 for minus, at the cap for plus).
+  final VoidCallback? onPressed;
+
+  const _AdjustButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
+          child: Icon(icon, size: 22),
+        ),
       ),
     );
   }

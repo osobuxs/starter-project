@@ -17,10 +17,13 @@ void main() {
 
   Future<TrucoGame> createGame() {
     return dataSource.createGame(
+      name: 'Truco 28/10',
       mode: TrucoMode.twoVsTwo,
       targetScore: 30,
       teamA: const TrucoTeam(name: 'Nosotros', playerIds: ['a1', 'a2']),
       teamB: const TrucoTeam(name: 'Ellos', playerIds: ['b1', 'b2']),
+      seatingOrder: const ['a1', 'b1', 'a2', 'b2'],
+      firstDealerId: 'b1',
     );
   }
 
@@ -36,6 +39,8 @@ void main() {
     TrucoTeamSide? winner,
     bool isEdit = false,
     TrucoTeamSide? revertWinner,
+    String? dealerId,
+    String? nextDealerId,
   }) {
     return TrucoHandCommit(
       gameId: game.id,
@@ -48,6 +53,7 @@ void main() {
         scoreBBefore: scoreBBefore,
         finishedGame: winner != null,
         winner: winner,
+        dealerId: dealerId,
       ),
       teamAPlayerIds: game.teamA.playerIds,
       teamBPlayerIds: game.teamB.playerIds,
@@ -57,6 +63,7 @@ void main() {
       winner: winner,
       isEdit: isEdit,
       revertWinner: revertWinner,
+      nextDealerId: nextDealerId,
     );
   }
 
@@ -65,6 +72,7 @@ void main() {
 
     final doc = await firestore.collection('truco_games').doc(game.id).get();
     expect(doc.data(), {
+      'name': 'Truco 28/10',
       'mode': 2,
       'targetScore': 30,
       'teamA': {
@@ -82,8 +90,65 @@ void main() {
       'winnerTeam': null,
       'date': 1000,
       'currentHand': 1,
+      'seatingOrder': ['a1', 'b1', 'a2', 'b2'],
+      'currentDealerId': 'b1',
     });
     expect(game.currentHand, 1);
+    expect(game.name, 'Truco 28/10');
+    expect(game.currentDealerId, 'b1');
+  });
+
+  test('commitHand stores the hand dealer and moves the deck on the game',
+      () async {
+    final created = await createGame();
+    await dataSource.commitHand(commitFor(
+      created,
+      handNumber: 1,
+      pointsA: 1,
+      pointsB: 0,
+      scoreABefore: 0,
+      scoreBBefore: 0,
+      scoreA: 1,
+      scoreB: 0,
+      dealerId: 'b1',
+      nextDealerId: 'a2',
+    ));
+
+    final game = await dataSource.getGame(created.id);
+
+    expect(game.hands.single.dealerId, 'b1');
+    expect(game.currentDealerId, 'a2');
+  });
+
+  test('games saved before names and dealers get safe defaults', () async {
+    await firestore.collection('truco_games').doc('old').set({
+      'mode': 2,
+      'targetScore': 30,
+      'teamA': {
+        'name': 'Nosotros',
+        'playerIds': ['a1', 'a2'],
+      },
+      'teamB': {
+        'name': 'Ellos',
+        'playerIds': ['b1', 'b2'],
+      },
+      'status': 'playing',
+      'date': 5,
+      'currentHand': 2,
+    });
+    await firestore
+        .collection('truco_games')
+        .doc('old')
+        .collection('hands')
+        .doc('1')
+        .set({'handNumber': 1, 'pointsA': 1, 'pointsB': 0});
+
+    final game = await dataSource.getGame('old');
+
+    expect(game.name, 'Truco');
+    expect(game.seatingOrder, ['a1', 'b1', 'a2', 'b2']);
+    expect(game.currentDealerId, 'a1');
+    expect(game.hands.single.dealerId, isNull);
   });
 
   test('getGame reads the game with its hands in order', () async {

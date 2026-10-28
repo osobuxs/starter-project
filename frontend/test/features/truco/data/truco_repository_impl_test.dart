@@ -25,10 +25,13 @@ void main() {
   test('watchGame wraps games in DataSuccess', () async {
     final repository = TrucoGameRepositoryImpl(dataSource);
     final created = await repository.createGame(
+      name: 'Truco',
       mode: TrucoMode.oneVsOne,
       targetScore: 18,
       teamA: const TrucoTeam(name: 'Nosotros', playerIds: ['a']),
       teamB: const TrucoTeam(name: 'Ellos', playerIds: ['b']),
+      seatingOrder: const ['a', 'b'],
+      firstDealerId: 'a',
     );
 
     final first = await repository.watchGame(created.data!.id).first;

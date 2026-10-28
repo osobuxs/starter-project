@@ -82,14 +82,20 @@ class FakeTrucoGameRepository implements TrucoGameRepository {
 
   @override
   Future<DataState<TrucoGame>> createGame({
+    required String name,
     required TrucoMode mode,
     required int targetScore,
     required TrucoTeam teamA,
     required TrucoTeam teamB,
+    required List<String> seatingOrder,
+    required String firstDealerId,
   }) async {
     if (failCreate) return DataFailed(Exception('boom'));
     final created = TrucoGame(
       id: 'created',
+      name: name,
+      seatingOrder: seatingOrder,
+      currentDealerId: firstDealerId,
       mode: mode,
       targetScore: targetScore,
       teamA: teamA,

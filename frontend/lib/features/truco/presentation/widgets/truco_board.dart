@@ -3,7 +3,7 @@ import 'package:news_app_clean_architecture/features/truco/domain/entities/truco
 import 'package:news_app_clean_architecture/features/truco/domain/entities/truco_team.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/services/truco_score_rules.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/widgets/truco_matchstick_painter.dart';
-import 'package:news_app_clean_architecture/features/truco/presentation/widgets/truco_seating_preview.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/widgets/truco_table_view.dart';
 
 /// The "anotador": one column per team with its name, members, total and
 /// the total drawn as matchsticks split into malas and buenas.

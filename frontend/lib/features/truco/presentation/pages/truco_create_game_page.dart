@@ -3,12 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/entities/truco_game.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/entities/truco_participant.dart';
 import 'package:news_app_clean_architecture/features/truco/domain/entities/truco_team.dart';
+import 'package:news_app_clean_architecture/features/truco/domain/services/truco_dealer_rules.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_create_game/truco_create_game_cubit.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_create_game/truco_create_game_state.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_participant/truco_participant_bloc.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_participant/truco_participant_state.dart';
 import 'package:news_app_clean_architecture/features/truco/presentation/truco_route_names.dart';
-import 'package:news_app_clean_architecture/features/truco/presentation/widgets/truco_seating_preview.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/widgets/truco_table_view.dart';
 
 class TrucoCreateGamePage extends StatelessWidget {
   const TrucoCreateGamePage({super.key});
@@ -69,8 +70,47 @@ class TrucoCreateGamePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
+              const _SectionTitle('Nombre de la partida'),
+              TextFormField(
+                key: const ValueKey('truco-game-name'),
+                initialValue: state.name,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  hintText: 'Ej.: Truco del viernes',
+                  prefixIcon: Icon(Icons.label_outline),
+                ),
+                onChanged: cubit.rename,
+              ),
+              const SizedBox(height: 16),
+              const _SectionTitle('Equipos'),
               for (final side in TrucoTeamSide.values)
-                _TeamCard(
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: TextFormField(
+                    key: ValueKey('team-name-${side.key}'),
+                    initialValue: state.teamOf(side).name,
+                    decoration: InputDecoration(
+                      labelText:
+                          'Equipo ${side == TrucoTeamSide.a ? 'A' : 'B'}',
+                      prefixIcon:
+                          Icon(Icons.groups, color: trucoTeamColor(side)),
+                    ),
+                    onChanged: (value) => cubit.renameTeam(side, value),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              const _SectionTitle('Jugadores'),
+              _PlayerPicker(
+                state: state,
+                participantState: participantState,
+              ),
+              const SizedBox(height: 16),
+              const _SectionTitle('Quién reparte primero'),
+              _DealerPicker(state: state, namesById: names),
+              const SizedBox(height: 16),
+              const _SectionTitle('Ubicación en la mesa'),
+              for (final side in TrucoTeamSide.values)
+                _TeamSeatsCard(
                   key: ValueKey('team-card-${side.key}'),
                   side: side,
                   team: state.teamOf(side),
@@ -78,19 +118,7 @@ class TrucoCreateGamePage extends StatelessWidget {
                   namesById: names,
                 ),
               const SizedBox(height: 8),
-              const _SectionTitle('Ubicación en la mesa'),
-              TrucoSeatingPreview(
-                playersPerTeam: state.mode.playersPerTeam,
-                teamAPlayerIds: state.teamA.playerIds,
-                teamBPlayerIds: state.teamB.playerIds,
-                namesById: names,
-              ),
-              const SizedBox(height: 16),
-              const _SectionTitle('Jugadores'),
-              _PlayerPicker(
-                state: state,
-                participantState: participantState,
-              ),
+              TrucoTableView(seats: _previewSeats(state, names)),
               const SizedBox(height: 24),
               if (state.validationError != null)
                 Padding(
@@ -140,14 +168,14 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-/// Team name field plus its seated members, reorderable with arrows.
-class _TeamCard extends StatelessWidget {
+/// Seated members of one team in seat order, reorderable with arrows.
+class _TeamSeatsCard extends StatelessWidget {
   final TrucoTeamSide side;
   final TrucoTeam team;
   final int playersPerTeam;
   final Map<String, String> namesById;
 
-  const _TeamCard({
+  const _TeamSeatsCard({
     super.key,
     required this.side,
     required this.team,
@@ -158,8 +186,9 @@ class _TeamCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<TrucoCreateGameCubit>();
-    final color = side == TrucoTeamSide.a ? trucoTeamAColor : trucoTeamBColor;
+    final color = trucoTeamColor(side);
     final prefix = side == TrucoTeamSide.a ? 'A' : 'B';
+    final title = team.name.trim().isEmpty ? 'Equipo $prefix' : team.name;
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -171,19 +200,9 @@ class _TeamCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextFormField(
-              key: ValueKey('team-name-${side.key}'),
-              initialValue: team.name,
-              decoration: InputDecoration(
-                labelText: 'Equipo $prefix',
-                prefixIcon: Icon(Icons.groups, color: color),
-              ),
-              onChanged: (value) => cubit.renameTeam(side, value),
-            ),
-            const SizedBox(height: 8),
             Text(
-              'Integrantes (${team.playerIds.length}/$playersPerTeam)',
-              style: TextStyle(color: Colors.grey.shade700),
+              '$title (${team.playerIds.length}/$playersPerTeam)',
+              style: TextStyle(fontWeight: FontWeight.w700, color: color),
             ),
             for (var i = 0; i < team.playerIds.length; i++)
               ListTile(
@@ -222,6 +241,74 @@ class _TeamCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One chip per seated player, in table order, to choose the first dealer.
+class _DealerPicker extends StatelessWidget {
+  final TrucoCreateGameState state;
+  final Map<String, String> namesById;
+
+  const _DealerPicker({required this.state, required this.namesById});
+
+  @override
+  Widget build(BuildContext context) {
+    final seats = state.seatingOrder;
+    if (seats.isEmpty) {
+      return Text(
+        'Elija los jugadores para decidir quién reparte.',
+        style: TextStyle(color: Colors.grey.shade700),
+      );
+    }
+    final cubit = context.read<TrucoCreateGameCubit>();
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        for (final id in seats)
+          ChoiceChip(
+            key: ValueKey('truco-first-dealer-$id'),
+            avatar: Icon(
+              Icons.style,
+              size: 16,
+              color: trucoTeamColor(
+                state.teamA.playerIds.contains(id)
+                    ? TrucoTeamSide.a
+                    : TrucoTeamSide.b,
+              ),
+            ),
+            label: Text(namesById[id] ?? id),
+            selected: state.firstDealerId == id,
+            onSelected: (_) => cubit.selectFirstDealer(id),
+          ),
+      ],
+    );
+  }
+}
+
+/// Seats for the preview, alternating A1, B1, A2, B2... with placeholders
+/// for the seats not filled yet.
+List<TrucoTableSeat> _previewSeats(
+  TrucoCreateGameState state,
+  Map<String, String> namesById,
+) {
+  final dealer = state.firstDealerId;
+  final mano = trucoManoOf(state.seatingOrder, dealer);
+  final seats = <TrucoTableSeat>[];
+  for (var i = 0; i < state.mode.playersPerTeam; i++) {
+    for (final side in TrucoTeamSide.values) {
+      final ids = state.teamOf(side).playerIds;
+      final id = i < ids.length ? ids[i] : null;
+      final placeholder = '${side == TrucoTeamSide.a ? 'A' : 'B'}${i + 1}';
+      seats.add(TrucoTableSeat(
+        playerId: id,
+        label: id == null ? placeholder : (namesById[id] ?? placeholder),
+        side: side,
+        isDealer: id != null && id == dealer,
+        isMano: id != null && id == mano,
+      ));
+    }
+  }
+  return seats;
 }
 
 /// Every registered player with one chip per team to seat them there.
@@ -274,9 +361,7 @@ class _PlayerRow extends StatelessWidget {
               label: Text(side == TrucoTeamSide.a ? 'A' : 'B'),
               tooltip: state.teamOf(side).name,
               selected: state.teamOf(side).playerIds.contains(player.id),
-              selectedColor:
-                  (side == TrucoTeamSide.a ? trucoTeamAColor : trucoTeamBColor)
-                      .withValues(alpha: 0.25),
+              selectedColor: trucoTeamColor(side).withValues(alpha: 0.25),
               onSelected: (_) => cubit.togglePlayer(side, player.id),
             ),
           ],

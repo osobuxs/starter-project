@@ -14,16 +14,22 @@ class TrucoGameRepositoryImpl implements TrucoGameRepository {
 
   @override
   Future<DataState<TrucoGame>> createGame({
+    required String name,
     required TrucoMode mode,
     required int targetScore,
     required TrucoTeam teamA,
     required TrucoTeam teamB,
+    required List<String> seatingOrder,
+    required String firstDealerId,
   }) {
     return _guard(() => _dataSource.createGame(
+          name: name,
           mode: mode,
           targetScore: targetScore,
           teamA: teamA,
           teamB: teamB,
+          seatingOrder: seatingOrder,
+          firstDealerId: firstDealerId,
         ));
   }
 

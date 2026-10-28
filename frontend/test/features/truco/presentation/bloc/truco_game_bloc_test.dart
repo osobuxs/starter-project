@@ -312,4 +312,94 @@ void main() {
       expect(bloc.state.editableLastHandAt(now), isNull);
     });
   });
+  group('dealer rotation', () {
+    const table = TrucoGame(
+      id: 'g1',
+      name: 'Truco 28/10',
+      mode: TrucoMode.twoVsTwo,
+      targetScore: 30,
+      teamA: TrucoTeam(name: 'Nosotros', playerIds: ['a1', 'a2']),
+      teamB: TrucoTeam(name: 'Ellos', playerIds: ['b1', 'b2']),
+      seatingOrder: ['a1', 'b1', 'a2', 'b2'],
+      currentDealerId: 'a2',
+      date: 1,
+    );
+
+    test('a confirmed hand stores its dealer and passes the deck one seat',
+        () async {
+      final bloc = await loaded(table);
+
+      await confirm(bloc, 1, 0);
+
+      expect(bloc.state.game!.hands.single.dealerId, 'a2');
+      expect(bloc.state.game!.currentDealerId, 'b2');
+      final commit = repository.commits.single;
+      expect(commit.hand.dealerId, 'a2');
+      expect(commit.nextDealerId, 'b2');
+    });
+
+    test('the deck wraps from the last seat back to the first', () async {
+      final bloc = await loaded(table);
+
+      await confirm(bloc, 1, 0);
+      await confirm(bloc, 0, 1);
+
+      expect(bloc.state.game!.currentDealerId, 'a1');
+      expect(repository.commits.last.hand.dealerId, 'b2');
+      expect(repository.commits.last.nextDealerId, 'a1');
+    });
+
+    test('correcting the last hand restores its dealer and recomputes on save',
+        () async {
+      final bloc = await loaded(table);
+      await confirm(bloc, 1, 0);
+      repository.commits.clear();
+
+      bloc.add(const StartEditLastTrucoHandEvent());
+      await pumpEventQueue();
+      expect(bloc.state.game!.currentDealerId, 'a2');
+
+      await confirm(bloc, 2, 0);
+
+      expect(bloc.state.game!.currentDealerId, 'b2');
+      final commit = repository.commits.single;
+      expect(commit.hand.dealerId, 'a2');
+      expect(commit.nextDealerId, 'b2');
+    });
+
+    test('cancelling a correction keeps the next dealer', () async {
+      final bloc = await loaded(table);
+      await confirm(bloc, 1, 0);
+
+      bloc.add(const StartEditLastTrucoHandEvent());
+      await pumpEventQueue();
+      bloc.add(const CancelEditLastTrucoHandEvent());
+      await pumpEventQueue();
+
+      expect(bloc.state.game!.currentDealerId, 'b2');
+    });
+
+    test('a legacy hand without dealer reopens on the previous seat', () async {
+      final bloc = await loaded(table.copyWith(
+        currentDealerId: 'b1',
+        scoreA: 1,
+        currentHand: 2,
+        hands: [
+          TrucoHand(
+            handNumber: 1,
+            pointsA: 1,
+            pointsB: 0,
+            timestamp: 1000000,
+            scoreABefore: 0,
+            scoreBBefore: 0,
+          ),
+        ],
+      ));
+
+      bloc.add(const StartEditLastTrucoHandEvent());
+      await pumpEventQueue();
+
+      expect(bloc.state.game!.currentDealerId, 'a1');
+    });
+  });
 }
