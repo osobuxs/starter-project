@@ -10,6 +10,7 @@ class HandModel extends HandEntity {
     String? dealerIdBefore,
     bool finishedGame = false,
     String? winnerId,
+    Map<String, int>? rejoinScores,
   }) : super(
     handNumber: handNumber,
     dealerId: dealerId,
@@ -19,10 +20,12 @@ class HandModel extends HandEntity {
     dealerIdBefore: dealerIdBefore,
     finishedGame: finishedGame,
     winnerId: winnerId,
+    rejoinScores: rejoinScores,
   );
 
   factory HandModel.fromFirestore(Map<String, dynamic> json, String docId) {
     final statesBefore = json['participantStatesBefore'];
+    final rejoinScores = json['rejoinScores'];
     return HandModel(
       handNumber: json['handNumber'] as int,
       dealerId: json['dealerId'] as String,
@@ -35,6 +38,9 @@ class HandModel extends HandEntity {
       dealerIdBefore: json['dealerIdBefore'] as String?,
       finishedGame: json['finishedGame'] as bool? ?? false,
       winnerId: json['winnerId'] as String?,
+      // Legacy hands have no rejoin scores (null, not empty).
+      rejoinScores:
+          rejoinScores is Map ? Map<String, int>.from(rejoinScores) : null,
     );
   }
 
@@ -48,6 +54,7 @@ class HandModel extends HandEntity {
       dealerIdBefore: entity.dealerIdBefore,
       finishedGame: entity.finishedGame,
       winnerId: entity.winnerId,
+      rejoinScores: entity.rejoinScores,
     );
   }
 
@@ -62,6 +69,7 @@ class HandModel extends HandEntity {
       if (dealerIdBefore != null) 'dealerIdBefore': dealerIdBefore,
       'finishedGame': finishedGame,
       'winnerId': winnerId,
+      if (rejoinScores != null) 'rejoinScores': rejoinScores,
     };
   }
 
@@ -74,5 +82,6 @@ class HandModel extends HandEntity {
     dealerIdBefore: dealerIdBefore,
     finishedGame: finishedGame,
     winnerId: winnerId,
+    rejoinScores: rejoinScores,
   );
 }

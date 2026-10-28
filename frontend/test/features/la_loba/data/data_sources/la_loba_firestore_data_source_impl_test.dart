@@ -82,4 +82,45 @@ void main() {
       expect(p2.data()!['totalGamesPlayed'], 1);
     });
   });
+
+  group('hand rejoin scores', () {
+    test('round-trips rejoinScores and reads legacy hands as null', () async {
+      await seedGame('g1', ['p1', 'p2', 'p3']);
+      final hands =
+          firestore.collection('games').doc('g1').collection('hands');
+      await hands.doc('1').set({
+        'handNumber': 1,
+        'dealerId': 'p1',
+        'scores': {'p1': 10, 'p2': 20, 'p3': 30},
+        'timestamp': 1,
+      });
+
+      await dataSource.commitHand(
+        const HandCommit(
+          gameId: 'g1',
+          hand: HandEntity(
+            handNumber: 2,
+            dealerId: 'p2',
+            scores: {'p1': 95, 'p2': 10, 'p3': 0},
+            timestamp: 2,
+            rejoinScores: {'p1': 30},
+          ),
+          participantIds: ['p1', 'p2', 'p3'],
+          participantStates: {
+            'p1': {'score': 30, 'status': 'active', 'rejoinedAtHand': 2},
+            'p2': {'score': 30, 'status': 'active'},
+            'p3': {'score': 30, 'status': 'active'},
+          },
+          nextDealerId: 'p3',
+          nextHandNumber: 3,
+        ),
+      );
+
+      final game = await dataSource.getGame('g1');
+      expect(game.hands.map((h) => h.rejoinScores), [
+        null,
+        {'p1': 30},
+      ]);
+    });
+  });
 }

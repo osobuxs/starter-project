@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/services/board_history.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_bloc.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_event.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_state.dart';
@@ -167,9 +169,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
                             .where(
                                 (id) => _isActive(game.participantStates[id]))
                             .toList();
-                        final eliminationHands =
-                            _eliminationHandByParticipant(game);
-                        final rejoinHands = _rejoinHandByParticipant(game);
+                        final boardHistory = buildBoardHistory(game);
 
                         return Column(
                           children: [
@@ -303,15 +303,10 @@ class _GamePlayPageState extends State<GamePlayPage> {
                                                           ...participantIds.map(
                                                             (participantId) =>
                                                                 DataCell(
-                                                              Text(
-                                                                '${hand.scores[participantId] ?? 0}',
-                                                                style:
-                                                                    _scoreCellStyle(
-                                                                  eliminationHands,
-                                                                  rejoinHands,
-                                                                  hand.handNumber,
-                                                                  participantId,
-                                                                ),
+                                                              _buildHandScoreCell(
+                                                                boardHistory,
+                                                                hand,
+                                                                participantId,
                                                               ),
                                                             ),
                                                           ),
@@ -741,77 +736,52 @@ class _GamePlayPageState extends State<GamePlayPage> {
     return value;
   }
 
-  TextStyle? _scoreCellStyle(
-    Map<String, int> eliminationHands,
-    Map<String, int> rejoinHands,
-    int handNumber,
+  Widget _buildHandScoreCell(
+    BoardHistory boardHistory,
+    HandEntity hand,
     String participantId,
   ) {
-    final rejoinHand = rejoinHands[participantId];
-    if (rejoinHand == handNumber) {
-      return const TextStyle(
-        color: _rejoinCellColor,
-        fontWeight: FontWeight.bold,
+    final scoreText = '${hand.scores[participantId] ?? 0}';
+
+    final rejoinScore =
+        boardHistory.rejoinScoresByHand[hand.handNumber]?[participantId];
+    if (rejoinScore != null) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            scoreText,
+            style: const TextStyle(
+              color: _rejoinCellColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            '($rejoinScore)',
+            key: ValueKey('rejoin-score-${hand.handNumber}-$participantId'),
+            style: const TextStyle(
+              color: _rejoinCellColor,
+              fontSize: 10,
+            ),
+          ),
+        ],
       );
     }
 
-    final eliminationHand = eliminationHands[participantId];
-    if (eliminationHand == handNumber) {
-      return const TextStyle(
-        color: _eliminationCellColor,
-        fontWeight: FontWeight.bold,
+    final eliminationHand =
+        boardHistory.eliminationHandByParticipant[participantId];
+    if (eliminationHand == hand.handNumber) {
+      return Text(
+        scoreText,
+        style: const TextStyle(
+          color: _eliminationCellColor,
+          fontWeight: FontWeight.bold,
+        ),
       );
     }
 
-    return null;
-  }
-
-  Map<String, int> _eliminationHandByParticipant(dynamic game) {
-    final result = <String, int>{};
-
-    for (final participantId in game.participantIds) {
-      final state = game.participantStates[participantId];
-      if (state is! Map<String, dynamic>) continue;
-
-      final explicitEliminationHand = state['eliminatedAtHand'];
-      if (explicitEliminationHand is int && explicitEliminationHand > 0) {
-        result[participantId] = explicitEliminationHand;
-        continue;
-      }
-
-      final isEliminated = state['status'] == 'eliminated';
-      final finalScore = state['score'];
-      if (!isEliminated || finalScore is! int || finalScore <= 100) {
-        continue;
-      }
-
-      var runningTotal = 0;
-      for (final hand in game.hands) {
-        runningTotal += (hand.scores[participantId] ?? 0) as int;
-        if (runningTotal > 100) {
-          result[participantId] = hand.handNumber;
-          break;
-        }
-      }
-    }
-
-    return result;
-  }
-
-  Map<String, int> _rejoinHandByParticipant(dynamic game) {
-    final result = <String, int>{};
-
-    for (final participantId in game.participantIds) {
-      final state = game.participantStates[participantId];
-      if (state is! Map<String, dynamic>) continue;
-
-      final explicitRejoinHand = state['rejoinedAtHand'];
-      if (explicitRejoinHand is int && explicitRejoinHand > 0) {
-        result[participantId] = explicitRejoinHand;
-      }
-    }
-
-    return result;
+    return Text(scoreText);
   }
 
   static final TextInputFormatter _scoreInputFormatter =

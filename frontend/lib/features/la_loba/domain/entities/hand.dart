@@ -15,6 +15,11 @@ class HandEntity extends Equatable {
   final bool finishedGame;
   final String? winnerId;
 
+  /// Score each participant rejoined with in this hand, after going over
+  /// the limit. Null on legacy hands written before it was persisted (the
+  /// board then infers it by replaying the hands).
+  final Map<String, int>? rejoinScores;
+
   const HandEntity({
     required this.handNumber,
     required this.dealerId,
@@ -24,6 +29,7 @@ class HandEntity extends Equatable {
     this.dealerIdBefore,
     this.finishedGame = false,
     this.winnerId,
+    this.rejoinScores,
   });
 
   bool get canBeEdited =>
@@ -38,6 +44,7 @@ class HandEntity extends Equatable {
     String? dealerIdBefore,
     bool? finishedGame,
     String? winnerId,
+    Map<String, int>? rejoinScores,
   }) {
     return HandEntity(
       handNumber: handNumber ?? this.handNumber,
@@ -49,6 +56,7 @@ class HandEntity extends Equatable {
       dealerIdBefore: dealerIdBefore ?? this.dealerIdBefore,
       finishedGame: finishedGame ?? this.finishedGame,
       winnerId: winnerId ?? this.winnerId,
+      rejoinScores: rejoinScores ?? this.rejoinScores,
     );
   }
 
@@ -62,5 +70,6 @@ class HandEntity extends Equatable {
         dealerIdBefore,
         finishedGame,
         winnerId,
+        rejoinScores,
       ];
 }

@@ -212,6 +212,42 @@ void main() {
   );
 
   blocTest<GameBloc, GameState>(
+    'Persists the rejoin score of every participant that rejoined in the hand',
+    build: () => bloc,
+    seed: () => GameState(
+      status: GameBlocStatus.loaded,
+      game: _doubleOverLimitSameBatchGame,
+      currentHandScores: const {'p1': 3, 'p2': 2, 'p3': 0, 'p4': 0},
+    ),
+    act: (bloc) {
+      bloc.add(const FinishPartidaEvent('g5'));
+      bloc.add(
+        const ResolveRetryDecisionEvent(participantId: 'p1', rejoin: true),
+      );
+      bloc.add(
+        const ResolveRetryDecisionEvent(participantId: 'p2', rejoin: false),
+      );
+    },
+    verify: (_) {
+      expect(repository.lastCommit?.hand.rejoinScores, {'p1': 90});
+    },
+  );
+
+  blocTest<GameBloc, GameState>(
+    'A hand without rejoins persists an empty rejoin map',
+    build: () => bloc,
+    seed: () => GameState(
+      status: GameBlocStatus.loaded,
+      game: _afterManoEliminatedGame,
+      currentHandScores: const {'p1': 0, 'p3': 0, 'p4': 0},
+    ),
+    act: (bloc) => bloc.add(const FinishPartidaEvent('g7')),
+    verify: (_) {
+      expect(repository.lastCommit?.hand.rejoinScores, isEmpty);
+    },
+  );
+
+  blocTest<GameBloc, GameState>(
     'When the mano is eliminated, the previous dealer deals again',
     build: () => bloc,
     seed: () => GameState(

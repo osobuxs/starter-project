@@ -92,6 +92,52 @@ Map<String, dynamic> applyRetryDecision({
   return updatedStates;
 }
 
+/// Score an over-limit participant rejoins with: the highest total among
+/// active participants still at or under the limit after the hand. Falls
+/// back to the highest active total when every active participant is over.
+int computeRejoinBaseScore({
+  required Map<String, dynamic> participantStates,
+  required List<String> overLimitParticipantIds,
+}) {
+  final overLimitSet = overLimitParticipantIds.toSet();
+  var highest = 0;
+  var foundCandidate = false;
+
+  for (final entry in participantStates.entries) {
+    if (overLimitSet.contains(entry.key)) {
+      continue;
+    }
+
+    final state = entry.value;
+    if (!_isActiveState(state) || state['score'] is! int) {
+      continue;
+    }
+
+    foundCandidate = true;
+    final score = _readScore(state);
+    if (score > highest) {
+      highest = score;
+    }
+  }
+
+  if (foundCandidate) {
+    return highest;
+  }
+
+  for (final state in participantStates.values) {
+    if (!_isActiveState(state) || state['score'] is! int) {
+      continue;
+    }
+
+    final score = _readScore(state);
+    if (score > highest) {
+      highest = score;
+    }
+  }
+
+  return highest;
+}
+
 String? determineAutomaticWinner(Map<String, dynamic> participantStates) {
   String? candidate;
   var activeUnderLimitCount = 0;

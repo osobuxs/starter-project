@@ -41,6 +41,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   Map<String, dynamic>? _pendingParticipantStates;
   int? _pendingRetryReentryBaseScore;
   Map<String, int>? _pendingRoundScores;
+  Map<String, int>? _pendingRejoinScores;
 
   StreamSubscription<DataState<GameEntity>>? _gameSubscription;
 
@@ -366,7 +367,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       _pendingHandNumberToPersist = handNumberToPersist;
       _pendingParticipantStates = scoreUpdate.updatedStates;
       _pendingRoundScores = roundScores;
-      _pendingRetryReentryBaseScore = _computeRetryReentryBaseScore(
+      _pendingRejoinScores = <String, int>{};
+      _pendingRetryReentryBaseScore = computeRejoinBaseScore(
         participantStates: scoreUpdate.updatedStates,
         overLimitParticipantIds: scoreUpdate.overLimitParticipantIds,
       );
@@ -421,6 +423,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           if (hand != null) {
             state['rejoinedAtHand'] = hand;
           }
+          final rejoinScore = state['score'];
+          if (rejoinScore is int) {
+            _pendingRejoinScores?[event.participantId] = rejoinScore;
+          }
         } else {
           final hand = _pendingHandNumberToPersist;
           if (hand != null) {
@@ -454,6 +460,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final handNumber = _pendingHandNumberToPersist;
     final participantStates = _pendingParticipantStates;
     final roundScores = _pendingRoundScores;
+    final rejoinScores = _pendingRejoinScores ?? const <String, int>{};
 
     if (game == null ||
         gameId == null ||
@@ -489,6 +496,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       dealerIdBefore: game.currentDealerId,
       finishedGame: winnerId != null,
       winnerId: winnerId,
+      rejoinScores: Map<String, int>.from(rejoinScores),
     );
     final hands = [
       ...game.hands.where((h) => h.handNumber != handNumber),
@@ -653,65 +661,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     _pendingParticipantStates = null;
     _pendingRetryReentryBaseScore = null;
     _pendingRoundScores = null;
-  }
-
-  int _computeRetryReentryBaseScore({
-    required Map<String, dynamic> participantStates,
-    required List<String> overLimitParticipantIds,
-  }) {
-    final overLimitSet = overLimitParticipantIds.toSet();
-    var highest = 0;
-    var foundCandidate = false;
-
-    for (final entry in participantStates.entries) {
-      if (overLimitSet.contains(entry.key)) {
-        continue;
-      }
-
-      final participantState = entry.value;
-      if (participantState is! Map<String, dynamic>) {
-        continue;
-      }
-
-      if (participantState['status'] != 'active') {
-        continue;
-      }
-
-      final score = participantState['score'];
-      if (score is! int) {
-        continue;
-      }
-
-      foundCandidate = true;
-      if (score > highest) {
-        highest = score;
-      }
-    }
-
-    if (foundCandidate) {
-      return highest;
-    }
-
-    for (final participantState in participantStates.values) {
-      if (participantState is! Map<String, dynamic>) {
-        continue;
-      }
-
-      if (participantState['status'] != 'active') {
-        continue;
-      }
-
-      final score = participantState['score'];
-      if (score is! int) {
-        continue;
-      }
-
-      if (score > highest) {
-        highest = score;
-      }
-    }
-
-    return highest;
+    _pendingRejoinScores = null;
   }
 
   int _clampScore(int value) {
