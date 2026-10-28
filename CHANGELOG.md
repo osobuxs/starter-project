@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 3. Commit, then tag `vMAJOR.MINOR.PATCH` on `main` and push the tag.
 4. Build the APK with `frontend/build_apk.bat` (Flutter pinned in `frontend/.fvmrc`).
 
+## [1.2.0] - 2026-10-28
+
+### Added
+
+- Truco: new module with its own player registry (admin-only writes).
+- Truco: create a game with the `+` button: mode (1v1, 2v2, 3v3), target 18 (9 + 9) or 30 (15 + 15), game name, team names, players per team, first dealer and seating order.
+- Truco: the play page shows the table with each player's seat, who deals and who is mano; the dealer rotates one seat per hand.
+- Truco: the board draws the points as matchsticks grouped in fives, split into malas and buenas.
+- Truco: points are entered with − / + buttons only (starting at 0, never negative, capped at what the team needs to win) and Confirmar.
+- Truco: instant save in the background, realtime board, correct the last hand (finished games only within 10 minutes).
+- Truco: history, ranking (a win counts for every member of the winning team) and per-player detail.
+
+### Security
+
+- Firestore rules: only the admin can write `truco_participants`, `truco_games` and their hands (deployed).
+
 ## [1.1.0] - 2026-10-28
 
 ### Added
