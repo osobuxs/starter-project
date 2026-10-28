@@ -5,6 +5,7 @@ import 'package:news_app_clean_architecture/di/core_di.dart';
 import 'package:news_app_clean_architecture/di/daily_news_di.dart';
 import 'package:news_app_clean_architecture/di/dardos_di.dart';
 import 'package:news_app_clean_architecture/di/la_loba_di.dart';
+import 'package:news_app_clean_architecture/di/truco_di.dart';
 import 'package:news_app_clean_architecture/di/user_profile_di.dart';
 
 final sl = GetIt.instance;
@@ -17,4 +18,5 @@ Future<void> initializeDependencies() async {
   registerArticlesDependencies(sl);
   await registerLaLobaDependencies(sl);
   await registerDardosDependencies(sl);
+  await registerTrucoDependencies(sl);
 }

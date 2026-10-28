@@ -5,6 +5,7 @@ import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_dialogs.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:news_app_clean_architecture/features/auth/presentation/bloc/auth_state.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/truco_route_names.dart';
 
 enum AppSectionDrawerVariant { full, auth }
 
@@ -168,6 +169,14 @@ class _AppSectionDrawer extends StatelessWidget {
             onTap: () => _navigateToRoute(
               context,
               routeName: AppRouteNames.dardos,
+            ),
+          ),
+          _DrawerRouteTile(
+            icon: Icons.style,
+            label: 'Truco',
+            onTap: () => _navigateToRoute(
+              context,
+              routeName: TrucoRouteNames.truco,
             ),
           ),
           const Divider(),
