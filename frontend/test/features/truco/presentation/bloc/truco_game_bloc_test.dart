@@ -63,7 +63,7 @@ void main() {
     final bloc = await loaded(_newGame);
     repository.commitResult = Completer();
 
-    await confirm(bloc, 3, -1);
+    await confirm(bloc, 3, 0);
 
     // Board updated before the write resolves.
     expect(bloc.state.status, TrucoGameBlocStatus.handConfirmed);
@@ -75,7 +75,7 @@ void main() {
 
     final commit = repository.commits.single;
     expect(commit.hand.pointsA, 3);
-    expect(commit.hand.pointsB, -1);
+    expect(commit.hand.pointsB, 0);
     expect(commit.hand.scoreABefore, 0);
     expect(commit.hand.timestamp, now.millisecondsSinceEpoch);
     expect(commit.scoreA, 3);
@@ -83,6 +83,25 @@ void main() {
     expect(commit.winner, isNull);
     expect(commit.teamAPlayerIds, ['a1']);
     repository.commitResult!.complete(const DataSuccess(null));
+  });
+
+  test('negative entries are clamped to zero', () async {
+    final bloc = await loaded(_newGame);
+
+    await enter(bloc, -3, -1);
+
+    expect(bloc.state.entryA, 0);
+    expect(bloc.state.entryB, 0);
+  });
+
+  test('an entry cannot exceed the points the team needs to win', () async {
+    final bloc =
+        await loaded(_newGame.copyWith(scoreA: 16, scoreB: 5, currentHand: 4));
+
+    await enter(bloc, 9, 30);
+
+    expect(bloc.state.entryA, 2);
+    expect(bloc.state.entryB, 13);
   });
 
   test('a hand with no points is rejected', () async {

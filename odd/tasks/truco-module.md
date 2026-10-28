@@ -50,7 +50,8 @@ The app has La Loba and Dardos scorers but no Truco. Paper "anotadores" use grou
 
 - Both teams reaching the target in the same hand: the higher raw (unclamped) total wins; an exact tie blocks the hand with an error so the admin corrects the entry.
 - Create defaults to 2 vs 2 at 30 points; picking a player for the other team moves them; reordering uses up/down arrows within a team.
-- Confirm closes the hand immediately (no confirmation dialog) because the board updates locally and the last hand can be corrected; a 0–0 hand is rejected. Per-hand entry is bounded to -99..99.
+- Confirm closes the hand immediately (no confirmation dialog) because the board updates locally and the last hand can be corrected; a 0–0 hand is rejected (minimum result 1–0).
+- User correction 2026-10-28: points never go negative; each team's entry is capped at the points it still needs to reach the target (bloc clamps to `[0, target - score]`, input accepts digits only). One team always wins first; the same-total tie error stays only as a safety net.
 - Ranking uses the persisted per-player totals (like La Loba/Dardos); the player detail totals are computed from that player's finished games, and finished games open on the same board page in read-only mode.
 - Malas/buenas are drawn from the clamped total: malas = min(total, half), buenas = the rest, each regrouped in fives from zero (so a half of 9 closes with a group of four).
 

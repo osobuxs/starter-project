@@ -33,9 +33,9 @@ class _TrucoHandCommitFailedEvent extends TrucoGameEvent {
 }
 
 class TrucoGameBloc extends Bloc<TrucoGameEvent, TrucoGameState> {
-  /// Bounds of the per-hand entry.
-  static const minHandPoints = -99;
-  static const maxHandPoints = 99;
+  /// Upper bound of what can be typed; the bloc further caps each entry at
+  /// the points the team still needs to reach the target.
+  static const maxTypedPoints = 30;
 
   final TrucoGameRepository _repository;
   final DateTime Function() _now;
@@ -136,7 +136,9 @@ class TrucoGameBloc extends Bloc<TrucoGameEvent, TrucoGameState> {
     final game = state.game;
     if (game == null || (game.isFinished && !state.isEditingHand)) return;
 
-    final points = event.points.clamp(minHandPoints, maxHandPoints);
+    // Points only go up: never negative and never past the target.
+    final remaining = game.targetScore - game.scoreOf(event.side);
+    final points = event.points.clamp(0, remaining < 0 ? 0 : remaining);
     emit(event.side == TrucoTeamSide.a
         ? state.copyWith(entryA: points, clearError: true)
         : state.copyWith(entryB: points, clearError: true));

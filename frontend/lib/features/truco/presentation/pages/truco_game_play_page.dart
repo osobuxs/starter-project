@@ -141,16 +141,15 @@ class _TrucoGamePlayPageState extends State<TrucoGamePlayPage> {
 
 int _parse(String text) {
   final value = text.trim();
-  if (value.isEmpty || value == '-') return 0;
-  return (int.tryParse(value) ?? 0)
-      .clamp(TrucoGameBloc.minHandPoints, TrucoGameBloc.maxHandPoints);
+  if (value.isEmpty) return 0;
+  return (int.tryParse(value) ?? 0).clamp(0, TrucoGameBloc.maxTypedPoints);
 }
 
 final TextInputFormatter _pointsFormatter =
     TextInputFormatter.withFunction((oldValue, newValue) {
   final value = newValue.text;
-  if (value.isEmpty || value == '-') return newValue;
-  return RegExp(r'^-?\d{1,2}$').hasMatch(value) ? newValue : oldValue;
+  if (value.isEmpty) return newValue;
+  return RegExp(r'^\d{1,2}$').hasMatch(value) ? newValue : oldValue;
 });
 
 class _HandEntry extends StatelessWidget {
@@ -212,8 +211,7 @@ class _HandEntry extends StatelessWidget {
                           hintText: '0',
                           isDense: true,
                         ),
-                        keyboardType:
-                            const TextInputType.numberWithOptions(signed: true),
+                        keyboardType: TextInputType.number,
                         inputFormatters: [_pointsFormatter],
                         onChanged: (value) => setPoints(side, _parse(value)),
                       ),
