@@ -293,7 +293,6 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
     final game = await getGame(gameId);
 
     if (!game.participantIds.contains(participantId)) {
-      final batch = _firestore.batch();
       final newParticipantIds = [...game.participantIds];
       if (insertIndex == null ||
           insertIndex < 0 ||
@@ -309,32 +308,19 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
           .map((p) => (p['score'] as int?) ?? 0)
           .fold<int>(0, (max, val) => val > max ? val : max);
 
+      // The entry score lives in the participant state; past hands are
+      // never rewritten (legacy games stored it in the previous hand).
       newParticipantStates[participantId] = {
         'score': highestScore,
         'status': 'active',
+        'joinedAtHand': game.currentHand,
+        'joinScore': highestScore,
       };
 
-      batch.update(gameRef, {
+      await gameRef.update({
         'participantIds': newParticipantIds,
         'participantStates': newParticipantStates,
       });
-
-      if (game.currentHand > 1) {
-        final previousHandRef =
-            gameRef.collection('hands').doc((game.currentHand - 1).toString());
-        final previousHandSnapshot = await previousHandRef.get();
-
-        if (previousHandSnapshot.exists) {
-          final previousHandData = previousHandSnapshot.data();
-          final previousScores = Map<String, dynamic>.from(
-              previousHandData?['scores'] as Map? ?? {});
-          previousScores[participantId] = highestScore;
-
-          batch.update(previousHandRef, {'scores': previousScores});
-        }
-      }
-
-      await batch.commit();
     }
   }
 

@@ -741,7 +741,11 @@ class _GamePlayPageState extends State<GamePlayPage> {
     HandEntity hand,
     String participantId,
   ) {
-    final scoreText = '${hand.scores[participantId] ?? 0}';
+    // A mid-game join shows its entry score in the hand before it started
+    // playing (legacy games stored it inside that hand's scores).
+    final joinScore =
+        boardHistory.joinScoresByHand[hand.handNumber]?[participantId];
+    final scoreText = '${hand.scores[participantId] ?? joinScore ?? 0}';
 
     final rejoinScore =
         boardHistory.rejoinScoresByHand[hand.handNumber]?[participantId];

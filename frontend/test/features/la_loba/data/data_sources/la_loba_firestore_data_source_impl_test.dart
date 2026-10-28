@@ -123,4 +123,39 @@ void main() {
       ]);
     });
   });
+
+  group('addParticipantToGame', () {
+    test('stores the join hand and score in the participant state without '
+        'touching the previous hand', () async {
+      await seedGame('g1', ['p1', 'p2']);
+      final gameRef = firestore.collection('games').doc('g1');
+      await gameRef.update({
+        'currentHand': 3,
+        'participantStates': {
+          'p1': {'score': 40, 'status': 'active'},
+          'p2': {'score': 70, 'status': 'active'},
+        },
+      });
+      await gameRef.collection('hands').doc('2').set({
+        'handNumber': 2,
+        'dealerId': 'p1',
+        'scores': {'p1': 20, 'p2': 35},
+        'timestamp': 2,
+      });
+
+      await dataSource.addParticipantToGame('g1', 'p3', insertIndex: 1);
+
+      final hand = await gameRef.collection('hands').doc('2').get();
+      expect(hand.data()!['scores'], {'p1': 20, 'p2': 35});
+
+      final game = await gameRef.get();
+      expect(game.data()!['participantIds'], ['p1', 'p3', 'p2']);
+      expect(game.data()!['participantStates']['p3'], {
+        'score': 70,
+        'status': 'active',
+        'joinedAtHand': 3,
+        'joinScore': 70,
+      });
+    });
+  });
 }

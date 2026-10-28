@@ -12,9 +12,15 @@ class BoardHistory {
   /// eliminated.
   final Map<String, int> eliminationHandByParticipant;
 
+  /// {handNumber: {participantId: entry score}} for participants that joined
+  /// mid-game, keyed by the hand right before they started playing. Legacy
+  /// joins already have the entry score inside that hand's scores.
+  final Map<int, Map<String, int>> joinScoresByHand;
+
   const BoardHistory({
     required this.rejoinScoresByHand,
     required this.eliminationHandByParticipant,
+    this.joinScoresByHand = const {},
   });
 }
 
@@ -32,11 +38,30 @@ BoardHistory buildBoardHistory(GameEntity game) {
   final rejoinScoresByHand = <int, Map<String, int>>{};
   final inferredEliminationHand = <String, int>{};
 
+  // Participants that joined mid-game start from their join score the
+  // first time they show up in a hand.
+  final joinScores = <String, int>{};
+  final joinScoresByHand = <int, Map<String, int>>{};
+  for (final participantId in game.participantIds) {
+    final state = game.participantStates[participantId];
+    if (state is! Map) continue;
+    final joinedAtHand = state['joinedAtHand'];
+    final joinScore = state['joinScore'];
+    if (joinedAtHand is! int || joinScore is! int) continue;
+
+    joinScores[participantId] = joinScore;
+    final entryHand = joinedAtHand - 1;
+    if (hands.any((hand) => hand.handNumber == entryHand)) {
+      (joinScoresByHand[entryHand] ??= {})[participantId] = joinScore;
+    }
+  }
+
   for (var i = 0; i < hands.length; i++) {
     final hand = hands[i];
 
     for (final entry in hand.scores.entries) {
-      totals[entry.key] = (totals[entry.key] ?? 0) + entry.value;
+      totals[entry.key] =
+          (totals[entry.key] ?? joinScores[entry.key] ?? 0) + entry.value;
     }
 
     final overLimitIds = [
@@ -83,6 +108,7 @@ BoardHistory buildBoardHistory(GameEntity game) {
   return BoardHistory(
     rejoinScoresByHand: rejoinScoresByHand,
     eliminationHandByParticipant: eliminationHandByParticipant,
+    joinScoresByHand: joinScoresByHand,
   );
 }
 

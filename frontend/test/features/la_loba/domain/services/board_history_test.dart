@@ -194,4 +194,52 @@ void main() {
       });
     });
   });
+
+  group('mid-game joins', () {
+    test('a joined participant starts from its join score and its entry is '
+        'shown in the hand before it started playing', () {
+      final history = buildBoardHistory(_game(
+        states: {
+          'p1': {'score': 60, 'status': 'active'},
+          'p2': {'score': 90, 'status': 'active'},
+          'p3': {
+            'score': 90,
+            'status': 'active',
+            'joinedAtHand': 3,
+            'joinScore': 80,
+            'rejoinedAtHand': 3,
+          },
+        },
+        hands: [
+          _hand(1, {'p1': 30, 'p2': 40}),
+          _hand(2, {'p1': 20, 'p2': 40}),
+          _hand(3, {'p1': 10, 'p2': 10, 'p3': 25}),
+        ],
+      ));
+
+      expect(history.joinScoresByHand, {
+        2: {'p3': 80},
+      });
+      // 80 + 25 = 105 went over and rejoined with the highest total (90).
+      expect(history.rejoinScoresByHand, {
+        3: {'p3': 90},
+      });
+    });
+
+    test('legacy joins (entry written into the previous hand) need no join '
+        'entry', () {
+      final history = buildBoardHistory(_game(
+        states: {
+          'p1': {'score': 50, 'status': 'active'},
+          'p2': {'score': 60, 'status': 'active'},
+        },
+        hands: [
+          _hand(1, {'p1': 50, 'p2': 50}),
+          _hand(2, {'p1': 0, 'p2': 10}),
+        ],
+      ));
+
+      expect(history.joinScoresByHand, isEmpty);
+    });
+  });
 }
