@@ -38,7 +38,7 @@ The app has La Loba and Dardos scorers but no Truco. Paper "anotadores" use grou
 
 - [x] T1 — Domain: entities (TrucoGame, TrucoTeam, TrucoHand, TrucoParticipant) + pure rules (apply hand with clamping 0..target, malas/buenas split, winner, matchstick grouping into fives) with unit tests.
 - [x] T2 — Data: Firestore data source/models/repository (`truco_participants`, `truco_games`, `truco_games/{id}/hands`), `watchGame` realtime, single-batch hand commit, edit last hand; `fake_cloud_firestore` tests.
-- [ ] T3 — Players: admin-only register/edit players (bloc + page), mirroring La Loba.
+- [x] T3 — Players: admin-only register/edit players (bloc + page), mirroring La Loba.
 - [ ] T4 — Create game: mode, target 18/30, team names, pick players per team, seating preview.
 - [ ] T5 — Game board: per-team numeric entry (+/−), confirm, matchstick painter with malas/buenas divider, winner, correct last hand, realtime.
 - [ ] T6 — Wiring: DI, routes, module entry, game history list.
@@ -65,5 +65,6 @@ The app has La Loba and Dardos scorers but no Truco. Paper "anotadores" use grou
 
 - T1 (route: delegated writer, single bounded writer for the module). RED: `flutter test test/features/truco` failed to compile (missing `trucoSeatingOrder`, entities). GREEN: 20 tests passed; analyze: No issues found.
 - T2 (delegated writer). RED: data source test failed to compile (no `TrucoFirestoreDataSourceImpl`). GREEN: 32 truco tests passed (fake_cloud_firestore: create, read, finish stats, edit revert/swap with net deltas, watchGame, participants); analyze: No issues found.
+- T3 (delegated writer). RED: participant bloc test failed to compile (no bloc). GREEN: 42 truco tests passed (admin check, create/trim/empty-name, rename, delete, failures; players tab widget tests for viewer vs admin add flow); analyze: No issues found. Admin check duplicated like Dardos (`_adminEmail` constant).
 
 Branch `feat/truco` created from `main` (v1.1.0). Next: T1–T6 via one delegated writer, then T7.
