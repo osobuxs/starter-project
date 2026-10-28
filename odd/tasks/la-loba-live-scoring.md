@@ -40,6 +40,18 @@ Several people follow the same board at the table; the scorer must not wait on t
 - [x] T4 — Edit last hand: each new hand stores a snapshot of the pre-hand state (`participantStatesBefore`, `dealerIdBefore`, `finishedGame`, `winnerId`); admin can reopen the last hand with prefilled scores, re-close it (overwrites same hand doc, reverts winner/stats if needed) or cancel. Legacy hands without snapshot are not editable. Route: delegated writer. Commit: see `git log` (`feat(la_loba): permite editar la ultima mano ...`). RED: 8 new tests failed (+1 for participants added after the snapshot); GREEN 46/46. Edit mode buffers remote updates and applies them on cancel; edited commit uses net stats deltas (`FieldValue.increment`) and rewrites status/winner. UI: admin-only `Editar última mano` app-bar action (also on finished games via `Ver partida`), edit banner with `Cancelar`, edit wording in the confirm dialog, `Agregar` disabled while editing. No widget tests for the page.
 - [x] T5 — User follow-up: finished games are correctable only within 10 minutes of the finishing hand's original timestamp (edits never extend the window); visible pencil `Corregir última mano` button. Route: inline (state, bloc clock injection, page label, tests). RED: compile failure (no `now` clock / `editableLastHandAt`); GREEN 48/48; analyze 28 pre-existing issues, none new.
 
+### Hardening round (user request 2026-10-28: "resolvé todo" + rejoin value display)
+
+- [x] T6 — Firestore rules: La Loba writes (`participants`, `games`, `hands`) only for the admin (same email as `participant_bloc.dart:127`); keep reads public. Verify no non-admin client path writes these collections. Rules are NOT deployed by the agent. Route: delegated writer. Commit: `fix(la_loba): restringe escrituras de La Loba al admin en las reglas`. New `isLaLobaAdmin()` (`request.auth.token.email`, no `email_verified` requirement). rg check: every client write (create/update participant, create game, commit hand, add participant to game, status updates) is reachable only from admin-gated UI/bloc paths; `MultiGameBloc` pause/resume/finish events are never dispatched by the UI. No runnable rules test (no emulator harness). Rules must be deployed manually (`firebase deploy --only firestore:rules`).
+- [ ] T7 — Stats writes in the hand batch must not fail the whole commit when a participant doc is missing (`set` + merge with increments).
+- [ ] T8 — Persist the rejoin (reentry) score per hand in the hand doc; show it as `(N)` under the orange rejoin total in the board. Legacy hands: compute it in a domain service by replay.
+- [ ] T9 — Mid-game join no longer writes the entry total into the previous hand's `scores`; store `joinedAtHand` / `joinScore` in participant state. Keep legacy data readable.
+- [ ] T10 — Move legacy elimination/rejoin inference out of `game_play_page.dart` into a pure domain service with tests.
+- [ ] T11 — Fix La Loba analyze issues (`use_build_context_synchronously`, `use_super_parameters`, null-aware warnings).
+- [ ] T12 — Remove dead repository/data-source methods; parallelize `getGameHistory` hand reads.
+- [ ] T13 — Widget tests for the game play page key flows; data-source tests with `fake_cloud_firestore` only if it resolves under the pinned SDK without touching other deps.
+- [ ] T14 — Pin Flutter 3.32.8 with `.fvmrc` and document why (Floor vs bloc_test analyzer conflict; real fix = migrate Floor, out of La Loba scope).
+
 ## Acceptance criteria
 
 - Dealer never freezes; eliminated mano → previous dealer deals again; rotation continues next round.
