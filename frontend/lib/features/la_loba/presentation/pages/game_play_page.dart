@@ -113,7 +113,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
           (bloc) => bloc.state.isAdmin,
         );
         final canEditLastHand = isAdmin &&
-            state.editableLastHand != null &&
+            state.editableLastHandAt(DateTime.now()) != null &&
             state.status != GameBlocStatus.retryRequired;
 
         return Scaffold(
@@ -124,9 +124,12 @@ class _GamePlayPageState extends State<GamePlayPage> {
             ),
             actions: [
               if (canEditLastHand)
-                IconButton(
-                  tooltip: 'Editar última mano',
-                  icon: const Icon(Icons.edit_note, color: Colors.black),
+                TextButton.icon(
+                  icon: const Icon(Icons.edit, color: Colors.black),
+                  label: const Text(
+                    'Corregir última mano',
+                    style: TextStyle(color: Colors.black),
+                  ),
                   onPressed: () => context
                       .read<GameBloc>()
                       .add(const StartEditLastHandEvent()),

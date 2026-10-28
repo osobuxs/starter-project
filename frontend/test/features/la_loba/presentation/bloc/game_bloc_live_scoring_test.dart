@@ -406,8 +406,54 @@ void main() {
     );
 
     blocTest<GameBloc, GameState>(
+      'a finished game can be corrected within 10 minutes of finishing',
+      build: () => GameBloc(
+        repository: repository,
+        now: () => DateTime.fromMillisecondsSinceEpoch(1)
+            .add(const Duration(minutes: 9, seconds: 59)),
+      ),
+      seed: () => const GameState(
+        status: GameBlocStatus.loaded,
+        game: _finishedByHand1,
+      ),
+      act: (bloc) => bloc.add(const StartEditLastHandEvent()),
+      expect: () => [
+        isA<GameState>()
+            .having((s) => s.editingHandNumber, 'editing', 1)
+            .having((s) => s.game?.status, 'game status', 'playing'),
+      ],
+    );
+
+    blocTest<GameBloc, GameState>(
+      'a finished game cannot be corrected after 10 minutes',
+      build: () => GameBloc(
+        repository: repository,
+        now: () => DateTime.fromMillisecondsSinceEpoch(1)
+            .add(const Duration(minutes: 10, seconds: 1)),
+      ),
+      seed: () => const GameState(
+        status: GameBlocStatus.loaded,
+        game: _finishedByHand1,
+      ),
+      act: (bloc) => bloc.add(const StartEditLastHandEvent()),
+      expect: () => <GameState>[],
+      verify: (bloc) {
+        expect(
+          bloc.state.editableLastHandAt(
+            DateTime.fromMillisecondsSinceEpoch(1)
+                .add(const Duration(minutes: 11)),
+          ),
+          isNull,
+        );
+      },
+    );
+
+    blocTest<GameBloc, GameState>(
       'editing the hand that finished the game reopens it and reverts stats',
-      build: () => GameBloc(repository: repository),
+      build: () => GameBloc(
+        repository: repository,
+        now: () => DateTime.fromMillisecondsSinceEpoch(1),
+      ),
       seed: () => const GameState(
         status: GameBlocStatus.loaded,
         game: _finishedByHand1,

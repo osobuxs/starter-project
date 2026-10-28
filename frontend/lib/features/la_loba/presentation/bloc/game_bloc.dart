@@ -54,8 +54,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   /// The hand being corrected, as it was originally committed.
   HandEntity? _editingOriginalHand;
 
-  GameBloc({required GameRepository repository})
-      : _repository = repository,
+  final DateTime Function() _now;
+
+  GameBloc({
+    required GameRepository repository,
+    DateTime Function()? now,
+  })  : _repository = repository,
+        _now = now ?? DateTime.now,
         super(const GameState()) {
     on<CreateGameEvent>(_onCreateGame);
     on<LoadGameEvent>(_onLoadGame);
@@ -176,7 +181,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     Emitter<GameState> emit,
   ) {
     final game = state.game;
-    final hand = state.editableLastHand;
+    final hand = state.editableLastHandAt(_now());
     if (game == null || hand == null || _pendingParticipantStates != null) {
       return;
     }

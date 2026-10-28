@@ -39,10 +39,14 @@ class GameState extends Equatable {
 
   bool get isEditingHand => editingHandNumber != null;
 
-  /// The last closed hand when it can be reopened: it must carry a pre-hand
-  /// snapshot (legacy hands do not), be the hand right before the current
-  /// one and, on a finished game, be the hand that finished it.
-  HandEntity? get editableLastHand {
+  /// How long after finishing a game its last hand can still be corrected.
+  static const finishedGameEditWindow = Duration(minutes: 10);
+
+  /// The last closed hand when it can be reopened at [now]: it must carry a
+  /// pre-hand snapshot (legacy hands do not), be the hand right before the
+  /// current one and, on a finished game, be the hand that finished it and
+  /// still be inside [finishedGameEditWindow].
+  HandEntity? editableLastHandAt(DateTime now) {
     final game = this.game;
     if (game == null || game.hands.isEmpty || isEditingHand) return null;
 
@@ -51,7 +55,13 @@ class GameState extends Equatable {
     );
     if (!last.canBeEdited) return null;
     if (last.handNumber != game.currentHand - 1) return null;
-    if (game.status == 'finished' && !last.finishedGame) return null;
+    if (game.status == 'finished') {
+      if (!last.finishedGame) return null;
+      // The hand keeps its original timestamp across edits, so correcting
+      // it never extends the window.
+      final finishedAt = DateTime.fromMillisecondsSinceEpoch(last.timestamp);
+      if (now.difference(finishedAt) > finishedGameEditWindow) return null;
+    }
     return last;
   }
 
