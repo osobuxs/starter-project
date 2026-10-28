@@ -182,4 +182,33 @@ void main() {
       expect(games.last.hands, isEmpty);
     });
   });
+
+  group('watchGame', () {
+    test('emits the game with its hands and again when a hand is added',
+        () async {
+      await seedGame('g1', ['p1', 'p2']);
+      final hands =
+          firestore.collection('games').doc('g1').collection('hands');
+
+      final emissions = <List<int>>[];
+      final subscription = dataSource.watchGame('g1').listen(
+            (game) => emissions.add(
+              game.hands.map((h) => h.handNumber).toList(),
+            ),
+          );
+      await pumpEventQueue();
+
+      await hands.doc('1').set({
+        'handNumber': 1,
+        'dealerId': 'p1',
+        'scores': {'p1': 5, 'p2': 0},
+        'timestamp': 1,
+      });
+      await pumpEventQueue();
+      await subscription.cancel();
+
+      expect(emissions.first, isEmpty);
+      expect(emissions.last, [1]);
+    });
+  });
 }
