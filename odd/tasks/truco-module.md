@@ -44,7 +44,7 @@ The app has La Loba and Dardos scorers but no Truco. Paper "anotadores" use grou
 - [x] T6 — Wiring: DI, routes, module entry, game history list.
 - [x] T6b — History, ranking and player detail (user request): stats on finish in the hand batch (net deltas on correction), finished games history, ranking (win counts for every member of the winning team), player detail page, bottom nav like La Loba/Dardos.
 - [x] T6b — History, ranking and player detail (user scope addition 2026-10-28): per-player stats persisted in the hand-commit batch with net deltas on correction; Historial tab (finished games, read-only), Ranking tab mirroring La Loba/Dardos (a win counts for every member of the winning team), player detail page; bottom nav wrapper.
-- [ ] T7 — Firestore rules for Truco collections (admin-only writes, public reads). Not deployed by the agent.
+- [x] T7 — Firestore rules for Truco collections (admin-only writes via `isLaLobaAdmin()`, public reads, deletes denied; player delete is a soft delete). Route: inline. Not deployed: run `firebase deploy --only firestore:rules`. Also wired `registerTrucoDependencies` in `frontend/lib/injection_container.dart` and a drawer entry (commit `4ec708a`); full suite 479/479.
 
 ## Decisions
 

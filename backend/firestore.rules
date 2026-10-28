@@ -212,6 +212,25 @@ service cloud.firestore {
       }
     }
 
+    // Truco: Card Game Management (same admin as La Loba)
+    match /truco_participants/{participantId} {
+      allow read: if true;
+      allow create, update: if isLaLobaAdmin();
+      allow delete: if false;
+    }
+
+    match /truco_games/{gameId} {
+      allow read: if true;
+      allow create, update: if isLaLobaAdmin();
+      allow delete: if false;
+
+      match /hands/{handId} {
+        allow read: if true;
+        allow create, update: if isLaLobaAdmin();
+        allow delete: if false;
+      }
+    }
+
     // Dardos: Dart Game Management
     match /dardos_participants/{participantId} {
       allow read: if true;
