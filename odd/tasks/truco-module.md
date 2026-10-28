@@ -39,7 +39,7 @@ The app has La Loba and Dardos scorers but no Truco. Paper "anotadores" use grou
 - [x] T1 — Domain: entities (TrucoGame, TrucoTeam, TrucoHand, TrucoParticipant) + pure rules (apply hand with clamping 0..target, malas/buenas split, winner, matchstick grouping into fives) with unit tests.
 - [x] T2 — Data: Firestore data source/models/repository (`truco_participants`, `truco_games`, `truco_games/{id}/hands`), `watchGame` realtime, single-batch hand commit, edit last hand; `fake_cloud_firestore` tests.
 - [x] T3 — Players: admin-only register/edit players (bloc + page), mirroring La Loba.
-- [ ] T4 — Create game: mode, target 18/30, team names, pick players per team, seating preview.
+- [x] T4 — Create game: mode, target 18/30, team names, pick players per team, seating preview.
 - [ ] T5 — Game board: per-team numeric entry (+/−), confirm, matchstick painter with malas/buenas divider, winner, correct last hand, realtime.
 - [ ] T6 — Wiring: DI, routes, module entry, game history list.
 - [ ] T6b — History, ranking and player detail (user request): stats on finish in the hand batch (net deltas on correction), finished games history, ranking (win counts for every member of the winning team), player detail page, bottom nav like La Loba/Dardos.
@@ -49,6 +49,7 @@ The app has La Loba and Dardos scorers but no Truco. Paper "anotadores" use grou
 ## Decisions
 
 - Both teams reaching the target in the same hand: the higher raw (unclamped) total wins; an exact tie blocks the hand with an error so the admin corrects the entry.
+- Create defaults to 2 vs 2 at 30 points; picking a player for the other team moves them; reordering uses up/down arrows within a team.
 - Malas/buenas are drawn from the clamped total: malas = min(total, half), buenas = the rest, each regrouped in fives from zero (so a half of 9 closes with a group of four).
 
 ## Acceptance criteria
@@ -66,5 +67,6 @@ The app has La Loba and Dardos scorers but no Truco. Paper "anotadores" use grou
 - T1 (route: delegated writer, single bounded writer for the module). RED: `flutter test test/features/truco` failed to compile (missing `trucoSeatingOrder`, entities). GREEN: 20 tests passed; analyze: No issues found.
 - T2 (delegated writer). RED: data source test failed to compile (no `TrucoFirestoreDataSourceImpl`). GREEN: 32 truco tests passed (fake_cloud_firestore: create, read, finish stats, edit revert/swap with net deltas, watchGame, participants); analyze: No issues found.
 - T3 (delegated writer). RED: participant bloc test failed to compile (no bloc). GREEN: 42 truco tests passed (admin check, create/trim/empty-name, rename, delete, failures; players tab widget tests for viewer vs admin add flow); analyze: No issues found. Admin check duplicated like Dardos (`_adminEmail` constant).
+- T4 (delegated writer). RED: validator and create-game cubit tests failed to compile. GREEN: 58 truco tests passed (validator rules, toggle/move between teams, trim on mode change, reorder, seating, submit valid/invalid/failure; create page widget tests for seating preview + start); analyze: No issues found.
 
 Branch `feat/truco` created from `main` (v1.1.0). Next: T1–T6 via one delegated writer, then T7.
