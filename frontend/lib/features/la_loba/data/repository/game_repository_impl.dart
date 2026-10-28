@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/la_loba/data/data_sources/remote/la_loba_firestore_data_source_impl.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
@@ -28,6 +30,20 @@ class GameRepositoryImpl implements GameRepository {
     } on Exception catch (e) {
       return DataFailed(e);
     }
+  }
+
+  @override
+  Stream<DataState<GameEntity>> watchGame(String gameId) {
+    return _firestoreDataSource.watchGame(gameId).transform(
+          StreamTransformer<GameEntity, DataState<GameEntity>>.fromHandlers(
+            handleData: (game, sink) => sink.add(DataSuccess(game)),
+            handleError: (error, stackTrace, sink) => sink.add(
+              DataFailed(
+                error is Exception ? error : Exception(error.toString()),
+              ),
+            ),
+          ),
+        );
   }
 
   @override

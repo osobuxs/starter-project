@@ -1,10 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/repository/game_repository.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/services/game_round_rules.dart';
 
 import 'game_event.dart';
 import 'game_state.dart';
+
+/// Internal event fed by the realtime game subscription.
+class _RemoteGameUpdatedEvent extends GameEvent {
+  final DataState<GameEntity> result;
+
+  const _RemoteGameUpdatedEvent(this.result);
+
+  @override
+  List<Object?> get props => [result];
+}
 
 class GameBloc extends Bloc<GameEvent, GameState> {
   final GameRepository _repository;
@@ -16,6 +29,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   Map<String, dynamic>? _pendingParticipantStates;
   int? _pendingRetryReentryBaseScore;
 
+  StreamSubscription<DataState<GameEntity>>? _gameSubscription;
+
+  /// Latest remote game received while the board was busy (round being
+  /// closed, retry dialog open). Applied once the board is idle again.
+  GameEntity? _bufferedRemoteGame;
+
   GameBloc({required GameRepository repository})
       : _repository = repository,
         super(const GameState()) {
@@ -25,6 +44,14 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<RecordScoreEvent>(_onRecordScore);
     on<FinishPartidaEvent>(_onFinishPartida);
     on<ResolveRetryDecisionEvent>(_onResolveRetryDecision);
+    on<_RemoteGameUpdatedEvent>(_onRemoteGameUpdated);
+  }
+
+  @override
+  Future<void> close() async {
+    await _gameSubscription?.cancel();
+    _gameSubscription = null;
+    return super.close();
   }
 
   Future<void> _onCreateGame(
@@ -71,6 +98,54 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         error: (result as DataFailed).error?.toString() ?? 'Error loading game',
       ));
     }
+
+    await _watchGame(event.gameId);
+  }
+
+  Future<void> _watchGame(String gameId) async {
+    await _gameSubscription?.cancel();
+    _bufferedRemoteGame = null;
+    _gameSubscription = _repository.watchGame(gameId).listen(
+      (result) {
+        if (!isClosed) add(_RemoteGameUpdatedEvent(result));
+      },
+    );
+  }
+
+  void _onRemoteGameUpdated(
+    _RemoteGameUpdatedEvent event,
+    Emitter<GameState> emit,
+  ) {
+    // Stream errors are transient (offline, permission hiccups): keep the
+    // board as it is and wait for the next snapshot.
+    if (event.result is! DataSuccess<GameEntity>) return;
+    final remote = event.result.data;
+    if (remote == null) return;
+
+    if (_isBoardBusy) {
+      _bufferedRemoteGame = remote;
+      return;
+    }
+
+    _applyRemoteGame(remote, emit);
+  }
+
+  bool get _isBoardBusy =>
+      _pendingParticipantStates != null ||
+      state.status == GameBlocStatus.loading ||
+      state.status == GameBlocStatus.retryRequired;
+
+  void _applyRemoteGame(GameEntity remote, Emitter<GameState> emit) {
+    _bufferedRemoteGame = null;
+    final wasFinished = state.game?.status == 'finished';
+    final finishedRemotely = !wasFinished && remote.status == 'finished';
+
+    // currentHandScores is deliberately untouched: the scorer may be typing.
+    emit(state.copyWith(
+      status:
+          finishedRemotely ? GameBlocStatus.gameFinished : GameBlocStatus.loaded,
+      game: remote,
+    ));
   }
 
   Future<void> _onAddPlayer(
@@ -304,6 +379,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           status: GameBlocStatus.error,
           error: winnerResult.error?.toString() ?? 'Error finishing game',
         ));
+        _releaseBoard(emit);
         return;
       }
 
@@ -330,6 +406,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           status: GameBlocStatus.error,
           error: updateResult.error?.toString() ?? 'Error updating scores',
         ));
+        _releaseBoard(emit);
         return;
       }
     }
@@ -346,6 +423,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         clearCurrentRetryParticipantId: true,
         clearRetryReentryBaseScore: true,
       ));
+      // The reloaded game is newer than anything buffered meanwhile.
+      _bufferedRemoteGame = null;
       _clearPendingRound();
       return;
     }
@@ -354,6 +433,17 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       status: GameBlocStatus.error,
       error: 'Error reloading game',
     ));
+    _releaseBoard(emit);
+  }
+
+  /// Drops the pending round after a failure and applies any remote game
+  /// that arrived while the board was busy.
+  void _releaseBoard(Emitter<GameState> emit) {
+    _clearPendingRound();
+    final buffered = _bufferedRemoteGame;
+    if (buffered != null) {
+      _applyRemoteGame(buffered, emit);
+    }
   }
 
   String _nextDealerId({

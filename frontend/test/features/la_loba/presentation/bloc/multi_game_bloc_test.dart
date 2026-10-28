@@ -156,6 +156,11 @@ class _FakeGameRepository implements GameRepository {
   }
 
   @override
+  Stream<DataState<GameEntity>> watchGame(String gameId) {
+    return const Stream.empty();
+  }
+
+  @override
   Future<DataState<List<GameEntity>>> getGameHistory() async {
     return DataSuccess(gamesHistory);
   }

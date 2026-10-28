@@ -4,6 +4,10 @@ import 'package:news_app_clean_architecture/features/la_loba/domain/entities/han
 abstract class LaLobaFirestoreDataSource {
   Future<GameEntity> createGame(String name, List<String> participantIds);
   Future<GameEntity> getGame(String gameId);
+
+  /// Live view of a game: emits whenever the game document or any of its
+  /// hands change (including local pending writes).
+  Stream<GameEntity> watchGame(String gameId);
   Future<List<GameEntity>> getGameHistory();
   Future<HandEntity> createHand(
     String gameId,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:news_app_clean_architecture/features/la_loba/data/data_sources/remote/la_loba_firestore_data_source.dart';
 import 'package:news_app_clean_architecture/features/la_loba/data/models/hand_model.dart';
@@ -49,18 +51,82 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
       throw Exception('Game not found');
     }
 
-    final data = snapshot.data()!;
-    final handsSnapshot = await _firestore
+    final handsSnapshot = await _handsQuery(gameId).get();
+
+    return _gameFromData(gameId, snapshot.data()!, _handsFrom(handsSnapshot));
+  }
+
+  @override
+  Stream<GameEntity> watchGame(String gameId) {
+    // Combines the game document and its hands subcollection into a single
+    // stream. Emits only once both listeners delivered their first snapshot,
+    // then on every change of either side.
+    late final StreamController<GameEntity> controller;
+    StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? gameSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? handsSub;
+    Map<String, dynamic>? latestGameData;
+    List<HandEntity>? latestHands;
+
+    void emitIfReady() {
+      final data = latestGameData;
+      final hands = latestHands;
+      if (data == null || hands == null || controller.isClosed) return;
+      try {
+        controller.add(_gameFromData(gameId, data, hands));
+      } catch (e, st) {
+        controller.addError(e, st);
+      }
+    }
+
+    controller = StreamController<GameEntity>(
+      onListen: () {
+        gameSub = _firestore.collection('games').doc(gameId).snapshots().listen(
+          (snapshot) {
+            if (!snapshot.exists) {
+              controller.addError(Exception('Game not found'));
+              return;
+            }
+            latestGameData = snapshot.data();
+            emitIfReady();
+          },
+          onError: controller.addError,
+        );
+        handsSub = _handsQuery(gameId).snapshots().listen(
+          (snapshot) {
+            latestHands = _handsFrom(snapshot);
+            emitIfReady();
+          },
+          onError: controller.addError,
+        );
+      },
+      onCancel: () async {
+        await gameSub?.cancel();
+        await handsSub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  Query<Map<String, dynamic>> _handsQuery(String gameId) {
+    return _firestore
         .collection('games')
         .doc(gameId)
         .collection('hands')
-        .orderBy('handNumber')
-        .get();
+        .orderBy('handNumber');
+  }
 
-    final hands = handsSnapshot.docs
+  List<HandEntity> _handsFrom(QuerySnapshot<Map<String, dynamic>> snapshot) {
+    return snapshot.docs
         .map((doc) => HandModel.fromFirestore(doc.data(), doc.id).toEntity())
         .toList();
+  }
 
+  GameEntity _gameFromData(
+    String gameId,
+    Map<String, dynamic> data,
+    List<HandEntity> hands,
+  ) {
     return GameEntity(
       id: gameId,
       name: data['name'] as String,

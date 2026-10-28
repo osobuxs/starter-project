@@ -6,6 +6,10 @@ abstract class GameRepository {
   Future<DataState<GameEntity>> createGame(String name,
       [List<String>? participantIds]);
   Future<DataState<GameEntity>> getGame(String gameId);
+
+  /// Emits the latest game (with hands) every time it changes remotely or
+  /// locally. Errors are delivered as [DataFailed] without closing the stream.
+  Stream<DataState<GameEntity>> watchGame(String gameId);
   Future<DataState<List<GameEntity>>> getGameHistory();
   Future<DataState<HandEntity>> createHand(
     String gameId,
