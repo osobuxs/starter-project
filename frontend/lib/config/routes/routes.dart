@@ -34,6 +34,18 @@ import 'package:news_app_clean_architecture/features/dardos/presentation/pages/g
 import 'package:news_app_clean_architecture/features/dardos/presentation/pages/game_finished_page.dart'
     as dardos_finished;
 import 'package:news_app_clean_architecture/features/dardos/presentation/pages/jugador_detail_page.dart';
+// Truco imports
+import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_create_game/truco_create_game_cubit.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_game/truco_game_bloc.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_game/truco_game_event.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_multi_game/truco_multi_game_bloc.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_multi_game/truco_multi_game_event.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_participant/truco_participant_bloc.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/bloc/truco_participant/truco_participant_event.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/pages/truco_create_game_page.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/pages/truco_game_play_page.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/pages/truco_wrapper.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/truco_route_names.dart';
 import 'package:news_app_clean_architecture/injection_container.dart';
 
 import '../../features/daily_news/domain/entities/article.dart';
@@ -328,6 +340,72 @@ class AppRoutes {
           ),
         );
 
+      // ---- Truco ----
+      case TrucoRouteNames.truco:
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<TrucoMultiGameBloc>(
+                create: (_) =>
+                    sl<TrucoMultiGameBloc>()..add(const LoadTrucoGamesEvent()),
+              ),
+              BlocProvider<TrucoParticipantBloc>(
+                create: (_) => _trucoParticipantBloc(),
+              ),
+            ],
+            child: const TrucoWrapper(),
+          ),
+        );
+
+      case TrucoRouteNames.create:
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<TrucoCreateGameCubit>(
+                create: (_) => sl<TrucoCreateGameCubit>(),
+              ),
+              BlocProvider<TrucoParticipantBloc>(
+                create: (_) => _trucoParticipantBloc(),
+              ),
+            ],
+            child: const TrucoCreateGamePage(),
+          ),
+        );
+
+      case TrucoRouteNames.play:
+        final trucoGameId = _extractGameId(settings.arguments);
+        if (trucoGameId == null) {
+          return _materialRoute(
+            settings,
+            policy: policy,
+            child: const AppCenteredMessageState(
+              icon: Icons.error_outline,
+              title: 'Ruta inválida',
+              message: 'No se encontró un gameId válido para la partida.',
+            ),
+          );
+        }
+        return _materialRoute(
+          settings,
+          policy: policy,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<TrucoGameBloc>(
+                create: (_) =>
+                    sl<TrucoGameBloc>()..add(LoadTrucoGameEvent(trucoGameId)),
+              ),
+              BlocProvider<TrucoParticipantBloc>(
+                create: (_) => _trucoParticipantBloc(),
+              ),
+            ],
+            child: TrucoGamePlayPage(gameId: trucoGameId),
+          ),
+        );
+
       default:
         return _materialRoute(
           settings,
@@ -347,6 +425,14 @@ class AppRoutes {
       builder: (_) =>
           _RouteAccessGate(settings: settings, policy: policy, child: child),
     );
+  }
+
+  /// Truco player registry with the admin check and players already
+  /// requested.
+  static TrucoParticipantBloc _trucoParticipantBloc() {
+    return sl<TrucoParticipantBloc>()
+      ..add(const CheckTrucoAdminStatusEvent())
+      ..add(const FetchTrucoParticipantsEvent());
   }
 
   static String? _extractGameId(Object? rawArg) {

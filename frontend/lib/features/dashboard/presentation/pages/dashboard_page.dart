@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:news_app_clean_architecture/core/navigation/route_names.dart';
 import 'package:news_app_clean_architecture/core/widgets/app_section_scaffold.dart';
+import 'package:news_app_clean_architecture/features/truco/presentation/truco_route_names.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -100,6 +101,12 @@ class DashboardPage extends StatelessWidget {
                             label: 'Dardos',
                             onTap: () => Navigator.of(context)
                                 .pushReplacementNamed(AppRouteNames.dardos),
+                          ),
+                          _DashboardChip(
+                            icon: Icons.style,
+                            label: 'Truco',
+                            onTap: () => Navigator.of(context)
+                                .pushReplacementNamed(TrucoRouteNames.truco),
                           ),
                         ],
                       ),
