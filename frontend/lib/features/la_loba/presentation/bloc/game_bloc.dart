@@ -291,6 +291,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final nextDealerId = _nextDealerId(
       participantIds: game.participantIds,
       currentDealerId: game.currentDealerId,
+      previousParticipantStates: game.participantStates,
       participantStates: participantStates,
     );
 
@@ -358,6 +359,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   String _nextDealerId({
     required List<String> participantIds,
     required String currentDealerId,
+    required Map<String, dynamic> previousParticipantStates,
     required Map<String, dynamic> participantStates,
   }) {
     final n = participantIds.length;
@@ -371,9 +373,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final currentDealerIndex = participantIds.indexOf(currentDealerId);
     if (currentDealerIndex < 0) return activeIds.first;
 
-    // The "mano" (first to play) sits right after the dealer.
-    // Mano advances one SEAT per round regardless of eliminations.
-    final currentManoSeat = (currentDealerIndex + 1) % n;
+    // The "mano" of the round just played was the first player that was
+    // active when the round STARTED, right after the dealer. Using the raw
+    // seat would point at an already-eliminated player and freeze the
+    // rotation on the same dealer forever.
+    var currentManoSeat = (currentDealerIndex + 1) % n;
+    for (var i = 1; i < n; i++) {
+      final idx = (currentDealerIndex + i) % n;
+      if (_isActive(previousParticipantStates[participantIds[idx]])) {
+        currentManoSeat = idx;
+        break;
+      }
+    }
 
     // Next mano: first active player starting from the seat AFTER
     // current mano. This ensures every active player gets their

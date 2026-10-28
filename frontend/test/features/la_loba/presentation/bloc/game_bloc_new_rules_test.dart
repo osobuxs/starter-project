@@ -225,7 +225,77 @@ void main() {
       expect(persistedStates?['p2']?['eliminatedAtHand'], 6);
     },
   );
+
+  blocTest<GameBloc, GameState>(
+    'When the mano is eliminated, the previous dealer deals again',
+    build: () => bloc,
+    seed: () => GameState(
+      status: GameBlocStatus.loaded,
+      game: _manoAboutToBeEliminatedGame,
+      currentHandScores: const {'p1': 0, 'p2': 5, 'p3': 0, 'p4': 0},
+    ),
+    act: (bloc) {
+      bloc.add(const FinishPartidaEvent('g6'));
+      bloc.add(
+        const ResolveRetryDecisionEvent(participantId: 'p2', rejoin: false),
+      );
+    },
+    verify: (_) {
+      expect(repository.lastDealerId, 'p1');
+    },
+  );
+
+  blocTest<GameBloc, GameState>(
+    'Dealer keeps rotating in the round after the mano was eliminated',
+    build: () => bloc,
+    seed: () => GameState(
+      status: GameBlocStatus.loaded,
+      game: _afterManoEliminatedGame,
+      currentHandScores: const {'p1': 0, 'p3': 0, 'p4': 0},
+    ),
+    act: (bloc) => bloc.add(const FinishPartidaEvent('g7')),
+    verify: (_) {
+      expect(repository.lastDealerId, 'p3');
+    },
+  );
 }
+
+const _manoAboutToBeEliminatedGame = GameEntity(
+  id: 'g6',
+  name: 'Mano eliminado',
+  status: 'playing',
+  date: 1,
+  participantIds: ['p1', 'p2', 'p3', 'p4'],
+  currentDealerId: 'p1',
+  currentHand: 3,
+  participantStates: {
+    'p1': {'score': 10, 'status': 'active'},
+    'p2': {'score': 99, 'status': 'active'},
+    'p3': {'score': 20, 'status': 'active'},
+    'p4': {'score': 30, 'status': 'active'},
+  },
+  winnerId: null,
+  hands: <HandEntity>[],
+);
+
+// p1 dealt again because p2 (the mano) was eliminated, so p3 was mano.
+const _afterManoEliminatedGame = GameEntity(
+  id: 'g7',
+  name: 'Ronda siguiente',
+  status: 'playing',
+  date: 1,
+  participantIds: ['p1', 'p2', 'p3', 'p4'],
+  currentDealerId: 'p1',
+  currentHand: 4,
+  participantStates: {
+    'p1': {'score': 10, 'status': 'active'},
+    'p2': {'score': 104, 'status': 'eliminated', 'eliminatedAtHand': 3},
+    'p3': {'score': 20, 'status': 'active'},
+    'p4': {'score': 30, 'status': 'active'},
+  },
+  winnerId: null,
+  hands: <HandEntity>[],
+);
 
 const _initialGame = GameEntity(
   id: 'g1',
@@ -317,6 +387,7 @@ class _FakeGameRepository implements GameRepository {
   int updateParticipantScoresCalls = 0;
   int updateGameWinnerCalls = 0;
   String? lastWinnerId;
+  String? lastDealerId;
   Map<String, dynamic>? lastUpdatedParticipantStates;
 
   @override
@@ -390,6 +461,7 @@ class _FakeGameRepository implements GameRepository {
   ) async {
     updateParticipantScoresCalls += 1;
     lastUpdatedParticipantStates = participantStates;
+    lastDealerId = currentDealerId;
     _gameAfterReload = _gameAfterReload.copyWith(
       currentDealerId: currentDealerId,
       currentHand: currentHand,
