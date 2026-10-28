@@ -5,6 +5,7 @@ import 'package:news_app_clean_architecture/features/la_loba/data/data_sources/r
 import 'package:news_app_clean_architecture/features/la_loba/data/models/hand_model.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand_commit.dart';
 
 class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
   final FirebaseFirestore _firestore;
@@ -182,6 +183,53 @@ class LaLobaFirestoreDataSourceImpl implements LaLobaFirestoreDataSource {
     });
 
     return hand;
+  }
+
+  @override
+  Future<void> commitHand(HandCommit commit) async {
+    final gameRef = _firestore.collection('games').doc(commit.gameId);
+    final handRef =
+        gameRef.collection('hands').doc(commit.hand.handNumber.toString());
+    final batch = _firestore.batch();
+
+    batch.set(handRef, HandModel.fromEntity(commit.hand).toJson());
+
+    final gameUpdate = <String, dynamic>{
+      'currentDealerId': commit.nextDealerId,
+      'currentHand': commit.nextHandNumber,
+      'participantStates': commit.participantStates,
+    };
+    final winnerId = commit.winnerId;
+    if (winnerId != null) {
+      gameUpdate['winnerId'] = winnerId;
+      gameUpdate['status'] = 'finished';
+    }
+    batch.update(gameRef, gameUpdate);
+
+    if (winnerId != null) {
+      _addStatsIncrements(batch, commit.participantIds, winnerId, 1);
+    }
+
+    // Applied to the local cache right away (listeners fire immediately);
+    // the returned future completes once the server acknowledges it.
+    await batch.commit();
+  }
+
+  void _addStatsIncrements(
+    WriteBatch batch,
+    List<String> participantIds,
+    String winnerId,
+    int delta,
+  ) {
+    for (final participantId in participantIds) {
+      final participantRef =
+          _firestore.collection('participants').doc(participantId);
+      batch.update(participantRef, {
+        'totalGamesPlayed': FieldValue.increment(delta),
+        if (participantId == winnerId)
+          'totalGamesWon': FieldValue.increment(delta),
+      });
+    }
   }
 
   @override

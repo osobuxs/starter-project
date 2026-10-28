@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand_commit.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/repository/game_repository.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_bloc.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/game_event.dart';
@@ -32,8 +33,6 @@ void main() {
     act: (bloc) => bloc.add(const FinishPartidaEvent('g1')),
     expect: () => [
       isA<GameState>()
-          .having((s) => s.status, 'status', GameBlocStatus.loading),
-      isA<GameState>()
           .having((s) => s.status, 'status', GameBlocStatus.retryRequired)
           .having((s) => s.currentRetryParticipantId, 'retryId', 'p1')
           .having((s) => s.pendingRetryParticipantIds.length, 'pending', 1),
@@ -51,8 +50,6 @@ void main() {
     act: (bloc) => bloc.add(const FinishPartidaEvent('g2')),
     expect: () => [
       isA<GameState>()
-          .having((s) => s.status, 'status', GameBlocStatus.loading),
-      isA<GameState>()
           .having((s) => s.status, 'status', GameBlocStatus.error)
           .having(
             (s) => s.error,
@@ -61,9 +58,7 @@ void main() {
           ),
     ],
     verify: (_) {
-      expect(repository.createHandCalls, 0);
-      expect(repository.updateParticipantScoresCalls, 0);
-      expect(repository.updateGameWinnerCalls, 0);
+      expect(repository.commitHandCalls, 0);
     },
   );
 
@@ -78,14 +73,12 @@ void main() {
     act: (bloc) => bloc.add(const FinishPartidaEvent('g3')),
     expect: () => [
       isA<GameState>()
-          .having((s) => s.status, 'status', GameBlocStatus.loading),
-      isA<GameState>()
           .having((s) => s.status, 'status', GameBlocStatus.gameFinished),
     ],
     verify: (_) {
-      expect(repository.createHandCalls, 1);
-      expect(repository.updateGameWinnerCalls, 1);
-      expect(repository.updateParticipantScoresCalls, 1);
+      expect(repository.commitHandCalls, 1);
+      expect(repository.lastCommit?.hand.handNumber, 4);
+      expect(repository.lastCommit?.hand.scores, {'p1': 11, 'p2': 7, 'p3': 0});
 
       final persistedStates = repository.lastUpdatedParticipantStates;
       expect(
@@ -120,11 +113,7 @@ void main() {
     },
     expect: () => [
       isA<GameState>()
-          .having((s) => s.status, 'status', GameBlocStatus.loading),
-      isA<GameState>()
           .having((s) => s.status, 'status', GameBlocStatus.retryRequired),
-      isA<GameState>()
-          .having((s) => s.status, 'status', GameBlocStatus.loading),
       isA<GameState>()
           .having((s) => s.status, 'status', GameBlocStatus.handFinished),
     ],
@@ -171,8 +160,6 @@ void main() {
     },
     expect: () => [
       isA<GameState>()
-          .having((s) => s.status, 'status', GameBlocStatus.loading),
-      isA<GameState>()
           .having((s) => s.status, 'status', GameBlocStatus.retryRequired)
           .having((s) => s.pendingRetryParticipantIds, 'pending', [
         'p1',
@@ -183,8 +170,6 @@ void main() {
           .having((s) => s.pendingRetryParticipantIds, 'pending', [
         'p2'
       ]).having((s) => s.currentRetryParticipantId, 'currentRetry', 'p2'),
-      isA<GameState>()
-          .having((s) => s.status, 'status', GameBlocStatus.loading),
       isA<GameState>()
           .having((s) => s.status, 'status', GameBlocStatus.handFinished),
     ],
@@ -383,9 +368,8 @@ const _doubleOverLimitSameBatchGame = GameEntity(
 
 class _FakeGameRepository implements GameRepository {
   GameEntity _gameAfterReload = _initialGame;
-  int createHandCalls = 0;
-  int updateParticipantScoresCalls = 0;
-  int updateGameWinnerCalls = 0;
+  int commitHandCalls = 0;
+  HandCommit? lastCommit;
   String? lastWinnerId;
   String? lastDealerId;
   Map<String, dynamic>? lastUpdatedParticipantStates;
@@ -414,7 +398,6 @@ class _FakeGameRepository implements GameRepository {
     String dealerId,
     Map<String, int> scores,
   ) async {
-    createHandCalls += 1;
     return DataSuccess(
       HandEntity(
         handNumber: handNumber,
@@ -441,6 +424,16 @@ class _FakeGameRepository implements GameRepository {
   }
 
   @override
+  Future<DataState<void>> commitHand(HandCommit commit) async {
+    commitHandCalls += 1;
+    lastCommit = commit;
+    lastUpdatedParticipantStates = commit.participantStates;
+    lastDealerId = commit.nextDealerId;
+    lastWinnerId = commit.winnerId;
+    return const DataSuccess(null);
+  }
+
+  @override
   Future<DataState<void>> updateGameStatus(String gameId, String status) async {
     return const DataSuccess(null);
   }
@@ -448,8 +441,6 @@ class _FakeGameRepository implements GameRepository {
   @override
   Future<DataState<void>> updateGameWinner(
       String gameId, String winnerId) async {
-    updateGameWinnerCalls += 1;
-    lastWinnerId = winnerId;
     _gameAfterReload = _gameAfterReload.copyWith(
       status: 'finished',
       winnerId: winnerId,
@@ -464,9 +455,6 @@ class _FakeGameRepository implements GameRepository {
     int currentHand,
     Map<String, dynamic> participantStates,
   ) async {
-    updateParticipantScoresCalls += 1;
-    lastUpdatedParticipantStates = participantStates;
-    lastDealerId = currentDealerId;
     _gameAfterReload = _gameAfterReload.copyWith(
       currentDealerId: currentDealerId,
       currentHand: currentHand,

@@ -35,8 +35,8 @@ Several people follow the same board at the table; the scorer must not wait on t
 ## Tasks
 
 - [x] T1 — Fix dealer rotation freeze after the mano is eliminated. Route: inline (1 source file + 1 test). Commit `56d2e60`. RED observed (`p1` vs expected `p3`), GREEN 27/27 La Loba tests. Review assess: medium, `under_budget`.
-- [x] T2 — Realtime board: `watchGame(gameId)` stream (game doc + hands subcollection `snapshots()`), `GameBloc` subscribes on load and cancels on close. Route: delegated writer (data source, repo interface/impl, bloc, fakes). Commit: see `git log` (`feat(la_loba): tablero en tiempo real ...`). RED: 4/6 new tests failed (no subscription); GREEN 33/33 La Loba tests. Remote updates keep `currentHandScores`, are buffered while a round is closing / retry dialog is open, stream errors are ignored, remote finish emits `gameFinished`. Data-source `snapshots()` combination has no runnable unit test (no Firestore fake in deps).
-- [ ] T3 — Instant score entry: compute next game state locally, emit it immediately, persist hand + game update (+ winner/stats) in one `WriteBatch` without blocking the UI; surface background failures without losing local state. Route: delegated writer.
+- [x] T2 — Realtime board: `watchGame(gameId)` stream (game doc + hands subcollection `snapshots()`), `GameBloc` subscribes on load and cancels on close. Route: delegated writer (data source, repo interface/impl, bloc, fakes). Commit `f54ad2e`. RED: 4/6 new tests failed (no subscription); GREEN 33/33 La Loba tests. Remote updates keep `currentHandScores`, are buffered while a round is closing / retry dialog is open, stream errors are ignored, remote finish emits `gameFinished`. Data-source `snapshots()` combination has no runnable unit test (no Firestore fake in deps).
+- [x] T3 — Instant score entry: compute next game state locally, emit it immediately, persist hand + game update (+ winner/stats) in one `WriteBatch` without blocking the UI; surface background failures without losing local state. Route: delegated writer. Commit: see T3 entry in `git log` (`feat(la_loba): cierre de mano instantaneo ...`). RED: 13 failing (4 new + 9 updated rules tests expecting a single `commitHand` and no loading flash); GREEN 37/37. New `HandCommit` entity + `commitHand` (hand set + game update + winner/status + stats increments in one batch); post-write `getGame` reload removed; failures emit `error` keeping the local board. Data-source batch has no runnable unit test.
 - [ ] T4 — Edit last hand: each new hand stores a snapshot of the pre-hand state (`participantStatesBefore`, `dealerIdBefore`, `finishedGame`); admin can reopen the last hand with prefilled scores, re-close it (overwrites same hand doc, reverts winner/stats if needed) or cancel. Legacy hands without snapshot are not editable. Route: delegated writer.
 
 ## Acceptance criteria
@@ -53,4 +53,4 @@ Several people follow the same board at the table; the scorer must not wait on t
 
 ## Progress
 
-T1, T2 done. Next: T3 (instant score entry).
+T1–T3 done. Next: T4 (edit last hand).

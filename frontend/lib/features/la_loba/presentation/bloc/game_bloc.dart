@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand_commit.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/repository/game_repository.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/services/game_round_rules.dart';
 
@@ -19,6 +21,16 @@ class _RemoteGameUpdatedEvent extends GameEvent {
   List<Object?> get props => [result];
 }
 
+/// Internal event raised when a background hand commit fails.
+class _HandCommitFailedEvent extends GameEvent {
+  final String message;
+
+  const _HandCommitFailedEvent(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
+
 class GameBloc extends Bloc<GameEvent, GameState> {
   final GameRepository _repository;
 
@@ -28,6 +40,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   int? _pendingHandNumberToPersist;
   Map<String, dynamic>? _pendingParticipantStates;
   int? _pendingRetryReentryBaseScore;
+  Map<String, int>? _pendingRoundScores;
 
   StreamSubscription<DataState<GameEntity>>? _gameSubscription;
 
@@ -45,6 +58,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<FinishPartidaEvent>(_onFinishPartida);
     on<ResolveRetryDecisionEvent>(_onResolveRetryDecision);
     on<_RemoteGameUpdatedEvent>(_onRemoteGameUpdated);
+    on<_HandCommitFailedEvent>(_onHandCommitFailed);
   }
 
   @override
@@ -204,10 +218,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     emit(state.copyWith(currentHandScores: updated));
   }
 
-  Future<void> _onFinishPartida(
+  void _onFinishPartida(
     FinishPartidaEvent event,
     Emitter<GameState> emit,
-  ) async {
+  ) {
     if (state.game == null) return;
 
     final game = state.game!;
@@ -215,7 +229,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       return;
     }
 
-    emit(state.copyWith(status: GameBlocStatus.loading));
+    // A round is already waiting for retry decisions.
+    if (_pendingParticipantStates != null) {
+      return;
+    }
 
     try {
       final roundScores = buildRoundScoresForActivePlayers(
@@ -244,13 +261,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         return;
       }
 
-      await _repository.createHand(
-        game.id,
-        handNumberToPersist,
-        game.currentDealerId,
-        roundScores,
-      );
-
       if (activeAtOrUnderLimitCount == 1) {
         _markOverLimitAsEliminated(
           participantStates: scoreUpdate.updatedStates,
@@ -263,6 +273,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       _pendingNextHandNumber = nextHandNumber;
       _pendingHandNumberToPersist = handNumberToPersist;
       _pendingParticipantStates = scoreUpdate.updatedStates;
+      _pendingRoundScores = roundScores;
       _pendingRetryReentryBaseScore = _computeRetryReentryBaseScore(
         participantStates: scoreUpdate.updatedStates,
         overLimitParticipantIds: scoreUpdate.overLimitParticipantIds,
@@ -279,19 +290,20 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         return;
       }
 
-      await _completeRound(emit);
+      _completeRound(emit);
     } catch (e) {
       emit(state.copyWith(
         status: GameBlocStatus.error,
         error: e.toString(),
       ));
+      _releaseBoard(emit);
     }
   }
 
-  Future<void> _onResolveRetryDecision(
+  void _onResolveRetryDecision(
     ResolveRetryDecisionEvent event,
     Emitter<GameState> emit,
-  ) async {
+  ) {
     if (_pendingParticipantStates == null) {
       return;
     }
@@ -338,26 +350,25 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       return;
     }
 
-    emit(state.copyWith(
-      status: GameBlocStatus.loading,
-      clearPendingRetryParticipantIds: true,
-      clearCurrentRetryParticipantId: true,
-      clearRetryReentryBaseScore: true,
-    ));
-
-    await _completeRound(emit);
+    _completeRound(emit);
   }
 
-  Future<void> _completeRound(Emitter<GameState> emit) async {
+  /// Builds the next game locally, shows it right away and persists it in
+  /// the background. The realtime stream reconciles with the server later.
+  void _completeRound(Emitter<GameState> emit) {
     final game = state.game;
     final gameId = _pendingGameId;
     final nextHandNumber = _pendingNextHandNumber;
+    final handNumber = _pendingHandNumberToPersist;
     final participantStates = _pendingParticipantStates;
+    final roundScores = _pendingRoundScores;
 
     if (game == null ||
         gameId == null ||
         nextHandNumber == null ||
-        participantStates == null) {
+        handNumber == null ||
+        participantStates == null ||
+        roundScores == null) {
       return;
     }
 
@@ -372,68 +383,70 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     final winnerId = determineAutomaticWinner(participantStates);
 
-    if (winnerId != null) {
-      final winnerResult = await _repository.updateGameWinner(gameId, winnerId);
-      if (winnerResult is! DataSuccess<void>) {
-        emit(state.copyWith(
-          status: GameBlocStatus.error,
-          error: winnerResult.error?.toString() ?? 'Error finishing game',
-        ));
-        _releaseBoard(emit);
-        return;
-      }
+    final hand = HandEntity(
+      handNumber: handNumber,
+      dealerId: game.currentDealerId,
+      scores: roundScores,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+    );
+    final hands = [
+      ...game.hands.where((h) => h.handNumber != handNumber),
+      hand,
+    ]..sort((a, b) => a.handNumber.compareTo(b.handNumber));
 
-      await _repository.updateParticipantStatsOnGameFinished(
-        game.participantIds,
-        winnerId,
-      );
-
-      await _repository.updateParticipantScores(
-        gameId,
-        nextDealerId,
-        nextHandNumber,
-        participantStates,
-      );
-    } else {
-      final updateResult = await _repository.updateParticipantScores(
-        gameId,
-        nextDealerId,
-        nextHandNumber,
-        participantStates,
-      );
-      if (updateResult is! DataSuccess<void>) {
-        emit(state.copyWith(
-          status: GameBlocStatus.error,
-          error: updateResult.error?.toString() ?? 'Error updating scores',
-        ));
-        _releaseBoard(emit);
-        return;
-      }
-    }
-
-    final gameResult = await _repository.getGame(game.id);
-    if (gameResult is DataSuccess) {
-      emit(state.copyWith(
-        status: winnerId == null
-            ? GameBlocStatus.handFinished
-            : GameBlocStatus.gameFinished,
-        game: gameResult.data,
-        currentHandScores: const {},
-        clearPendingRetryParticipantIds: true,
-        clearCurrentRetryParticipantId: true,
-        clearRetryReentryBaseScore: true,
-      ));
-      // The reloaded game is newer than anything buffered meanwhile.
-      _bufferedRemoteGame = null;
-      _clearPendingRound();
-      return;
-    }
+    final nextGame = game.copyWith(
+      currentDealerId: nextDealerId,
+      currentHand: nextHandNumber,
+      participantStates: participantStates,
+      hands: hands,
+      status: winnerId == null ? null : 'finished',
+      winnerId: winnerId,
+    );
 
     emit(state.copyWith(
-      status: GameBlocStatus.error,
-      error: 'Error reloading game',
+      status: winnerId == null
+          ? GameBlocStatus.handFinished
+          : GameBlocStatus.gameFinished,
+      game: nextGame,
+      currentHandScores: const {},
+      clearPendingRetryParticipantIds: true,
+      clearCurrentRetryParticipantId: true,
+      clearRetryReentryBaseScore: true,
     ));
-    _releaseBoard(emit);
+
+    // Anything buffered predates this local write.
+    _bufferedRemoteGame = null;
+    _clearPendingRound();
+
+    unawaited(_persistHand(HandCommit(
+      gameId: gameId,
+      hand: hand,
+      participantIds: game.participantIds,
+      participantStates: participantStates,
+      nextDealerId: nextDealerId,
+      nextHandNumber: nextHandNumber,
+      winnerId: winnerId,
+    )));
+  }
+
+  Future<void> _persistHand(HandCommit commit) async {
+    final result = await _repository.commitHand(commit);
+    if (result is DataSuccess<void> || isClosed) return;
+    add(_HandCommitFailedEvent(
+      result.error?.toString() ?? 'Error desconocido',
+    ));
+  }
+
+  void _onHandCommitFailed(
+    _HandCommitFailedEvent event,
+    Emitter<GameState> emit,
+  ) {
+    // Keep the local board: the realtime stream will show the server truth
+    // once it arrives.
+    emit(state.copyWith(
+      status: GameBlocStatus.error,
+      error: 'No se pudo guardar la mano: ${event.message}',
+    ));
   }
 
   /// Drops the pending round after a failure and applies any remote game
@@ -533,6 +546,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     _pendingHandNumberToPersist = null;
     _pendingParticipantStates = null;
     _pendingRetryReentryBaseScore = null;
+    _pendingRoundScores = null;
   }
 
   int _computeRetryReentryBaseScore({

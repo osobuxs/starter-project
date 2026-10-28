@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:news_app_clean_architecture/core/resources/data_state.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/game.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand.dart';
+import 'package:news_app_clean_architecture/features/la_loba/domain/entities/hand_commit.dart';
 import 'package:news_app_clean_architecture/features/la_loba/domain/repository/game_repository.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/multi_game_bloc.dart';
 import 'package:news_app_clean_architecture/features/la_loba/presentation/bloc/multi_game_event.dart';
@@ -163,6 +164,11 @@ class _FakeGameRepository implements GameRepository {
   @override
   Future<DataState<List<GameEntity>>> getGameHistory() async {
     return DataSuccess(gamesHistory);
+  }
+
+  @override
+  Future<DataState<void>> commitHand(HandCommit commit) async {
+    return const DataSuccess(null);
   }
 
   @override

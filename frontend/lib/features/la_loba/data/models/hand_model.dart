@@ -22,6 +22,15 @@ class HandModel extends HandEntity {
     );
   }
 
+  factory HandModel.fromEntity(HandEntity entity) {
+    return HandModel(
+      handNumber: entity.handNumber,
+      dealerId: entity.dealerId,
+      scores: entity.scores,
+      timestamp: entity.timestamp,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'handNumber': handNumber,
