@@ -21,7 +21,8 @@ class FakeAuth extends Fake implements FirebaseAuth {
   @override
   User? currentUser;
 
-  FakeAuth({String? email}) : currentUser = email == null ? null : FakeUser(email);
+  FakeAuth({String? email})
+      : currentUser = email == null ? null : FakeUser(email);
 }
 
 class FakeTrucoParticipantRepository implements TrucoParticipantRepository {

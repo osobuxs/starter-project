@@ -99,7 +99,8 @@ class TrucoSeatingPreview extends StatelessWidget {
           color: color,
           borderRadius: BorderRadius.circular(15),
           boxShadow: const [
-            BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+            BoxShadow(
+                color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
           ],
         ),
         child: Text(

@@ -97,7 +97,9 @@ class TrucoCreateGameCubit extends Cubit<TrucoCreateGameState> {
   }
 
   TrucoCreateGameState _withTeam(TrucoTeamSide side, TrucoTeam team) {
-    return side == TrucoTeamSide.a ? _editing(teamA: team) : _editing(teamB: team);
+    return side == TrucoTeamSide.a
+        ? _editing(teamA: team)
+        : _editing(teamB: team);
   }
 
   TrucoCreateGameState _editing({

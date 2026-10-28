@@ -118,7 +118,8 @@ class TrucoFirestoreDataSourceImpl implements TrucoFirestoreDataSource {
     final snapshot = await _games.orderBy('date', descending: true).get();
     return Future.wait(snapshot.docs.map((doc) async {
       final hands = await _handsQuery(doc.id).get();
-      return TrucoGameModel.fromFirestore(doc.id, doc.data(), _handsFrom(hands));
+      return TrucoGameModel.fromFirestore(
+          doc.id, doc.data(), _handsFrom(hands));
     }));
   }
 
@@ -162,7 +163,8 @@ class TrucoFirestoreDataSourceImpl implements TrucoFirestoreDataSource {
     final winner = commit.winner;
     final revert = commit.revertWinner;
     final playedDelta = (winner != null ? 1 : 0) - (revert != null ? 1 : 0);
-    final winners = winner == null ? const <String>[] : commit.playersOf(winner);
+    final winners =
+        winner == null ? const <String>[] : commit.playersOf(winner);
     final reverted =
         revert == null ? const <String>[] : commit.playersOf(revert);
 
@@ -189,10 +191,7 @@ class TrucoFirestoreDataSourceImpl implements TrucoFirestoreDataSource {
   }
 
   Query<Map<String, dynamic>> _handsQuery(String gameId) {
-    return _games
-        .doc(gameId)
-        .collection(handsCollection)
-        .orderBy('handNumber');
+    return _games.doc(gameId).collection(handsCollection).orderBy('handNumber');
   }
 
   List<TrucoHand> _handsFrom(QuerySnapshot<Map<String, dynamic>> snapshot) {

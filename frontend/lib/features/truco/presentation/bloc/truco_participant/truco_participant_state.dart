@@ -26,7 +26,8 @@ class TrucoParticipantState extends Equatable {
 
   /// Player names by id (for boards, lists and history).
   Map<String, String> get namesById => {
-        for (final participant in participants) participant.id: participant.name,
+        for (final participant in participants)
+          participant.id: participant.name,
       };
 
   TrucoParticipantState copyWith({

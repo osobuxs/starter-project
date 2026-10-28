@@ -76,8 +76,7 @@ void main() {
       expect(outcome.winner, TrucoTeamSide.a);
     });
 
-    test('when both reach the target with the same total it is unresolved',
-        () {
+    test('when both reach the target with the same total it is unresolved', () {
       final outcome = applyTrucoHand(
         scoreA: 28,
         scoreB: 28,

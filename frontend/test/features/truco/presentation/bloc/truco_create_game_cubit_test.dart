@@ -116,7 +116,8 @@ void main() {
       final game = repository.game!;
       expect(game.mode, TrucoMode.oneVsOne);
       expect(game.targetScore, 18);
-      expect(game.teamA, const TrucoTeam(name: 'Los de acá', playerIds: ['a1']));
+      expect(
+          game.teamA, const TrucoTeam(name: 'Los de acá', playerIds: ['a1']));
       expect(game.teamB, const TrucoTeam(name: 'Ellos', playerIds: ['b1']));
     },
   );

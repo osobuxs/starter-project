@@ -203,8 +203,9 @@ class _TeamCard extends StatelessWidget {
                     IconButton(
                       tooltip: 'Subir',
                       icon: const Icon(Icons.arrow_upward),
-                      onPressed:
-                          i == 0 ? null : () => cubit.movePlayer(side, i, i - 1),
+                      onPressed: i == 0
+                          ? null
+                          : () => cubit.movePlayer(side, i, i - 1),
                     ),
                     IconButton(
                       tooltip: 'Bajar',
@@ -273,10 +274,9 @@ class _PlayerRow extends StatelessWidget {
               label: Text(side == TrucoTeamSide.a ? 'A' : 'B'),
               tooltip: state.teamOf(side).name,
               selected: state.teamOf(side).playerIds.contains(player.id),
-              selectedColor: (side == TrucoTeamSide.a
-                      ? trucoTeamAColor
-                      : trucoTeamBColor)
-                  .withValues(alpha: 0.25),
+              selectedColor:
+                  (side == TrucoTeamSide.a ? trucoTeamAColor : trucoTeamBColor)
+                      .withValues(alpha: 0.25),
               onSelected: (_) => cubit.togglePlayer(side, player.id),
             ),
           ],
