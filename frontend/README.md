@@ -21,6 +21,18 @@ Las capturas funcionales de la app usadas como evidencia están en:
 
 - [`./screenshots/`](./screenshots/)
 
+## Flutter SDK version (pinned)
+
+This project is pinned to **Flutter 3.32.8** through [`.fvmrc`](./.fvmrc) ([FVM](https://fvm.app/)):
+
+```bash
+fvm install        # reads .fvmrc
+fvm flutter pub get
+fvm flutter test
+```
+
+Why: the current `pubspec.lock` only resolves on that SDK. `floor_generator ^1.5` (used by the `daily_news` feature) requires `analyzer ^6`, which conflicts with the test stack pulled by `bloc_test ^10` on newer Flutter SDKs. The real fix is migrating `daily_news` off Floor; until then, use the pinned SDK.
+
 ### Generate files for routing, di etc.:
 `flutter pub run build_runner build --delete-conflicting-outputs`
 ### Generate the icons:

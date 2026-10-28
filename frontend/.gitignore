@@ -51,3 +51,6 @@ app.*.map.json
 
 # Flutter screenshots (captured with `s` in `flutter run`)
 flutter_*.png
+
+# FVM (Flutter Version Management) local SDK link; the pin lives in .fvmrc
+.fvm/
